@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}DNC{% endblock title %}
+
+{% block extra-stylesheets %}
+{% endblock extra-stylesheets %}
+
+{% block header %}DNC Management<small>numbers</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">DNC</li>
+{% endblock breadcrumb %}
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>DNC</legend>
+				<div class="tab-content">
+					<div class="row tab-pane fade show active" id="user" role="tabpanel" aria-labelledby="user">
+						<div class="col-12 append_table">
+							{% include "ndnc/dnc_table.html" %} 
+							
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+
+{% if can_create %}
+<!-- action buttons -->
+{% if can_create %}
+<div class="bottom-menu">
+	<div class="action-button-circle">
+		<a><div class="circle-button skin-black"><i class="fa fa-plus"></i></div></a>
+	</div>
+	<div class="fab-div-area py-0 my-0" id="fab-div-area" style="height: 175px;">
+		<ul class="fab-ul" style="height: 170px;">
+			<li class="li-style">
+				<a class="fas fa-phone-slash fa-rotate-90 fab-div-item" data-toggle="modal" data-target="#create-edit-dnc-modal" title="Add Dnc Number"></a>
+			</li>
+			<br>
+			<li class="li-style">
+				<a class="fas fa-cloud-upload-alt fab-div-item" data-toggle="modal" data-target="#dncfileupload-wizard-modal" title="Upload Dnc"></a>
+			</li>
+		</ul>
+	</div>
+</div>
+{% endif %}
+<!-- model forms  -->
+<div class="modal fade" id="dncfileupload-wizard-modal" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to create users."></i>
+					<b>DNC Wizard » Upload</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body pt-3">
+				<form id="dnc-upload-form" class="wizard-validation-form" method="POST">
+					{% csrf_token %}
+					<div>
+						<section>
+							<div class="row">
+								<div class="col-6">
+									<input type="file" class="dropify" id="uploaded-file" name="uploaded_file"/>
+								</div>
+								<div class="col-6 dropify-wrapper">
+									<div class="dropify-message d-flex justify-content-center">
+										<a download class="mr-5 download-sample-file" file_name="dnc_list" file_type="csv">
+											<span class="csv-download"></span>
+											<span class="sample-csv-text">Sample Csv</span>
+										</a>
+										<a download class="download-sample-file" file_name="dnc_list" file_type="xls">
+											<span class="csv-download"></span>
+											<span class="sample-csv-text">Sample xls</span>
+										</a>
+									</div>
+								</div>
+							</div>
+							<div class="row">
+								<a id="proper-data" class="d-none upload-css text-info" download>
+									<span class="fa fa-download download-file-css"></span>
+									<span class="msg"></span>
+								</a>
+							</div>
+							<div class="row">
+								<a id="improper-data" class="d-none upload-css text-danger" download>
+									<span class="fa fa-download download-file-css"></span>
+									<span class="msg"></span>
+								</a>
+							</div>
+							<div class="row pull-right">
+								<div class="upload-css">
+									<button type="button" class="btn btn-dark btn-fw d-none validate-uploaded-file" id="validate-dnc-file">Validate File</button>
+									<button type="button" class="btn btn-success btn-fw d-none confirm-dnc-upload" id="confirm-dnc-upload-file">Continue</button>
+									<button type="button" class="btn btn-light btn-fw d-none cancel-uploaded-file" id="cancel-dnc-uploaded-file">Cancel</button>
+
+								</div>
+							</div>
+							<div class="form-group">
+								<p id="dnc-file-error" class="text-danger"></p>
+								<p id="empty-data" class="text-danger"></p>
+							</div>
+						</section>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="callcenter">
+	<input type="hidden" id="model_name" value="DNC">
+</div>
+<div class="modal fade" id="create-edit-dnc-modal" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="Edit Dnc number"></i>
+					<b>DNC Wizard » Edit</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body pt-3">
+				<form id="create_edit_dnc_form" class="wizard-validation-form" method="POST">
+					{% csrf_token %}
+					<div>
+						<h3>Create or Edit Dnc Number <br><small>Change or create details for Dnc Number</small></h3>
+						<section>
+							<input type="text" name="pk" class="form-control d-none" id="dnc_number_pk">
+							<div class="form-group row">
+								<label for="dnc_numeric" class="col-sm-4 col-form-label">Numeric<span class="star">*</span> :</label>
+								<div class="col-sm-8">
+									<input type="text" name="numeric" data-toggle="tooltip" data-original-title="numeric" class="form-control" id="dnc_numeric" placeholder="Enter numreic" data-validation="length" data-validation-length="max10" data-validation-error-msg-container="#dnc-numeric-msg" >
+									<span id="dnc-numeric-msg"></span>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="dnc_campaign" class="col-sm-4 col-form-label">Campaign:</label>
+								<div class="col-sm-8">
+									<select class="form-control select2-class" id="dnc_campaign" name="campaign" data-validation="required" multiple>
+										{% for campaign in campaign_list %}
+											<option value="{{ campaign.id}}">{{ campaign.slug }}</option>
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="global_dnc" class="col-sm-4 col-form-label">Global DNC:</label>
+								<div class="col-sm-8 form-inline">
+									<div class="form-check">
+										<label class="form-check-label">
+											<input type="checkbox" class="form-check-input" name="global_dnc" id="global_dnc">
+											<i class="input-helper"></i>
+										</label>
+									</div>
+								</div>
+							</div>
+						    <div class="form-group row">
+								<label for="status" class="col-sm-4 col-form-label">Status :</label>
+								<div class="col-sm-8">
+									<select class="form-control" name="status" id="status">
+										<option value="Active" selected="">Active</option>
+										<option value="Inactive">Inactive</option>
+									</select>
+								</div>
+							</div>
+						</section>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'melody/js/dropify.js' %}"></script>
+
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		{% if can_read %}
+			selective_datatable($('#dnc-list-table'));  //datatbale jquery
+			$(".wizard li a[href='#previous']").addClass("d-none");
+			$(".wizard li a[href='#finish']").text('Submit');
+			{% if  dnc_list %}
+				query_set_list = {{dnc_list|safe}}
+			{% endif %}
+		{% else %}
+		PermissionDeny();
+		{% endif %}
+		});
+</script>
+
+{% endblock extra-js %}

@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dispos{% endblock title %}
+
+{% block extra-stylesheets %}
+
+<link rel="stylesheet" href="{% static 'css/dataTables.bootstrap4.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/responsive.bootstrap4.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/select.dataTables.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+
+{% endblock extra-stylesheets %}
+
+{% block header %}Campaign Management<small>Disposition</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Dispositions</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Dispositions</legend>
+				<!-- disposition tab and table -->
+				<div class="row">
+					<div class="col-12">
+						<table id="disposition-list-table" class="table table-striped table-bordered nowrap" style="width: 100%">
+							<thead>
+								<tr>
+									<th>
+										<div class="btn-group select-all-div">
+											<div class="form-check">
+												<label class="form-check-label ml-3">
+													<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+												</label>
+											</div>
+											{% if can_delete %}
+											<div class="dropdown">
+												<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+													<span class="caret"></span></button>
+												<ul class="dropdown-menu">
+													<li class="dropdown-item text-center" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete_selected')">Delete Selected</li>
+													<li class="dropdown-item text-center" onclick="confirmDelete('warning-message-and-cancel', 'Ok','all')">Delete All</li>                       
+												</ul>
+											</div>
+											{% endif %}
+										</div>
+									</th>
+									<th>Primary Dispo</th>
+									<th>Sub Dispos</th>
+									<th>Status</th>
+									<th>Enabled</th>
+									{% if can_update or can_delete %}
+									<th>Action</th>
+									{% endif %}
+								</tr>
+							</thead>
+							<tbody class="data-body-div">
+								{% for dispo in dispos.all %}
+								<tr id="{{ dispo.id }}">
+									<td></td>
+									<td>{{ dispo.name }}</td>
+									<td>{{ dispo.sub_dispos }}</td>
+									<td>{{ dispo.status }}</td>
+									<td>{{ dispo.enabled }} </td>
+									{% if can_update or can_delete %}
+									<td>
+										<div class="dropdown">
+											<button class="btn btn-secondary dropdown-toggle table-dropdown" role="button" id="dropdownMenuLink"  data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+												Choose Action
+											</button>
+											<div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+												{% if can_update %}
+												<a class="dropdown-item"  id="dispo-modify" data-dispoid="{{dispo.id}}" >Modify</a>
+												{% endif %}
+												<div class="dropdown-divider"></div>
+												{% if can_delete %}
+												<a class="dropdown-item" onclick="confirmDelete('delete_one', 'Ok','particular_entry-{{ dispo.id}}')">Delete</a>
+												{% endif %}
+											</div>
+										</div>
+									</td>
+									{% endif %}
+								</tr>
+								{% endfor %}
+							</tbody>
+						</table>	
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% if can_create %}
+<!-- action buttons -->
+<div class="bottom-menu">
+	<div class="action-button-circle" data-toggle="modal">
+		<a data-toggle="modal" data-target="#modal_add_disposition" title="Add Dispositions">
+			<div class="circle-button skin-black">
+				<i class="fa fa-plus button-area add-disposition"></i>
+			</div>
+		</a>
+	</div>
+</div>
+{% endif %}
+<!-- model forms -->
+<div class="modal fade" id="modal_add_disposition" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to create diapositions."></i>
+					<b>Dispo Wizard » Add New Disposition</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body">
+				<form id="disposition-form" class="wizard-form" >
+					{% csrf_token %}
+					<div>
+						<h3>Add Dispositions</h3>
+						<section>
+							<div class="form-group">
+								<label for="Primary Dispo" class="col-form-label">Primary Dispo</label>
+								<input type="text" class="form-control" id="primary_dispo" name = "name" placeholder="Enter the primary dispostion" data-validation="required" data-validation-error-msg-container="#primarydispo-msg">
+								<span id="primarydispo-msg"></span>
+							</div>						
+							<div class="form-group">
+								<label for="sub dispo" class="col-form-label">Sub Dispos</label>
+								<input name="dispos" id="tags" value="" placeholder="add sub-disposition" data-validation="required" data-validation-error-msg-container="#subdispo-msg" />
+								<span id="subdispo-msg"></span>
+							</div>
+							<div class="form-group">
+								<label for="status" name="status" class="col-form-label">Status</label>
+								<select class="form-control">
+									<option>Active</option>
+									<option>Inactive</option>
+								</select>
+							</div>
+						</section>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+<!--- modal form ends here ---------->
+<!-- modal form for updatng the form data ----------------->
+<div class="modal fade" id="modal_update_disposition" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to update disposition."></i>
+					<b>Dispo Wizard » Update Disposition</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body">
+				<form id="update-disposition-form" class="wizard-form" action="#">
+					{% csrf_token %}
+					<div>
+						<h3>Update Disposition</h3>
+						<section>
+							<input type="text" name ="name" class="form-control d-none" id="update_dispo_pk">
+							<div class="form-group">
+								<label for="dispo_name" class="col-form-label">Primary Dispo</label>
+								<input type="text" name ="name" class="form-control" id="update_dispo_name" placeholder="Enter the disposition name" data-validation="required" data-validation-error-msg-container="#dispo-name-msg">
+								<span id="dispo-name-msg"></span>
+							</div>
+							<div class="form-group" id ="update_sub_dispo">
+								<label for="sub dispo" class="col-form-label">Sub Dispos</label>
+								<input name="sub_dispos" class="dispo-tags" id="update_dispo_tag" value="" placeholder="add sub-disposition" />
+							</div>
+							<div class="form-group">
+								<label for="status" class="col-form-label">Status</label>
+								<select class="form-control" id="update_status" name="status">
+									<option>Active</option>
+									<option>Inactive</option>
+								</select>
+							</div>
+						</section>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="callcenter">
+	<input type="hidden" id="model_name" value="Disposition">
+</div>
+
+<!-- update modal form ends here ---------------->
+{% endblock content %}
+{% block extra-js %}
+
+<script src="{% static 'js/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'js/dataTables.bootstrap4.min.js' %}"></script>
+<script src="{% static 'js/dataTables.responsive.min.js' %}"></script>
+<script src="{% static 'js/responsive.bootstrap4.min.js' %}"></script>
+<script src="{% static 'js/form-validator.min.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{%static 'melody/js/form-addons.js'%}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		var dispo_table = $('#disposition-list-table')
+	  	selective_datatable(dispo_table);  //datatbale jquery
+	  	$.validate();
+	  	{% if not can_read %}
+		PermissionDeny();
+		{% endif %}
+	  } );
+	</script>
+
+	{% endblock extra-js %}

@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}CRM Field{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+{% endblock extra-stylesheets %}
+
+{% block header %}CRM Management<small>CRM Fields</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">CRM Fields</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>CRM Field </legend>
+				<!-- disposition tab and table -->
+				<div class="append_table">
+					<div class="col-12">
+						{% include "search.html" %}    
+					</div>
+					<div class="row">
+						<div class="col-12">
+							<table id="crm-fields-list-table" class="table display table-striped nowrap avatar-table" style="width: 100%">
+								<thead>
+									<tr>
+										<th class="avatar"></th>
+										<th data-data="name" class="name">Name</th>
+										<th data-data="campaign_name">Campaign</th>
+										<th data-data="created_by">Created By</th>
+										{% if can_update or can_delete %}
+											<th data-data="checkbox_col" class="checkbox_col">
+												<div class="btn-group select-all-div">
+													<div class="form-check">
+														<label class="form-check-label ml-3">
+															<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+															<i class="input-helper"></i>
+														</label>
+													</div>
+													<div class="dropdown">
+														<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+															<span class="caret"></span></button>
+														<ul class="dropdown-menu">
+															{% if can_delete %}
+																<li class="dropdown-item text-center" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">Delete Selected</li>
+															{% endif %}
+														</ul>
+													</div>
+												</div>
+											</th>
+											<th data-data="action" class="action">Action</th>
+										{% endif %}
+									</tr>
+								</thead>
+							</table>
+							{% include "vue_pagination.html" %}  	
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% csrf_token %}
+<input type="hidden" id="app_name" value="crm">
+<input type="hidden" id="model_name" value="CrmField">
+<!-- action buttons -->
+{% if can_create %}
+<div class="bottom-menu">
+	<div class="action-button-circle">
+		<a><div class="circle-button skin-black"><i class="fa fa-plus"></i></div></a>
+	</div>
+	<div class="fab-div-area" id="fab-div-area" style=" height: 175px; padding-top: 0px; margin-top: 0px; padding-bottom: 0px; margin-bottom: 0px;">
+		<ul class="fab-ul" style="height: 170px;">
+			<li class="li-style"><a class="fa fa-list fab-div-item" href="{% url 'create-crm_fields' %}" title="Add Crm Fields"></a></li></br>
+			<li class="li-style"><a class="fas fa-cloud-upload-alt fab-div-item" data-toggle="modal" data-target="#crmField_upload_modal" title="Upload Crm Fields"></a></li><br>
+		</ul>
+		</a>
+	</div>
+</div>
+
+<div class="modal fade " id="crmField_upload_modal" tabindex="-1" role="dialog">
+	<div class="modal-dialog " role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="Modal form to create CRM Fields by uploading CSV file"></i>
+					<b>File Wizard » CRM Field Upload</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body pt-3">
+				<form id="crmField_upload_form" class="wizard-form" action="{% url 'users-bulk-upload' %}" method="POST">
+					{% csrf_token %}
+					<div>
+						<h2>CRM Field Upload<br><small>Browse the file and Click on Submit</small></h2>
+						<section>
+							<div class="form-group row">
+								<label for="crmField_name" class="col-sm-4 col-form-label">Name<span class="star">*</span> :</label>
+								<div class="col-sm-8">
+									<input type="text" name="name" data-toggle="tooltip" data-original-title="Enter CRM Name" class="form-control" id="crmField_name" placeholder="Name" name="name" data-validation="length alphanumeric" data-validation-length="min4" data-validation-allowing="_" data-validation-error-msg-container="#crm-error-msg" >
+									<span id="crm-error-msg"></span>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="campaign" class="col-sm-4 col-form-label">Campaign :</label>
+								<div class="col-sm-8">
+									<select class="form-control" name="campaign" id="crm_field_campaign" multiple>
+										{% for campaign in campaign_list %}
+										<option value="{{ campaign.name}}">{{ campaign.name }}</option>
+										{% endfor %}
+									</select>
+									<span id="campaign_error"></span>
+								</div>
+							</div>
+							<div id="uploaded_file" class="form-group row">
+								<label for="uploaded_file" class=" col-sm-4 mb-sm-0 col-form-label">Sample File :</label>
+                                <div class="col-6 form-inline">
+                                    <a download class="download-sample-file crm-fields" file_name="crm-fields" file_type="csv">sample_crm_field.csv</a>
+                                    <a download class="download-sample-file crm-fields" file_name="crm-fields" file_type="xls">sample_crm_field.xls</a>
+                                </div>
+                            </div>
+							<div class="form-group row">
+								<label for="file" class="col-sm-4 mb-0 col-form-label">Select File<span class="star">*</span> :</label>
+								<label id="upload-file-error" class="col-sm-8 mb-sm-0 col-form-label d-none text-danger"></label>
+							</div>
+							<div class="row mt-2" style="margin-bottom: 15px;">
+								<div class="col-md-6 proper_data_div">
+									<a id="proper-data" class="d-none upload-css text-info" download>
+										<span class="fa fa-download download-file-css"></span>
+										<span class="msg"></span>
+									</a>
+								</div>
+								<div class="col-md-6 improper_data_div">
+									<a id="improper-data" class="d-none upload-css text-danger" download>
+										<span class="fa fa-download download-file-css"></span>
+										<span class="msg"></span>
+									</a>
+								</div>
+								<div class="col-md-12">
+									<p id="empty-data" class=" d-none alert alert-danger" style="overflow: hidden"> 
+										No Data is Found in File, Add Atleast one CRM Field 
+									</p>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-12">
+									<input type="file" class="dropify" id="uploaded-audio-file"  name="crmField_file"  accept=""/>
+								</div>
+							</div>
+						</section>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+
+
+<!-- update modal form ends here ---------------->
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/barrating.js' %}"></script>
+<script src="{% static 'js/tags-input.js' %}"></script>
+<script src="{%static 'melody/js/form-addons.js'%}"></script>
+<script src="{% static 'js/dropify.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		crmfield_page = true
+		var dispo_table = $('#crm-fields-list-table')
+	  	selective_datatable(dispo_table);  //datatbale jquery
+	  	$.validate();
+	  	$(".wizard li a[href='#previous']").addClass("d-none").text('Cancel')
+		$(".wizard li a[href='#finish']").text('Validate')
+		edit_url = "{% url 'edit-crm_fields' 123 %}"
+		get_pagination_data(1, true)
+	  } );
+</script>
+{% endblock extra-js %}

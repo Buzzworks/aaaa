@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Scripts{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+{% endblock extra-stylesheets %}
+
+{% block header %}Campaign Management<small>Scripts</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Scripts</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Scripts</legend>
+				{% csrf_token %}
+				<!-- department tab and table -->
+				<div class="append_table">
+					<div class="col-12">
+						{% include "search.html" %}    
+					</div>
+					<div class="row">
+						<div class="col-12">
+							<table id="script-list-table" class="table display table-striped nowrap avatar-table" style="width: 100%">
+								<thead>
+									<tr>
+										<th class="avatar"></th>
+										<th data-data="name" class="name"><strong>Name</strong></th>
+										<th data-data="created_by_user">Created By</th>
+										<th data-data="status">Status</th>
+										<th data-data="created_date" class="list_date">created date</th>
+										<th data-data="modified_date" class="list_date">modified date</th>
+										{% if can_update or can_delete %}
+											<th data-data="checkbox_col" class="checkbox_col">
+												<div class="btn-group select-all-div">
+													<div class="form-check">
+														<label class="form-check-label ml-3">
+															<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+															<i class="input-helper"></i>
+														</label>
+													</div>
+													<div class="dropdown">
+														<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+															<span class="caret"></span></button>
+														<ul class="dropdown-menu">
+															{% if can_update %}
+																<li class="dropdown-item" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make Active')">
+																	Active Selected
+																</li>
+																<li class="dropdown-item" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make InActive')">
+																	Inactive Selected
+																</li>
+															{% endif %}
+															{% if can_delete %}
+																<li class="dropdown-item" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">
+																	Delete Selected
+																</li>
+															{% endif %}
+														</ul>
+													</div>
+												</div>
+											</th>
+											<th data-data="action" class="action">Action</th>
+										{% endif %}
+									</tr>
+								</thead>
+							</table>
+							{% include "vue_pagination.html" %} 
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="callcenter">
+	<input type="hidden" id="model_name" value="Script">
+</div>
+{% endif %}
+{% if can_create %}
+<!-- action buttons -->
+<div class="bottom-menu">
+	<div class="action-button-circle" data-toggle="modal">
+		<a title="Add Script" href="{% url 'create-scripts' %}">
+			<div class="circle-button skin-black">
+				<i class="fa fa-plus button-area add-scripts"></i>
+			</div>
+		</a>
+	</div>
+</div>
+{% endif %}
+{% endblock content %}
+
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		{% if can_read %}
+			var script_table = $('#script-list-table')
+			selective_datatable(script_table);  //datatbale jquery
+			edit_url = "{% url 'edit-scripts' 123 %}"
+			get_pagination_data(1, true)
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+	});
+</script>
+
+{% endblock extra-js %}

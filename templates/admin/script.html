@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{% if script %}Edit{% else %}Create{% endif %} Script{% endblock title %}
+
+{% block extra-stylesheets %}
+
+<link rel="stylesheet" href="{% static 'melody/vendors/summernote/dist/summernote-bs4.css' %}">
+
+{% endblock extra-stylesheets %}
+
+{% block header %}Campaign Management<small>{% if script %}Edit{% else %}Create{% endif %} Script</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'scripts' %}">Script</a></li>
+<li class="breadcrumb-item active" aria-current="page">{% if script %}Modify{% else %}Create{% endif %}</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_view %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>{% if script %}Edit{% else %}Create{% endif %} Script</legend>
+				<div class="row">
+					<div class="col-12 grid-margin stretch-card">
+						<div class="card">
+							<div class="card-body">
+								<form class="forms-sample" id="script-create-form">
+									{% csrf_token %}
+									<div class="row mb-4">
+										<div class="col-md-4">
+											<div class="form-group row">
+												<label for="name" class="col-sm-4 col-form-label">Name<span class="star">*</span> :</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control" data-toggle="tooltip" data-original-title="Enter Script Name" id="name" placeholder="Name" name="name" data-validation="required" data-validation-error-msg-container="#script-name-error">
+													<span id="script-name-error"></span>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-4">
+											<div class="form-group row">
+												<label for="extension" class="col-sm-4 col-form-label">Campaign<span class="star">*</span> :</label>
+												<div class="col-sm-8">
+													<select class="form-control"  id="script_campaign_select" name="campaign" data-validation="required">
+														<option value="">Select Campaign</option>
+														{% for campaign in campaign_list %}
+															{% if campaign.slug == script.campaign.slug %}
+																<option value="{{ campaign.id}}" selected>{{ campaign.slug }}</option>
+															{% else %}
+																<option value="{{ campaign.id}}">{{ campaign.slug }}</option>
+															{% endif %}
+															
+														{% endfor %}
+													</select>
+													<div id="script_error" class="d-none" style="color:#b94a48"></div>
+												</div>
+											</div>
+										</div>										
+										<div class="col-md-4">
+											<div class="form-group row">
+												<label for="" class="col-sm-4 col-form-label">Status :</label>
+												<div class="col-sm-8">
+													{% if script %}
+													<select class="form-control" name="status">
+														{% for status in script_status %}
+														{% if status.0 == script.status %}
+														<option value="{{ status.0 }}" selected>{{ status.1 }}</option>
+														{% else %}
+														<option value="{{ status.0 }}">{{ status.1 }}</option>
+														{% endif %}
+														{% endfor %}
+													</select>
+													{% else %}
+													<select class="form-control" name="status">
+														{% for status in script_status %}
+														<option value="{{ status.0 }}">{{ status.1 }}</option>
+														{% endfor %}
+													</select>
+													{% endif %}
+												</div>
+											</div>
+										</div>										
+									</div>
+									<div class="row grid-margin">
+										<div class="col-lg-12">
+											<div class="card">
+												<div class="card-body">					
+													<h4 class="card-title">Add Script Here :</h4>
+													<!-- <div id="summernoteExample">
+														{% if script %}
+															{{script.text|safe}}
+														{% endif %}
+													</div> -->
+													<textarea id='scriptEditor'>
+														{% if script %}
+															{{script.text|safe}}
+														{% endif %}
+													</textarea>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-sm-6">
+											<div class="alert alert-danger d-none" id="script-err-msg">
+
+											</div>
+										</div>
+										<div class="col-sm-6">
+											<div class="float-right">
+												<button type="button" class="btn btn-success mr-sm-2" id="script-submit-btn">{% if script %}Update{% else %}Submit{% endif %}</button>
+												<button type="button" class="btn btn-light" id="" onclick="showSwal('warning-message-and-cancel','OK', '/CampaignManagement/Scripts/')">Cancel</button>
+											</div>
+										</div>
+									</div>
+									<input type="hidden" name="text" id="script-data">
+									<input type="hidden" name="script_id" value="{{ script.id }}" id="script_id">
+								</form>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% endblock content %}
+
+{% block extra-js %}
+
+<script src="{% static 'melody/js/settings.js' %}"></script>
+<script src="{% static 'melody/js/dragula.js' %}"></script>
+<script src="{% static 'melody/vendors/summernote/dist/summernote-bs4.min.js' %}"></script>
+<script src="{% static 'melody/vendors/tinymce/tinymce.min.js' %}"></script>
+<script src="{% static 'js/script_editor.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	{% if can_view %}
+		$.validate({
+			form:'#script-create-form',
+		});
+		$("#name").val("{{ script.name }}")
+		// namespace_fields = {{script.namespace_fields|safe}}
+		// $('#namespace_fields').val(namespace_fields)
+		contact_fields = {{ contact_fields|safe}}
+		var editorField_list = []
+		$.each(contact_fields, function(index,value){
+			var editorField_dict = {}
+			editorField_dict['text'] = editorField_dict['value'] = value
+			editorField_list.push(editorField_dict)
+
+		})
+		addScriptEditior(editorField_list)
+	{% else %}
+		PermissionDeny();
+	{% endif %}
+</script>
+
+{% endblock extra-js %}

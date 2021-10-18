@@ -1,0 +1,727 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Dashboard{% endblock title %}
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'melody/vendors/iconfonts/simple-line-icon/css/simple-line-icons.css' %}">
+{% endblock extra-stylesheets %}
+
+{% block header %}Dashboard{% endblock header %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active p-2" aria-current="page"></li>
+<!-- <strong>
+	<div class="form-check">
+		<label class="form-check-label">
+			<input type="checkbox" class="form-check-input" id="eavesdrop_session">
+			Caller Session
+			<i class="input-helper"></i>
+		</label>
+	</div>
+</strong> -->
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if not error %}
+<style type="text/css">
+	tfoot {
+    display: table-header-group;
+}
+</style>
+<audio id="audio_remote" autoplay="autoplay"></audio>
+<div id="live_data">
+	<div class="row">
+		{% csrf_token %}
+		<div class="col-lg-4 col-md-6 col-sm-12">
+			<a href="#" style="color: inherit;" class="status-card" @click="selectedCard('login_agent')">
+				<div class="card card-status" style="">
+					<div class="card-header" style="">
+						<div class="card-icon" style="">
+							<i class="icon-people fa-3x"></i>
+						</div>
+						<p class="card-category">Agent(s)</p>
+						<h3 class="card-title" id="live_agent_count">0</h3>
+					</div>
+					<div class="card-body px-2 pt-2 pb-0">
+						<div class="row justify-content-around">
+							<div class="col-2 text-center p-0" style="border-right: 1px solid #eee">
+								<span class="ed-header">Inbound</span><br>
+								<span id="inbound_count">0</span>
+							</div>
+							<div class="col-2 text-center p-0" style="border-right: 1px solid #eee">
+								<span class="ed-header">Manual</span><br>
+								<span id="manual_count">0</span>
+							</div>
+							<div class="col-2 text-center p-0" style="border-right: 1px solid #eee">
+								<span class="ed-header">Preview</span><br>
+								<span id="preview_count">0</span>
+							</div>
+							<div class="col-2 text-center p-0" style="border-right: 1px solid #eee; overflow: hidden;text-overflow: ellipsis;">
+								<span class="ed-header">Progressive</span><br>
+								<span id="progressive_count">0</span>
+							</div>
+							<div class="col-2 text-center p-0" style="overflow: hidden;text-overflow: ellipsis;">
+								<span class="ed-header">Predictive</span><br>
+								<span id="predictive_count">0</span>
+							</div>
+						</div>
+					</div>
+					<div class="card-footer">
+						<div class="stats">Login Agents</div>
+					</div>
+				</div>
+			</a>
+		</div>
+		<div class="col-lg-4 col-md-6 col-sm-12">
+			<a href="#" style="color: inherit;" class="status-card" @click="selectedCard('active_agent')">
+				<div class="card card-status" style="">
+					<div class="card-header" style="">
+						<div class="card-icon" style="">
+							<i class="icon-people fa-3x"></i>
+						</div>
+						<p class="card-category">Agent(s)</p>
+						<h3 id="agent_count" class="card-title">0</h3>
+					</div>
+					<div class="card-body px-3 pt-2 pb-0">
+						<div class="row">
+							<div class="col-3 text-center" style="border-right: 1px solid #eee">
+								<span class="ed-header">Dialer</span><br>
+								<span id="dialer_count">0</span>
+							</div>
+							<div class="col-3 text-center" style="border-right: 1px solid #eee">
+								<span class="ed-header">Login</span><br>
+								<span id="login_count">0</span>
+							</div>
+							<div class="col-3 text-center" style="border-right: 1px solid #eee">
+								<span class="ed-header">Break</span><br>
+								<span id="break_count">0</span>
+							</div>
+							<div class="col-3 text-center">
+								<span class="ed-header">Logout</span><br>
+								<span id="logout_count">0</span>
+							</div>
+						</div>
+					</div>
+					<div class="card-footer">
+						<div class="stats">Agents</div>
+					</div>
+				</div>
+			</a>
+		</div>
+		<div class="col-lg-4 col-md-6">
+			<a href="#" style="color: inherit;" class="status-card" @click="selectedCard('campaign')">
+				<div class="card card-status" style="">
+					<div class="card-header" style="">
+						<div class="card-icon" style="">
+							<i class="icon-flag fa-3x"></i>
+						</div>
+						<p class="card-category">Campaign(s)</p>
+						<h3 id="a_camp_count" class="card-title">0</h3>
+					</div>
+					<div class="card-body px-2 pt-2 pb-0">
+						<div class="row">
+							<div class="col-4 text-center pr-0" style="border-right: 1px solid #eee">
+								<span class="ed-header">Lead List</span><br>
+								<span id="lead_list_count">0</span>
+							</div>
+							<div class="col-4 text-center px-0" style="border-right: 1px solid #eee">
+								<span class="ed-header">Active List</span><br>
+								<span id="al_list_count">0</span>
+							</div>
+							<div class="col-4 text-center pl-0">
+								<span class="ed-header">Total Data</span><br>
+								<span id="ll_data_count">0</span>
+							</div>
+						</div>
+					</div>
+					<div class="card-footer">
+						<div class="stats">Campaign</div>
+					</div>
+				</div>
+			</a>
+		</div>
+	</div>
+	<div class="row" id="table_div" style="display: none;" :data-selected="selected_card">
+		<div class="col-12 grid-margin">
+			<div class="card">
+				<div class="card-header">
+					<div v-if="card_title =='Login Agents'" class="card-action float-right d-flex align-items-center">
+						<div class="form-check d-flex pt-2 mr-3">
+							<small class="pr-2 text-muted">Call Session</small>
+							<div class="material-switch fa-pull-right">
+								<label for="eavesdrop_session" class="switch">
+									<input type="checkbox" id="eavesdrop_session" >
+									<span class="slider round"></span>
+								</label>
+							</div>
+						</div>
+						<button type="button" class="btn btn-link text-danger p-0" id="force_logout_all_agents" onclick="confirmEmergencyLogoutAll()" title="Logout All Agents"><i class="fas fa-sign-out-alt"></i></button>
+					</div>
+					<h4 class="card-title mb-0">${card_title} <button v-if="card_title =='Agents'" class="btn btn-link btn-sm p-2 text-primary" title="Refresh table" @click="getActiveAgentData"><i class="fas fa-sync-alt"></i></button></h4>
+				</div>
+				<div class="card-body pt-2">
+					<div>
+						<table id="ls_call_table" class="display table-striped nowrap" style="width: 100%" >
+							<thead>
+								<tr>
+									<th data-data="state" class="state_col"></th>
+									<th data-data="username" class='live_username'>Username</th>
+									<th data-data="name">Name</th>
+									<th data-data="supervisor"> Supervisor Name</th>
+									<th data-data="assign_data_count">Assign Data</th>
+									<th data-data="dialed_data_count">Dialed Assign Data</th>
+									<th data-data="notdialed_data_count">NotDialed Assign Data</th>
+									<th data-data="call_count">Today's Call Count</th>
+									<th data-data="state" class="action-col"></th>
+								</tr>
+							</thead>
+							<tbody class="text-center"></tbody>
+							<tfoot>
+								<tr>
+									<th></th>
+									<th>
+										<div class="input-container">
+											<i class="fa fa-search icon search-icon"></i>
+											<input type="text" class="table-search-icon " placeholder="Username">
+										</div>
+									</th>
+									<th>
+										<div class="input-container">
+											<i class="fa fa-search icon search-icon"></i>
+											<input type="text" class="table-search-icon" placeholder="Name">
+										</div>
+									</th>
+									<th>
+										<div class="input-container">
+											<i class="fa fa-search icon search-icon"></i>
+											<input type="text" class="table-search-icon" placeholder="Supervisor Name">
+										</div>
+									</th>
+									<th>
+										<div class="input-container">
+											<i class="fa fa-search icon search-icon"></i>
+											<input type="text" class="table-search-icon" placeholder="Assign Data">
+										</div>
+									</th>
+									<th>
+										<div class="input-container">
+											<i class="fa fa-search icon search-icon"></i>
+											<input type="text" class="table-search-icon" placeholder="Dialed Assigned Data">
+										</div>
+									</th>
+									<th>
+										<div class="input-container">
+											<i class="fa fa-search icon search-icon"></i>
+											<input type="text" class="table-search-icon" placeholder="Not Dialed Assigned Data ">
+										</div>
+									</th>
+									<th>
+										<div class="input-container">
+											<i class="fa fa-search icon search-icon"></i>
+											<input type="text" class="table-search-icon" placeholder="Total Calls">
+										</div>
+									</th>
+									<th></th>
+								</tr>
+							</tfoot>
+						</table>
+					</div>
+					<div>
+						<div v-show="card_title =='Campaign'" class="row dataTables_wrapper dt-bootstrap4">
+							<div class="col-md-6">
+								<div class="dataTables_length">
+									<label>Show
+										<select class="custom-select custom-select-sm form-control form-control-sm" v-model.number="camp_table_page_len">
+											<option value="10">10</option>
+											<option value="25">25</option>
+											<option value="50">50</option>
+										</select>
+										entries
+									</label>
+								</div>
+							</div>
+							<div class="col-md-6">
+								<div id="example_filter" class="dataTables_filter d-block d-md-inline-flex">
+									<label>
+										<span>Filter By:</span>
+										<input type="text" class="form-control form-control-sm" placeholder="campaign" v-model.trim="camp_table_filter">
+										<button class="btn btn-inverse-dark p-1" @click="filterCampTable()"><i class="fas fa-filter"></i></button>
+									</label>
+								</div>
+							</div>
+						</div>
+						<table id="ls_campaign_table" class="display table-striped nowrap" style="width: 100%">
+							<thead>
+								<tr>
+									<th data-data="campaign">Campaign</th>
+									<th data-data="total_ll_count">Lead List</th>
+									<th data-data="active_ll_count">Active List</th>
+									<th data-data="ll_total_data">Data</th>
+									<th data-data="ll_notdialed_count">Not Dialled</th>
+									<th data-data="ll_queuecall_count">Queued</th>
+									<th data-data="ll_dialed_count">Dialled</th>
+									<th data-data="totalcalls_today">Total Calls Today</th>
+									<th data-data="queueLoginagents_count">Login Agents</th>
+								</tr>
+							</thead>
+						</table>
+						<campaign-table-pagination v-show="card_title =='Campaign'" :total_records="pagination_data.total_records"
+													:total_pages="pagination_data.total_pages"
+													:page="pagination_data.page"
+													:has_next="pagination_data.has_next"
+													:has_prev="pagination_data.has_prev"
+													:start_index="pagination_data.start_index"
+													:end_index="pagination_data.end_index"
+													v-on:set-page="camp_table_page_num = $event"
+						></campaign-table-pagination>
+					</div>
+					<table id="ls_agent_table" class="display table-striped nowrap" style="width: 100%">
+						<thead>
+							<tr>
+								<th data-data="name">Name</th>
+								<th data-data="username">Username</th>
+								<th data-data="campaign">Campaign</th>
+								<th data-data="extension" class="extension">Extension</th>
+								<th data-data="role_name" class="role_name">Role Name</th>
+								<th data-data="status" class="status_col">Status</th>
+								<th data-data="state" class="state_col">State</th>
+								<th data-data="event_time" class="duration-col">State Duration</th>
+								<th data-data="dial_number">Numeric</th>
+								<th data-data="call_type">Call Type</th>
+								<th data-data="call_count">Call Count</th>
+								<th data-data="login_time" class="login-time-col">Login Time</th>
+								<th data-data="login_duration" class="duration-col">Login Duration</th>
+								<th data-data="state" class="action-col">Action</th>
+							</tr>
+						</thead>
+						<tfoot>
+							<tr>
+								<th>
+									<div class="input-container">
+										<i class="fa fa-search icon search-icon"></i>
+										<input type="text" class="table-search-icon " placeholder="Name">
+									</div>
+								</th>
+								<th>
+									<div class="input-container">
+										<i class="fa fa-search icon search-icon"></i>
+										<input type="text" class="table-search-icon " placeholder="Username">
+									</div>
+								</th>
+								<th>
+									<div class="input-container">
+										<i class="fa fa-search icon search-icon"></i>
+										<input type="text" class="table-search-icon" placeholder="Campaign">
+									</div>
+								</th>
+								<th></th>
+								<th></th>
+								<th>
+									<div class="input-container">
+										<i class="fa fa-search icon search-icon"></i>
+										<input type="text" class="table-search-icon" placeholder="Status">
+									</div>
+								</th>
+								<th>
+									<div class="input-container">
+										<i class="fa fa-search icon search-icon"></i>
+										<input type="text" class="table-search-icon" placeholder="State">
+									</div>
+								</th>
+								<th></th>
+								<th>
+									<div class="input-container">
+										<i class="fa fa-search icon search-icon"></i>
+										<input type="text" class="table-search-icon" placeholder="Numeric">
+									</div>
+								</th>
+								<th>
+									<div class="input-container">
+										<i class="fa fa-search icon search-icon"></i>
+										<input type="text" class="table-search-icon" placeholder="Call Type">
+									</div>
+								</th>
+								<th>
+									<div class="input-container">
+										<i class="fa fa-search icon search-icon"></i>
+										<input type="text" class="table-search-icon" placeholder="Call Count">
+									</div>
+								</th>
+								<th>
+									<div class="input-container">
+										<i class="fa fa-search icon search-icon"></i>
+										<input type="text" class="table-search-icon" id="logintime" placeholder="Login Time">
+									</div>
+								</th>
+								<th></th>
+								<th></th>
+							</tr>
+						</tfoot>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-md-7 col-sm-12">
+			<div class="card">
+				<div class="card-body">
+					<h4 class="card-title"><i class="fas fa-signal"></i>Trunk Status</h4>
+					<table id="trunk_status_table" class="display table-striped nowrap" style="width: 100%" >
+						<thead>
+							<tr>
+								<th data-data="name">Trunk</th>
+								<th data-data="consumed_channels">Consume Channels</th>
+								<th data-data="free_channels">Free Channels</th>
+								<th data-data="channel_count">Total Channels</th>
+								{% if request.user.is_superuser %}
+								<th data-data="id" class="action_btn"></th>
+								{% endif %}
+							</tr>
+						</thead>
+						<tbody class="text-center"></tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+		<div class="col-md-5 col-sm-12">
+			<div class="card">
+				<div class="card-body">
+					<h4 class="card-title"><i class="fas fa-signal"></i>Services Status</h4>
+					<table id="services_status_table" class="display table-striped nowrap" style="width: 100%" >
+						<thead>
+							<tr>
+								<th data-data="status" class="state_col">Status</th>
+								<th data-data="name">Service Name</th>
+								<th data-data="since">Last Updated Date</th>
+								<th data-data="uptime">Up/Down Time</th>
+							</tr>
+						</thead>
+						<tbody class="text-center"></tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="modal fade" id="live_call_model" tabindex="-1" role="dialog" aria-labelledby="live_call_model_title" style="display: none; padding-right: 17px;" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+
+				<div class="modal-header">
+					<h5 class="modal-title" id="live_call_model_title">
+						${ct_action_type}...<br>
+						<small>You are currently ${ct_action_type}ing to ${ct_row_data.username}...</small>
+					</h5>
+				</div>
+				<div class="modal-body">
+					<div class="row">
+						<label class="col-4 crm-form-label">Agent <span class="float-right">:</span></label>
+						<div class="col-8"><span>${ct_row_data.username}</span></div>
+						<label class="col-4 crm-form-label">Campaign <span class="float-right">:</span></label>
+						<div class="col-8"><span>${ct_row_data.campaign}</span></div>
+						<label class="col-4 crm-form-label">Call Type <span class="float-right">:</span></label>
+						<div class="col-8"><span>${ct_row_data.call_type}</span></div>
+						<label class="col-4 crm-form-label">Number <span class="float-right">:</span></label>
+						<div class="col-8"><span>${ct_row_data.dial_number}</span></div>
+					</div>
+				</div>
+				<div class="modal-footer oct_button">
+					<div class="mr-auto">
+						<template v-for="item in ct_remaning_action">
+							<button v-if="item == 'Listen'" type="button" class="btn btn-primary btn-icon-text btn-sm" title="Listen">
+								<i class="fas fa-headphones-alt btn-icon-prepend"></i>Listen
+							</button>
+							<button v-else-if="item == 'Whisper'" type="button" class="btn btn-success btn-icon-text btn-sm" title="Whisper">
+								<i class="fas fa-headset"></i>Whisper
+							</button>
+							<button v-else-if="item == 'Barge'" type="button" class="btn btn-info btn-icon-text btn-sm" title="Barge">
+								<i class="fas fa-users btn-icon-prepend"></i>Barge
+							</button>
+						</template>
+					</div>
+					<button id="eavesdrop_dissconnect" type="button" class="btn btn-danger btn-sm ml-auto" title="Dissconnect">Dissconnect</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<div class="row d-none">
+	<div class="col-lg-6 grid-margin">
+		<div class="card">
+			<div class="card-body">
+				<h4 class="card-title">Live Chart </h4>
+				<div id="camp_LD_linechart" style="height: 400px"></div>
+			</div>
+		</div>
+	</div>
+	<div class="col-lg-6 grid-margin">
+		<div class="card">
+			<div class="card-body">
+				<h4 class="card-title">Campaign Call</h4>
+				<div id="camp_HR_linechart" style="height: 400px"></div>
+			</div>
+		</div>
+	</div>
+</div>
+<div class="modal fade" id="campaign_lead_deatails" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg" role="document" style="margin-top: 10% !important;">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to update Switch details."></i>
+					<b>Campaign Lead Details</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body p-3">
+				<div class="row">
+					<div class="col-12 grid-margin">
+						<div class="row css_data d-none">
+							<div class="col-6">
+								<label class="text-info" style="font-weight: 600;float: right;">Total Data With CSS:<span id="with_css"></span></label>
+							</div>
+							<div class="col-6">
+								<label class="text-info" style="font-weight: 600;float: left;">Total Data Without CSS:<span id="without_css"></span></label>
+							</div>
+						</div>
+						<table id="campaign-phonebook-table" class="display table-striped nowrap" style="width: 100%">
+							<thead>
+								<tr>
+									<th data-data="name" class="name">Lead List Name</th>
+									<th data-data="ll_total_data" class="ll_total_data">Total Data</th>
+									<th data-data="ll_notdialed_count" class="ll_notdialed_count">Not Dialled Data</th>
+									<th data-data="ll_queuecall_count" class="ll_queuecall_count">Queued Data</th>
+									<th data-data="ll_dialed_count" class="ll_dialed_count">Dialled Data</th>
+									<th data-data="totalcalls_today" class="totalcalls_today">Total Calls Today</th>
+								</tr>
+							</thead>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<!----------- Assign has user campaign wise data ------------>
+<div class="modal fade" id="user_camp_campaign_lead_deatails" tabindex="-1" role="dialog" aria-labelledby="ModalLabel_1" aria-hidden="true">
+	<div class="modal-dialog modal-lg" role="document" style="margin-top: 10% !important;">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel_1">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to update Switch details."></i>
+					<b>User Data Campaign Wise Details</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body p-3">
+				<div class="row">
+					<div class="col-12 grid-margin">
+						<table id="userwise-campaign-details-table" class="display table-striped nowrap" style="width: 100%">
+							<thead>
+								<tr>
+									<th data-data="status"></th>
+									<th data-data="campaign">Campaign</th>
+									<th data-data="assign_data_count">Assigned Data</th>
+									<th data-data="notdialed_data_count">NotDialed Data</th>
+									<th data-data="dialed_data_count">Dialed Data</th>
+								</tr>
+							</thead>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-------------- ------------>
+
+{% endif %}
+{% endblock content %}
+
+{% block extra-js %}
+<script type="text/javascript">
+	var call_type = "{{ user.call_type }}"
+	var server_ip = "{{ server_ip }}"
+	// var socket = '';
+	var sip_login = false;
+	{% if request.user.call_type == 'webrtc' %}
+	ocallSession = ''
+	sip_identity = `sip:${extension}@${host}`
+	websocket_proxy_url = `wss://${host}:{{ user.uservariable.domain.wss_port }}`;
+	outbound_proxy_url = `udp://${host}:{{ user.uservariable.domain.sip_udp_port }}`;
+	{% endif %}
+
+</script>
+<script type="text/javascript">
+	function update() {
+		$('#clock_date').html(moment().format('DD'));
+		$('#clock_day').html(moment().format('dddd'));
+		$('#clock_time').html(moment().format('LT'));
+		$('#clock_month').html(moment().format('MMMM'));
+		}
+	setInterval(update, 100);
+ </script>
+
+<script src="{% static 'js/admin_vue.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<!-- <script src="{% static 'js/socket.io.js' %}"></script>
+<script src="{% static 'js/dialer/node_socket.js' %}"></script> -->
+<!-- <script id="web_socket_client" src="{% static 'js/web_socket_client.js'%}" data-name="{{web_socket_host}}" data-username="{{ request.user.extension }}"></script>
+ -->
+<!-- </script> -->
+
+{% if request.user.call_type == 'webrtc' %}
+<script src="{% static 'webrtc/sip.js' %}"></script>
+<script src="{% static 'webrtc/sip_session.js' %}"></script>
+{% endif %}
+
+<script type="text/javascript">
+$(document).ready(function(){
+		{% if error %}
+		PermissionDeny();
+		{% endif %}
+		live_data.call_data = JSON.parse(`{{bridge_call|safe}}`)
+		$('#live_agent_count').text(`{{live_agent_count}}`)
+		$('#login_count').text(`{{login_count}}`)
+		$('#agent_count').text(`{{total_agent_c}}`)
+		$('#dialer_count').text(`{{dialer_count}}`)
+		$('#logout_count').text(`{{logout_count}}`)
+		$('#inbound_count').text(`{{inbound_count}}`)
+		$('#preview_count').text(`{{preview_count}}`)
+		$('#progressive_count').text(`{{progressive_count}}`)
+		$('#predictive_count').text(`{{predictive_count}}`)
+		$('#manual_count').text(`{{manual_count}}`)
+		$('#a_camp_count').text(`{{a_camp_count}}`)
+		$('#lead_list_count').text(`{{lead_list_count}}`)
+		$('#al_list_count').text(`{{al_list_count}}`)
+		$('#ll_data_count').text(`{{ll_data_count}}`)
+		$('#break_count').text(`{{break_count}}`)
+		trunk_status_table.rows.add({{trunks_data|safe}}).draw(false).columns.adjust()
+		services_status_table.rows.add({{services_data|safe}}).draw(false).columns.adjust()
+		// var nodejs_port = '3232';
+		// socket = io(server_ip  + ':' + nodejs_port, {
+		// 	'reconnection': true,
+		// 	'reconnectionDelay': 1000,
+		// 	'reconnectionDelayMax': 5000,
+		// 	'reconnectionAttempts': 5
+		// });	
+		// socketevents()
+	})
+	$(window).on('beforeunload', function(){
+		if(ocallSession != ''){
+			ocallSession.hangup()
+		}
+		console.log("Bye now!");
+	});
+	$(document).on('change', '#eavesdrop_session',function(){
+		if ($(this).prop("checked") == true){
+			if (socket.connected){
+				if(call_type == "webrtc"){
+					if(ocallSession == ''){
+						sip_login = true
+						sipInitialize();
+					}
+				} else if (call_type == '3') {
+					errorAlert('OOPS!!! Something Went Wrong',"SIP-IP-PHONE enable for this user..., please coordinate your administrator.");
+					$('#eavesdrop_session').prop("checked",false)
+				} else {
+					$('.preloader').fadeIn("fast");
+					$.ajax({
+						type: 'post',
+						headers: {"X-CSRFToken": csrf_token},
+						url: '/api/eavesdrop_session/',
+						data: {'domain_ip': domain_ip, 'extension':extension},
+						success : function(data){
+							$('.preloader').fadeOut("slow");
+							if(!data['success']){
+								errorAlert('OOPS!!! Something Went Wrong',data['error']);
+								$('#eavesdrop_session').prop("checked",false)
+							}
+						}
+					})
+				}
+			} else {
+				errorAlert('Connection Error','Socket Connection Failed... try after reloading the page')
+				this.checked = !this.checked
+			}
+		}
+		else{
+			if(call_type == "webrtc"){
+				if(ocallSession != ''){
+					sip_login = false
+					ocallSession.hangup()
+					ocallSession = ''
+					if (sipStack) {
+						sipStack.stop()
+					}
+					SIPml["b_initialized"] = false
+				}
+				console.log("Bye now!");
+				session_details = {}
+			}
+			else{
+				var session_data = session_details[extension]
+				$.ajax({
+					type: 'post',
+					headers: {"X-CSRFToken": csrf_token},
+					url: '/api/eavesdrop_session/',
+					data: {'session_data': JSON.stringify(session_data)},
+					success : function(data){
+						$('.preloader').fadeOut("slow");
+						if(!data['success']){
+							errorAlert('OOPS!!! Something Went Wrong',data['error']);
+							$('#eavesdrop_session').prop("checked",true)
+						}
+						else{
+							session_details = {}
+						}
+					}
+				})
+			}
+		}
+	})
+</script>
+<script type="text/javascript">
+$(document).ready(function() {
+   $('#ls_agent_table,#ls_campaign_table,#ls_call_table').DataTable();
+  
+});
+
+	$.fn.dataTableExt.afnFiltering.push(
+		function( oSettings, aData, iDataIndex ) {
+			var column_index = 8;
+			var filter = $('#logintime').val().replace(/\s*/g, '');
+			var row_data = parseInt(aData[column_index], 10);
+			if (filter.match(/^<\d+$/)) {
+				var num = filter.match(/\d+$/);
+				return row_data < num ? true : false;
+			}
+			else if (filter.match(/^>\d+$/)) {
+				var num = filter.match(/\d+$/);
+				return row_data > num ? true : false;
+			}
+			else if (filter.match(/^\d+$/)) {
+	          	var num1 = filter.match(/^\d+/);
+		        var num2 = filter.match(/\d+$/);
+		        return (row_data <= num1 && row_data >= num2) ? true : false;
+		    }
+		    else if (filter.match(/^\d+-\d+$/)) {
+		        var num1 = filter.match(/^\d+/);
+		        var num2 = filter.match(/\d+$/);
+		        return (row_data >= num1 && row_data <= num2) ? true : false;
+		    }
+			return true;
+		}
+	);
+	$(document).ready(function() {
+		var oTable = $('#ls_agent_table').dataTable();  
+		$('#logintime').keyup( function() { oTable.fnDraw(); } );
+	});
+</script>
+<script type="text/javascript">
+	console.log(user_name);
+</script>
+{% endblock extra-js %}

@@ -1,0 +1,18 @@
+[Unit]
+Description=CDR demo service
+After=network.target
+StartLimitInterval = 0
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+
+ExecStartPre=/usr/bin/test -x /usr/local/src/flexydial/flexydialenv/bin/django-admin 
+ExecStartPre=/usr/bin/test -e /usr/local/src/flexydial/flexydial/settings.py 
+
+ExecStart=/usr/local/src/flexydial/flexydialenv/bin/python /usr/local/src/flexydial/manage.py cdrd
+StandardOutput=/var/log/flexydial/flexydial-cdrd.log
+
+[Install]
+WantedBy=multi-user.target

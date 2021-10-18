@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+
+{% block title %}Update Skilled Routing{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+
+{% endblock extra-stylesheets %}
+
+{% block header %}Campaign<small>Skill Routing</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'skilledrouting' %}">Skill Routing</a></li>
+<li class="breadcrumb-item active" aria-current="page">Update</li>
+{% endblock breadcrumb %}
+{% block content %}
+{% if can_update %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<form id="create-skilled-routing-form-edit" class="forms-sample" action="" method="PUT">
+					<legend>Skill Routing</legend>
+					<div class="row">
+						<div class="col-12 grid-margin stretch-card">
+							<div class="card">
+								<div class="card-body">
+									{% csrf_token %}
+									<div class="row mb-2">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="tagging_name" class="col-sm-4 col-form-label">Name<span class="star">*</span>:</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control" id="skill_name" placeholder="Enter Skill Name" name="name" data-validation="required alphanumeric"  data-validation="alphanumeric" data-validation-allowing="_ " data-validation-error-msg-container="#skill-name-error" value="{{queryset.name}}" >
+													<span id="skill-name-error"></span>
+												</div>
+											</div>
+										</div>
+										{% comment %}
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="tagging_name" class="col-sm-4 col-form-label">Skill Id<span class="star">*</span>:</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control" id="skill_id" placeholder="Enter Skill Id" name="skill_id" data-validation="required " data-validation-error-msg-container="#skill-id-error" value="{{queryset.skill_id}}" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)">
+													<span id="skill-id-error"></span>
+												</div>
+											</div>
+										</div>
+										{% endcomment %}
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="" class="col-sm-3 col-form-label">Status<span class="star">*</span> :</label>
+												 <div class="col-sm-9">
+													<select class="form-control select_status" id="status" data-validation="required" name="status" >
+															{% for st_us in status %}
+															{% if st_us.0 == queryset.status %}
+																<option value="{{st_us.1}}" selected>{{ st_us.0 }}</option>
+															{% else %}
+																<option value="{{st_us.1}}">{{ st_us.0 }}</option>
+															{% endif %}
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="" class="col-sm-4 col-form-label">Welcome Audio<span class="star">*</span>:</label>
+												<div class="col-sm-8">
+													<select class="form-control" name="welcome_audio" id="welcome_audio" data-validation="required">
+														<option value="">Select Welcome Audio file </option>
+														{% for audio in audio_file %}
+															{% if audio.name == welcome_file %}
+																<option value="{{audio.name}}" selected>{{ audio.name }}</option>
+															{% else %}
+															<option value='{{ audio.name }}'>{{ audio.name }}</option>
+															{% endif %}
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6" id="">
+											<div class="form-group row" id="ibc_div">
+												<label class="col-sm-3 col-form-label"> Sibc_popup:</label>
+												<div class="col-md-8 form-inline">
+													<div class="form-check">
+														<label class="form-check-label" style="margin-left: 0px !important">
+															<input type="checkbox" id="skill_popup" class="form-check-input" name="skill_popup" {% if queryset.skill_popup %}checked {% endif %}>
+															<i class="input-helper"></i>
+														</label>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div id="add_trunk_div">
+										{% include "campaign/trunk_group_expansion.html" %} 
+									</div>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="" class="col-sm-4 col-form-label">Schedule Time :</label>
+												<div class="col-sm-8">
+													<select class="form-control" name="schedule" id="schedule">
+														<option value="">Select Shift</option>
+														{% for st_us in schedules %}
+														{% if st_us.id == queryset.schedule.id %}
+															<option value="{{st_us.id}}" selected>{{ st_us.name }}</option>
+														{% else %}
+															<option value="{{st_us.id}}">{{ st_us.name }}</option>
+														{% endif %}
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="" class="col-sm-4 col-form-label">Abandoned campaign :</label>
+												<div class="col-sm-8">
+														<select class="form-control" name="d_abandoned_camp" id="d_abandoned_camp" data-toggle="tooltip" data-original-title="Abandoned Call campaign">
+															<option value="">Select Campaign</option>
+															{% for camp in campaigns %}
+																{% if camp == queryset.d_abandoned_camp %}
+																	<option value="{{camp}}" selected>{{camp}}</option>
+																{%else%}
+																	{% if camp != 'hangup' and camp != 'repeat'%}
+																	<option value="{{camp}}">{{camp}}</option>
+																	{% endif %}
+																{% endif %}
+															{% endfor %}
+														</select>
+														<span id='campaign-error-dialog'></span>
+													<!-- <span class="text-danger" v-show="val.error">Digit already selected for Campaign</span> -->
+												</div>
+											</div>
+										</div>																			
+									</div>	
+									<div> 
+									<div class="row collapse show collapse-div" role="tabpanel" aria-labelledby="clone-crmf-heading"  style="" id="skilledrouting_vue">
+										<div class="card-body">
+												<div class="form-froup row" >
+													<div class="col-md-6" v-for="(val,index) in skills_route" v-bind:key="index">
+														<div class="form-group row">
+															<label for="" class="col-sm-4 col-form-label">Press  <span class="star">*</span></label>
+															<div class="col-sm-3">
+																<select class="form-control" v-model="val.label"  data-validation="required" data-validation-error-msg="select skill number" @change="selectNumber($event, index)">
+																	<template v-for="num in dial_numbers">
+																		<option v-if="num == 'default' && index > 0" :value="num" disabled>${num}</option>
+																		<option v-else :value="num">${num}</option>
+																	</template>
+																</select>
+															</div>
+															 <div class="col-sm-3">
+																<select class="form-control" name="camaign" data-validation="required" id="campaign" data-toggle="tooltip" v-model="val.campaign" data-original-title="Select a campaign" data-validation-error-msg="Please select a campaign"  data-validation-error-msg-container="#campaign-error-dialog">
+																	<option value="">Select Campaign</option>
+																	 <option v-for="option in campaign" :value="option">${option}</option>
+																</select>
+																<span id='campaign-error-dialog'></span>
+																<span class="text-danger" v-show="val.error">Digit already selected for Campaign</span>
+															</div>
+															<span v-if="skills_route.length > 1" @click="RemoveSkill(index)" class="d-inline fa fa-times-circle text-danger remove-section" style="font-size: 20px; position: relative;top: 8px;"></span>
+															<span v-if="index+1 === skills_route.length && index < 11 && val.label != 'default'"  @click="AddSkill(index+1)" class="d-inline fa fa-plus-circle text-success ml-1 add-section" style="float:right; font-size: 20px; position: relative;top: 8px;"></span>
+														</div>
+													</div>
+												</div>
+												<div class="row">
+													<div class="col-sm-6">
+														<div class="alert alert-danger d-none skill-err-msg" id="skill-err-msg"></div>
+													</div>
+													<div class="col-sm-6">
+													<div class="float-right">
+														<button type="button" class="btn btn-success mr-sm-2 edit-skill-btn "  id="edit-skill-btn">Update</button>
+														<input type="hidden" id="skillmap-id"  value="{{queryset.id}}">
+													</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+<input type="hidden" id="app_name" value="callcenter">
+<input type="hidden" id="model_name" value="SkilledRouting">
+{% endblock content %}
+
+{% block extra-js %}
+<script type="text/x-template" id="single_select_template">
+	<select>
+		<slot></slot>
+	</select>
+</script>
+<script src="{% static 'js/form-validator.min.js' %}"></script>
+<script src="{% static 'js/dial_trunk.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	{% if can_update %}
+	skill_vue.onEditSkill({{raw_data|safe}})
+	skill_vue.campaign ={{campaigns|safe}}
+	add_trunk_vue.camp_page =true
+	var is_trunk = false;
+	add_trunk_vue.used_did = {{used_did|safe}}
+	add_trunk_vue.trunk_list={{trunk_list|convert_in_json|safe}}
+	add_trunk_vue.did_type = [{"text":"single","id":"single"},{"text":"multiple","id":"multiple"},{"text":"select all","id":"select_all"}]
+	add_trunk_vue.skill_ingroup = true
+	add_trunk_vue.hide_single_trunk = false
+		var skill_query_set ={{queryset.skill_id|safe}}
+		skill_query_set = skill_query_set
+		did_type = skill_query_set.did_type
+		did_start = skill_query_set.did_start
+		did_end = skill_query_set.did_end
+		did = skill_query_set.did
+		trunk_id = skill_query_set.trunk_id
+		// console.log({{queryset.skill_id|safe}},"sddddddddd")
+		range_array = []
+		$.each(add_trunk_vue.trunk_list, function(index,trunk_val){
+
+                    if( trunk_val["id"] === parseInt(trunk_id)){
+                    	is_trunk = true
+                        var temp_range = trunk_val["did_range"].split(",")
+                        var start_end = temp_range[0]
+                        if (temp_range[1] == undefined) {
+                            end_node = start_end
+                        }
+                        else {
+                            end_node = temp_range[1]
+                        }
+                        let is_leading_zero = false
+                        let start_end_length = start_end.length
+                        if (start_end.match(/^0+/)) {
+                            is_leading_zero = true
+                        }
+                        for (i = start_end; i <= end_node; i++) {
+                        	let did_value = (is_leading_zero) ? i.toString().padStart(start_end_length,"0") : i.toString()
+                        	if(add_trunk_vue.used_did.indexOf(did_value.toString()) === -1){
+                                select_options = {
+			                		"id":i,
+			                		"text":did_value,
+			                		"disabled":false,
+			                	}
+                            }else{
+                            	select_options = {
+			                		"id":i,
+			                		"text":did_value,
+			                		"disabled":true,
+			                	}
+                            }
+                            range_array.push(select_options)
+                        }
+                    }
+                })
+		// $('[value="single_trunk"]').attr("checked",true).trigger("change")
+		if(is_trunk==true){
+			dummy_data = {"trunk_priority":1, "trunk_id":trunk_id,"did_type":did_type,"did_start":did_start,"did_end":did_end,"did":did,"options":range_array, "old_trunk":trunk_id}
+			if (did_type=="single") {
+				dummy_data["did"] = did[0]
+			}
+		}else{
+			dummy_data = {"trunk_priority":1, "trunk_id":"","did_type":"","did":[],"options":[], "old_trunk":""}
+		}
+		add_trunk_vue.group_trunk_list.push(dummy_data)
+
+	// var cal_bck = {{queryset.callback}}
+	// if(cal_bck != 'None'){
+	// 	skill_vue.callback_val = {{queryset.callback}}
+	// }else{
+	// 	skill_vue.callback_val = ''
+	// }
+{% else %}
+	PermissionDeny()
+{% endif %}
+</script>
+
+{% endblock extra-js %}

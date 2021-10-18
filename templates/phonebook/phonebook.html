@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Lead List{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+
+{% endblock extra-stylesheets %}
+
+{% block header %}CRM<small>Lead List</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Lead List</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Lead List</legend>
+				{% csrf_token %}
+				<!-- crm list tab and table -->
+				<div class="append_table">
+					<div class="col-12">
+						{% include "search.html" %}    
+					</div>
+					<div class="row">
+						<div class="col-12">
+							<table id="crm-list-table" class="table display table-striped nowrap avatar-table" style="width: 100%">
+								<thead>
+									<tr>
+										<th class="avatar"> </th>
+										<th data-data="name" class="name">Name</th>
+										<th data-data="campaign_name">Campaign</th>
+										<th data-data="status">Status</th>
+										<th data-data="percentage" class="percentage">Uploaded Status</th>
+										<th data-data="last_updated_contact_count" class="last_updated_contact_count">Last Updated</th>
+										<th data-data="total_contact_count" class="total_contact_count">Total Contact</th>
+										<th data-data="improper_file_name" class="improper_data">Improper Data</th>
+										<th data-data="expire_date">Expire Date</th>
+										<th data-data="created_by">Created By</th>
+										<th data-data="created_date" class="list_date">created date</th>
+										<th data-data="modified_date" class="list_date">modified date</th>
+										{% if can_update or can_delete %}
+											<th data-data="checkbox_col" class="checkbox_col">
+												<div class="btn-group select-all-div">
+													<div class="form-check">
+														<label class="form-check-label ml-3">
+															<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+															<i class="input-helper"></i>
+														</label>
+													</div>
+													<div class="dropdown">
+														<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+															<span class="caret"></span></button>
+														<ul class="dropdown-menu">
+															{% if can_update %}
+															<li class="dropdown-item text-center" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make Active')">Active Selected</li>
+															<li class="dropdown-item text-center" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make InActive')">Inactive Selected
+															{% endif%}
+															{% if can_delete %}
+															<li class="dropdown-item text-center" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">Delete Selected</li>
+															{% endif %}
+														</ul>
+													</div>
+												</div>
+											</th>
+											<th data-data="action" class="action">Action</th>
+										{% endif %}
+									</tr>
+								</thead>
+							</table>
+							{% include "vue_pagination.html" %}  
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="modal fade" id="LeadListModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel-2">
+            <div class="modal-dialog" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="exampleModalLabel-2">Churn Lead List Contact</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                  </button>
+                </div>
+                <div class="modal-body">
+                	<form id="churn_list_form" action="#">
+                		<div class="row">
+                			<div class="col-12">
+								<div class="form-group">
+									<label class="col-form-label mb-0">Start Date<span class='star'>*</span> :</label>
+									<div data-target-input="nearest" class="input-group date" id="start-date">
+										<div data-target="#start-date" data-toggle="datetimepicker" class="input-group datetimepicker">
+											<input type="text" name="start_date" placeholder="YYYY-MM-DD HH:mm" data-target="#start-date" class="form-control crm-form-control datetimepicker-input" autocomplete="off" data-validation="required">
+											<div class="input-group-addon input-group-append">
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="form-group">
+									<label class="col-form-label mb-0">End Date<span class='star'>*</span> :</label>
+									<div data-target-input="nearest" class="input-group date " id="end-date">
+										<div data-target="#end-date" data-toggle="datetimepicker" class="input-group datetimepicker">
+											<input type="text" name="end_date" placeholder="YYYY-MM-DD HH:mm" data-target="#end-date" class="form-control crm-form-control datetimepicker-input" autocomplete="off" data-validation="required">
+											<div class="input-group-addon input-group-append">
+
+											</div>
+										</div>
+									</div>
+								</div>							
+                				<div class="form-group">
+                					<label for="campaign" class="col-sm-3 col-form-label">Disposition<span class='star'>*</span> :</label>
+                					<div class="col-sm-9">
+                						<select class="form-control select2-class" name="leadchurn" data-validation="required" id="lead-phonebook-churn" multiple>
+                							<option value="">Select Disposition</option>
+                						</select>
+                					</div>
+                				</div>
+                				<div class="form-group">
+                					<label for="campaign" class="col-sm-3 col-form-label">User :</label>
+                					<div class="col-sm-9">
+                						<select class="form-control select2-class" name="user"  id="user-churn" multiple>
+                							<option value="">Select User</option>
+                						</select>
+                					</div>
+                				</div>
+                			</div>                        		
+	                        <div class="col-12">
+								<div class="alert alert-danger mb-sm-0 p-2 d-none" id="leadchurn-err-msg"></div>
+							</div>
+                		</div>
+                		<div class="row">
+							<div class="col-12 mt-3 contact_summery_div d-none" id="summery_div">
+								<p class="text_msg_content"></p>
+							</div>
+						</div>
+                		<input type="hidden" name="leadchurn-count" id="lead_value"/>
+                	</form>
+              </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-warning" id="leadchurn-count-click">Check Count</button>
+              <button type="button" class="btn btn-success" id="leadchurn-smbt-button">Submit</button>
+              <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+            </div>
+            </div>
+        </div>
+	<input type="hidden" id="app_name" value="crm">
+	<input type="hidden" id="model_name" value="Phonebook">
+</div>
+{% endif %}
+{% if can_create %}
+<!-- action buttons -->
+<div class="bottom-menu">
+	<div class="action-button-circle" data-toggle="modal">
+		<a href="{% url 'create-phonebook' %}" title="Upload List">
+			<div class="circle-button skin-black">
+				<i class="fa fa-plus button-area add-department"></i>
+			</div>
+		</a>
+	</div>
+</div>
+{% endif %}
+
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/circle_progress.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/reports.js' %}"></script>
+<script id="web_socket_client" src="{% static 'js/web_socket_client.js'%}" data-name="{{web_socket_host}}"></script>
+
+<script type="text/javascript">
+	$(document).ready(function() {
+			url = location.pathname
+			var phonebook_table = $('#crm-list-table')
+			selective_datatable(phonebook_table)
+			$.validate();
+			edit_url = "{% url 'edit-phonebook' 123 %}"
+			get_pagination_data(1, true)
+			{% if not can_read %}
+				PermissionDeny();
+			{% endif %}
+		});
+
+	</script>
+{% endblock extra-js %}

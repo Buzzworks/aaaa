@@ -1,0 +1,91 @@
+<div class="col-12">
+	{% include "search.html" %}    
+</div>
+<div class="">
+	{% if queryset %}
+	<table id="dnc-list-table" class="table display table-striped nowrap" style="width:100%">
+		<thead>
+			<tr>
+				<th></th>
+				<th>Numeric</th>
+				<th>Campiagn</th>
+				<th>Global-DNC</th>
+				<th>Status</th>
+				{% if can_update or can_delete %}
+				<th class="px-1">
+					<div class="btn-group select-all-div">
+						<div class="form-check">
+							<label class="form-check-label ml-3">
+								<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+								<i class="input-helper"></i>
+							</label>
+						</div>
+						<div class="dropdown">
+							<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+								<center>
+									<span class="caret"></span>
+								</center>
+							</button>
+							<ul class="dropdown-menu">
+								{% if can_delete %}
+								<li class="dropdown-item text-center" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">Delete Selected</li>
+								{% endif %}
+								{% if can_update %}
+								<li class="dropdown-item text-center" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make Active')">Make Active</li>											
+								<li class="dropdown-item text-center" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make InActive')">Make Inactive</li>											
+								{% endif %}
+
+							</ul>
+						</div>
+					</div>
+				</th>
+				<th data-data="action" class="action">Action</th>
+				{% endif %}
+			</tr>
+		</thead>
+		<tbody id="user-table-body" class="data-body-div">
+			{% for num in queryset %}
+			<tr id="{{ num.id }}">
+				<td><avatar username="{{ num.numeric }}" :size="36"></avatar></td>
+				<td><a class="dnc-modify name-el" data-dncid="{{num.id}}">{{ num.numeric }}</a></td>
+				<td>{{ num.campaign_list }}</td>
+				<td>{{ num.global_dnc }}</td>
+				<td>{{ num.status }}</td>
+				{% if can_update or can_delete %}
+				<td>
+					<div class="form-check">
+						<label class="form-check-label">
+							<input type="checkbox" class="form-check-input"><i class="input-helper"></i>
+						</label>
+					</div>
+				</td>
+				<td>
+					<div class="dropdown show">
+						<button class="btn btn-secondary dropdown-toggle table-dropdown" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+							Choose Action
+						</button>
+						<div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+							<a class="dropdown-item dnc-modify" data-dncid="{{num.id}}">Modify</a>
+							{% if can_delete %}
+							<a class="dropdown-item" onclick="confirmDelete('delete_one', 'Ok','particular_entry-{{ num.id}}')">Delete</a>
+							{% endif %}
+							{% if can_update %}
+								{% if num.status == 'Active' %}
+									<li class="dropdown-item" onclick="confirmActiveStatus('delete_one', 'Ok','particular_entry-{{ num.id}}-Make InActive')">Inactive Selected
+												</li>
+								{% else %}
+									<li class="dropdown-item" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','particular_entry-{{ num.id}}-Make Active')">Active Selected
+									</li>
+								{% endif %}
+							{% endif %}
+						</div>
+					</div>
+				</td>
+				{% endif %}
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+	{% include "custom_pagination.html" %} 
+	{% endif %}
+</div>

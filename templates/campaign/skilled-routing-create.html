@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+
+{% block title %}Create Skilled Routing{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+
+{% endblock extra-stylesheets %}
+
+{% block header %}Campaign<small>Skill Routing</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'skilledrouting' %}">Skill Routing</a></li>
+<li class="breadcrumb-item active" aria-current="page">Create</li>
+{% endblock breadcrumb %}
+{% block content %}
+{% if can_create %}
+<!-- action buttons -->
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<form id="create-skilled-routing-form" class="forms-sample" action="" method="POST">
+					<legend>Skill Routing</legend>
+					<div class="row">
+						<div class="col-12 grid-margin stretch-card">
+							<div class="card">
+								<div class="card-body">
+									{% csrf_token %}
+									<div class="row mb-2">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="tagging_name" class="col-sm-4 col-form-label">Name<span class="star">*</span>:</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control" id="skill_name" placeholder="Enter Skill Name" name="name" data-validation="required alphanumeric"  data-validation="alphanumeric" data-validation-allowing="_ " data-validation-error-msg-container="#skill-name-error" value="" >
+													<span id="skill-name-error"></span>
+												</div>
+											</div>
+										</div>
+										{% comment %}
+										<div class="col-md-3 pl-4">
+											<div class="form-group row">
+												<label for="tagging_name" class="col-sm-4 col-form-label">Skill Id<span class="star">*</span>:</label>
+												<div class="col-md-10">
+													<input type="text" class="form-control" id="skill_id" placeholder="Enter Skill Id" name="skill_id" data-validation="required" data-validation-error-msg-container="#skill-id-error" value="" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)">
+													<span id="skill-id-error"></span>
+												</div>
+											</div>
+										</div>
+										{% endcomment %}
+										<div class="col-md-6"> 
+											<div class="form-group row">
+												<label for="" class="col-sm-4 col-form-label">Status<span class="star">*</span> :</label>
+												<div class="col-sm-8" >
+													<select class="form-control select_status" id="select_status" data-validation="required" name="status" >
+															{% for stat in status %}
+															<option value="{{stat.0}}">{{stat.1}}</option>
+															{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>	
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="" class="col-sm-4 col-form-label">Welcome Audio<span class="star">*</span>:</label>
+												<div class="col-md-8">
+													<select class="form-control" name="welcome_audio" id="welcome_audio" data-validation="required">
+														<option value="">Select Welcome Audio file </option>
+														{% for audio in audio_file %}
+														<option value='{{ audio.name }}'>{{ audio.name }}</option>
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6" id="">
+											<div class="form-group row" id="ibc_div">
+												<label class="col-sm-4 col-form-label"> Sibc_popup:</label>
+												<div class="col-md-8 form-inline">
+													<div class="form-check">
+														<label class="form-check-label" style="margin-left: 0px !important">
+															<input type="checkbox" id="skill_popup" class="form-check-input" name="skill_popup">
+															<i class="input-helper"></i>
+														</label>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+									{% comment %}
+									<div class="col-md-6">
+										<div class="form-group row">
+											<label for="" class="col-sm-4 col-form-label">Skill Id <span class="star">*</span>:</label>
+										</div>
+									</div>	
+									{% endcomment %}
+									<div id="add_trunk_div">
+										{% include "campaign/trunk_group_expansion.html" %} 
+									</div>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="" class="col-sm-4 col-form-label">Schedule Time :</label>
+												<div class="col-sm-8">
+													<select class="form-control" name="schedule" id="schedule" >
+														<option value="">Select Shift</option>
+														{% for time in schedules %}
+														<option value="{{ time.id }}">{{ time.name }}</option>
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="" class="col-sm-4 col-form-label">Abandoned campaign :</label>
+												<div class="col-sm-8">
+														<select class="form-control" name="d_abandoned_camp" id="d_abandoned_camp" data-toggle="tooltip" data-original-title="Abandoned Call campaign">
+															<option value="">Select Campaign</option>
+															{% for camp in campaign %}
+																{% if camp != 'hangup' and camp != 'repeat'%}
+																<option value="{{camp}}">{{camp}}</option>
+																{% endif %}
+															{% endfor %}
+														</select>
+														<span id='campaign-error-dialog'></span>
+													<!-- <span class="text-danger" v-show="val.error">Digit already selected for Campaign</span> -->
+												</div>
+											</div>
+										</div>																			
+									</div>
+									<div class="row" id="skilledrouting_vue">
+										<div class="col-md-6" v-for="(val,index) in skills_route" v-bind:key="index">
+											<div class="form-group row mb-1">
+												<label for="" class="col-sm-4 col-form-label">Press  <span class="star">*</span>:</label>
+												<div class="col-sm-3">
+													<select class="form-control" v-model="val.label"  data-validation="required" data-validation-error-msg="select skill number" @change="selectNumber($event, index)">
+														<option value="" disabled>Select key</option>
+														<template v-for="num in dial_numbers">
+															<option v-if="num == 'default' && index > 0" :value="num" disabled>${num}</option>
+															<option v-else :value="num">${num}</option>
+														</template>
+													</select>
+												</div>
+
+												 <div class="col-sm-4">
+													<select class="form-control" name="campaign" data-validation="required" id="campaign" data-toggle="tooltip" v-model="val.campaign" data-original-title="Select a campaign" data-validation-error-msg="Please select a campaign"  data-validation-error-msg-container="#campaign-error-dialog">
+														<option value="" disabled>Select Campaign</option>
+														<template v-for="option in campaign">
+															<option v-if="val.label == 'default' && (option == 'hangup' || option == 'repeat')" :value="option" disabled>${option}</option>
+															<option v-else :value="option">${option}</option>
+														</template>
+													</select>
+													<span id='campaign-error-dialog'></span>
+												<span class="text-danger" v-show="val.error">Digit already selected for Campaign</span>
+												</div>
+												<span v-if="skills_route.length > 1" @click="RemoveSkill(index,val.label)" class="d-inline fa fa-times-circle text-danger remove-section" style="font-size: 20px; position: relative;top: 8px;"></span>
+												<span v-if="index+1 === skills_route.length && index < 11 && val.label != 'default'"  @click="AddSkill(index+1,val.label)" class="d-inline fa fa-plus-circle text-success ml-1 add-section" style="float:right; font-size: 20px; position: relative;top: 8px;"></span>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-sm-6">
+											<div class="alert alert-danger d-none skill-err-msg" id="skill-err-msg"></div>
+										</div>
+										<div class="col-sm-6">
+											<div class="float-right">
+												<button type="button" class="btn btn-success mr-sm-2 create-skill-btn" id="create-skill-btn">Submit</button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+<input type="hidden" id="app_name" value="callcenter">
+<input type="hidden" id="model_name" value="SkilledRouting">
+{% endif %}
+{% endblock content %}
+
+{% block extra-js %}
+
+<script type="text/x-template" id="single_select_template">
+	<select>
+		<slot></slot>
+	</select>
+</script>
+<script src="{% static 'js/form-validator.min.js' %}"></script>
+<script src="{% static 'js/dial_trunk.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script>
+	add_trunk_vue.camp_page =true
+	add_trunk_vue.used_did = {{used_did|safe}}
+	add_trunk_vue.trunk_list={{trunk_list|convert_in_json|safe}}
+	add_trunk_vue.skill_ingroup = true
+	add_trunk_vue.did_type = [{"text":"single","id":"single"},{"text":"multiple","id":"multiple"},{"text":"select all","id":"select_all"}]
+	add_trunk_vue.group_trunk_list.push({"trunk_priority":1, "trunk_id":"","did_type":"","did":[],"did_start":"","did_end":"","options":[], 'old_trunk':''})
+	{% if can_create %}
+	skill_vue.campaign ={{campaign|safe}}
+{%else%}
+	PermissionDeny()
+{% endif %}
+</script>
+
+{% endblock extra-js %}

@@ -1,0 +1,50 @@
+<div class="form-group row" id="" v-if="hide_single_trunk==false" v-for="(val,index) in group_trunk_list">
+	<label class="px-1 px-sm-2 col-form-label" v-model="val['trunk_priority']" v-if="camp_page==false">${index+1}.</label>
+	<label for="lead_name" class="col-2 col-form-label" v-if="camp_page==true">Select Trunk:</label>
+	<div class="col-10">
+		<div class="row">
+			<div class="col-12 col-sm-6 col-md-4 mb-2">
+				<single-select class="form-control col-5"  name="trunk" data-validation="required" :id="index+'-trunk_id'" :options="trunk_list" v-model="val['trunk_id']" v-on:where-change="calculateChannelCount(val['trunk_id'], index,index, val['old_trunk'])">
+				<option value="">Select Trunk</option>
+				</single-select>
+				<span class="has-error d-none" :id="index+'-exist_error'"><span class="help-block form-error">This dial trunk alredy selected in other group, select differnt trunk</span></span>
+				<span class="has-error d-none" :id="index+'-exist_current_error'"><span class="help-block form-error">This dial trunk alredy selected, select differnt trunk</span></span>
+			</div>
+			<div class="col-12 col-sm-6 col-md-4 mb-2" v-if="val['trunk_id']">
+				<single-select class="form-control col-5"  name="did_option" data-validation="required" :id="index+'-did_option'" :options="did_type" v-model="val['did_type']" v-on:where-change="checkDidType(index,val['did_type'])" :key="val['trunk_id']">
+				<option value="">Select Option</option>
+				</single-select>
+			</div>
+			<div class="col-12 col-md-4 mb-2" v-if="val['did_type']=='multiple'|| val['did_type'] == 'select_all'">
+				<select2 class="form-control col-5"  :name="index+'selected_did'" data-validation="required" :id="index+'-did_option_multiple'" :options="val['options']" v-model="val['did']"  :multiple="true" :key="index+'multiple'+val['trunk_id']">
+				<option value="" disabled>Select Option</option>
+				</select2>
+			</div>
+			<div v-if="val['did_type'] =='range'" class="col-12 col-md-4 mb-2">
+				<div class="row">
+					<div class="col-5">
+						<single-select class="form-control col-5"  name="did_option" data-validation="required" :id="index+'-did_start'" :options="val['options']" v-model="val['did_start']" v-on:where-change="changeDidRnageValue(val['did_start'], val['did_end'], 'start', index)" :key="index+'start'+val['trunk_id']">
+						</single-select>
+						<span class="has-error d-none" :id="index+'-start_less_error'"><span class="help-block form-error">Start value should be lesser than end</span></span>
+					</div>
+					<label for="dial_string" class="px-2 col-form-label text-center">to</label>
+					<div class="col-5">
+						<single-select class="form-control col-5"  name="did_option" data-validation="required" :id="index+'-did_end'" :options="val['options']" v-model="val['did_end']" :key="index+'end'+val['trunk_id']" v-on:where-change="changeDidRnageValue(val['did_start'], val['did_end'], 'end', index)">
+						</single-select>
+						<span class="has-error d-none" :id="index+'-end_greater_error'"><span class="help-block form-error">End Value should be greater than start</span></span>
+					</div>
+				</div>
+			</div>
+			<div class="col-12 col-sm-8 col-md-4 mb-2" v-if="val['did_type']=='single'">
+				<single-select class="form-control col-5"  :name="index+'selected_did'" data-validation="required" :id="index+'-did_option_single'" :options="val['options']" v-model="val['did']" :key="index+'single'+val['trunk_id']">
+				<option value="">Select Option</option>
+				</single-select>
+			</div>
+		</div>
+	</div>
+	<div class="col-1 mt-2 px-0 px-sm-2 d-inline">
+		<span v-if="group_trunk_list.length > 1" @click="remove_trunk(index)" class="fa fa-times-circle ml-1 ml-sm-2 text-danger" style="font-size: 20px; cursor: pointer;"></span>
+		<span v-if="index+1 === group_trunk_list.length && index < 4 && camp_page === false" @click="add_dial_trunk(index)" class="fa fa-plus-circle text-success ml-1 ml-sm-2 mt-1 mt-sm-0" style="font-size: 20px; cursor: pointer;"></span>
+	</div>
+</div>
+

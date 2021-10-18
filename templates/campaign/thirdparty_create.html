@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}ThirdParty API{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+{% endblock extra-stylesheets %}
+
+{% block header %}Modules<small>ThirdParty CRM</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'thirdpartyapi' %}">ThirdParty CRM</a></li>
+<li class="breadcrumb-item active" aria-current="page">Create</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_create %}
+<div class="card">
+	<div class="card-body">
+		<legend>Create ThirdParty CRM</legend>
+		<form class="forms-sample" id="thirdparty-create-form">
+			<input type="hidden" name="weburl" id="weburl">
+			{% csrf_token %}
+			<div class="row">
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="thirdParty-name" class="col-sm-4 col-form-label">Name<span class="star">*</span> :</label>
+						<div class="col-sm-8">
+							<input type="text" data-toggle="tooltip" data-original-title="Enter Name" class="form-control" id="thirdParty-name" placeholder="Name" name="name" data-validation="length alphanumeric" data-validation-length="max100" data-validation-allowing="_",data-validation-error-msg-container="#thirdparty_name_exist">
+							<span id="thirdparty_name_exist"></span>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="" class="col-sm-4 col-form-label">Status</label>
+						<div class="col-sm-8">
+							<select class="form-control" name="status" id="status">
+								{% for status in api_status %}
+								<option value="{{ status.0 }}">{{ status.1 }}</option>
+								{% endfor %}
+							</select>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="" class="col-sm-4 col-form-label">Campaign<span class="star">*</span> :</label>
+						<div class="col-sm-8">
+							<select class="form-control" name="campaign" id="api_campaign_crm" multiple  data-validation="required">
+								{% for campaign in campaigns %}
+								<option value="{{ campaign.id }}" >{{ campaign.name }}</option>
+								{% endfor %}
+							</select>
+						</div>
+					</div>
+					<span id="api-camp-error" class="alert alert-danger d-none"></span>
+					<span id="camp_exists" class="alert alert-danger d-none"></span>
+				</div>
+				<div class="col-md-6">
+						<div class="form-group row" id="apimode_div">
+							<label for="description" class="col-sm-4 col-form-label">API Mode <span class="star">*</span>:</label>
+							<div class="col-sm-8 mb-3">
+								<select class="form-control" id="api_mode_select" data-toggle="tooltip" title="Select API Mode" data-validation="required">
+									<option value="">Select api Mode</option>
+									{% for api_mode in api_modes %}
+									<option value="{{api_mode.0}}">{{api_mode.0}}</option>
+									{% endfor %}
+								</select>
+							</div>
+							<div id="api_err_msg" class="alert alert-danger d-none"></div>
+						</div>
+					</div>
+				<!-- row ends here -->
+			</div>
+			<div class="row">
+				<div class="col-md-6"> 	
+					<div class="form-group row">
+						<label for="click_url" class="col-7 col-sm-5 col-form-label">Click For Details :</label> 
+						<div class="col-5 col-sm-7 form-inline">
+							<div class="form-check">
+								<label class="form-check-label">
+									<input type="checkbox" class="form-check-input" name="click_url" id="click_url">
+									<i class="input-helper"></i>
+								</label>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6"> 	
+					<div class="form-group row">
+						<label for="dynamic_api" class="col-7 col-sm-5 col-form-label">Dymanic API :</label> 
+						<div class="col-5 col-sm-7 form-inline">
+					 		<div class="form-check">
+			 					<label class="form-check-label">
+			 						<input type="checkbox" class="form-check-input" name="dynamic_api" id="dynamic_api">
+			 						<i class="input-helper"></i>
+			 					</label>
+			 				</div>
+				 		</div>
+				 	</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row " id="api_url_div">
+						<label for="description" class="col-sm-4 col-form-label">API<span class="star">*</span> :</label>
+						<div class="col-sm-8 mb-3">
+							<input type="url" class="form-control noSpace" id="api_weburl" data-validation="url">
+							<div id="api_url_err_msg"></div>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6 d-none" id="api_parameters_div"> 
+					<div class="form-group row">
+						<label for="api_parameters" class="col-sm-4 col-form-label">API Parameters:</label>
+						<div class="col-sm-8">
+							<select class="form-control" id="api_parameters" multiple>
+							</select>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row mt-4">
+				<div class="col-sm-6">
+					<div class="alert alert-danger d-none thirdarty-err-msg" id="thirdparty-err-msg"></div>
+				</div>
+				<div class="col-sm-6">
+					<div class="float-right">
+						<button type="button" class="btn btn-light btn-icon-text " onclick="showSwal('warning-message-and-cancel','OK', '/CampaignManagement/third-party-api/')">
+							<i class="fas fa-arrow-left btn-icon-prepend"></i>Cancel
+						</button>
+						<button type="button" class="btn btn-success btn-icon-text ml-2 create-thirdparty-btn" id="create-thirdparty-btn">
+							<i class="far fa-check-square btn-icon-prepend"></i>Submit
+						</button>
+					</div>
+				</div>
+			</div>
+		</form>
+	</div>
+</div>
+<input type="hidden" id="app_name" value="callcenter">
+<input type="hidden" id="model_name" value="ThirdPartyApi">
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	$('#api_parameters,#api_campaign_crm').select2()
+</script>
+{% endblock extra-js %}

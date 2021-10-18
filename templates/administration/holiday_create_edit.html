@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{% if holidays %}Edit {% else %}Create{% endif %} Holidays List{% endblock title %}
+{% block extra-stylesheets %}
+<!-- <link rel="stylesheet" href="{% static 'melody/vendors/summernote/dist/summernote-bs4.css' %}"> -->
+{% endblock extra-stylesheets %}
+{% block header %}Modules<small>{% if holidays %}Edit {% else %}Create{% endif %} Holidays List</small>{% endblock header %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'holidays' %}">Holidays</a></li>
+<li class="breadcrumb-item active" aria-current="page">{% if holidays %}Modify{% else %}Create{% endif %}</li>
+{% endblock breadcrumb %}
+{% block content %}
+{% if can_view %}
+<div class="card">
+	<div class="card-body">
+		<legend {% if not is_edit %}class="mb-2"{% endif %}>{% if holidays %}Edit {% else %}Create{% endif %}Holidays </legend>
+		<form class="forms-sample" id="holidays-create-form">
+			{% csrf_token %}
+			<div class="row">
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="name" class="col-sm-4 col-form-label">Name<span class="star">*</span> :</label>
+						<div class="col-sm-8">
+							<input type="text" class="form-control" data-toggle="tooltip" data-original-title="Enter holiday Name" id="name" placeholder="Name" name="name" data-validation="required" data-validation-error-msg-container="#name-error">
+							<span id="name-error"></span>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="" class="col-sm-4 col-form-label">Status :</label>
+						<div class="col-sm-8">
+							{% if sms_template %}
+							<select class="form-control" name="status">
+								{% for status in holiday_list_status %}
+								{% if status.0 == holidays.status %}
+								<option value="{{ status.0 }}" selected>{{ status.1 }}</option>
+								{% else %}
+								<option value="{{ status.0 }}">{{ status.1 }}</option>
+								{% endif %}
+								{% endfor %}
+							</select>
+							{% else %}
+							<select class="form-control" name="status">
+								{% for status in holiday_list_status %}
+								<option value="{{ status.0 }}">{{ status.1 }}</option>
+								{% endfor %}
+							</select>
+							{% endif %}
+						</div>
+					</div>
+				</div>										
+			</div>
+			<div class="row">
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="" class="col-sm-4 col-form-label">Audio :</label>
+						<div class="col-sm-8">
+							<select class="form-control" id="audio_file" name="holiday_audio">
+								<option value="">Select the audio file </option>
+								{% for audio in audio_files %}
+									{% if audio.id == holidays.holiday_audio_id %}
+										<option value="{{audio.id}}" selected>{{ audio.name }}</option>
+									{% else %}
+										<option value="{{audio.id}}">{{audio.name}}</option>
+									{%endif%}
+								{% endfor %}
+							</select>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row ">
+						<label for="extension" class="col-sm-4 col-form-label">Date<span class="star">*</span> :</label>
+						<div class="col-sm-8">
+							<div id="datepicker-popup" class="input-group date datepicker p-0">
+		                        <input type="text" class="form-control blockfirstspace" placeholder="Enter Holiday Date" name="holiday_date" id="holiday_date">
+		                        <span class="input-group-addon input-group-append border-left">
+		                          <span class="far fa-calendar input-group-text" style="padding: 10px"></span>
+		                        </span>
+	                      	</div>
+		                    <span id="holiday_date_error"></span>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-6">
+					<div class="form-group row" >
+						<label for="extension" class="col-sm-4 col-form-label">Description<span class="star">*</span> :</label>
+						<div class="col-sm-8 mb-3">
+							<textarea class="form-control" data-toggle="tooltip" data-original-title="Enter Holiday Description" name="description" id="description" rows="4" >{{ holidays.description }}</textarea>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row mt-4">
+				<div class="col-sm-6">
+					<div class="alert alert-danger d-none" id="script-err-msg">
+					</div>
+				</div>
+				<div class="col-sm-6">
+					<div class="float-right">
+						<button type="button" class="btn btn-light btn-icon-text cancel" id="" onclick="showSwal('warning-message-and-cancel','OK', '/Administration/Holidays/')">
+							<i class="fas fa-arrow-left btn-icon-prepend"></i>Cancel
+						</button>
+						<button type="button" class="btn btn-success btn-icon-text ml-2" id="holidays-submit-btn">
+							<i class="far fa-check-square btn-icon-prepend"></i>{% if holidays %}Update{% else %}Submit{% endif %}
+						</button>
+					</div>
+				</div>
+			</div>
+			<input type="hidden" name="holidays_id" value="{{ holidays.id }}" id="holidays_id">
+		</form>
+	</div>
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'melody/vendors/tinymce/tinymce.min.js' %}"></script>
+<script src="{% static 'js/script_editor.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	{% if can_view %}
+		$.validate({
+			form:'#sms-template-create-form',
+		});
+		$("#name").val("{{ holidays.name }}")
+		{% if holidays.holiday_date %}
+			$('#holiday_date').val(moment("{{holidays.holiday_date}}").format('YYYY-MM-DD'))
+		{% endif %}
+	{% else %}
+		PermissionDeny();
+	{% endif %}
+	{% if not is_edit %}
+		disabled_fields()
+	{% endif %}
+	$('.datepicker').datepicker({
+		startDate:new Date(),
+		format:"yyyy-mm-dd",
+	});
+</script>
+{% endblock extra-js %}

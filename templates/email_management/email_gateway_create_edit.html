@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{% if email_gateway %}Edit{% else %}Create{% endif %} SMS Template{% endblock title %}
+{% block extra-stylesheets %}
+<!-- <link rel="stylesheet" href="{% static 'melody/vendors/summernote/dist/summernote-bs4.css' %}"> -->
+{% endblock extra-stylesheets %}
+{% block header %}Modules<small>{% if email_gateway %}Edit{% else %}Create{% endif %} Email GateWay</small>{% endblock header %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'email_gateway' %}">Email GateWay</a></li>
+<li class="breadcrumb-item active" aria-current="page">{% if email_gateway %}Modify{% else %}Create{% endif %}</li>
+{% endblock breadcrumb %}
+{% block content %}
+{% if can_view %}
+<div class="card">
+	<div class="card-body">
+		<legend {% if not is_edit %}class="mb-2"{% endif %}>{% if email_gateway %}Edit{% else %}Create{% endif %} Email Gateway</legend>
+		{% if not is_edit %}
+		<div class="alert alert-fill-warning mb-2 py-2">
+			<i class="fa fa-exclamation-triangle"></i>You cannot edit Email Template because Agents are login with this Email Template on dialer
+		</div>
+		{% endif %}
+		<form class="forms-sample" id="email-gateway-create-form">
+			{% csrf_token %}
+			<div class="row">
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="name" class="col-sm-4 col-form-label">Name<span class="star">*</span> :</label>
+						<div class="col-sm-8">
+							<input type="text" class="form-control" data-toggle="tooltip" data-original-title="Enter Email Template Name" id="name" placeholder="Name" name="name" data-validation="required" data-validation-error-msg-container="#gateway-name-error"
+							value="{{email_gateway.name}}">
+							<span id="gateway-name-error"></span>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="email_host" class="col-sm-4 col-form-label">Email Host<span class="star">*</span> :</label>
+						<div class="col-sm-8">
+							<input type="text" class="form-control" data-toggle="tooltip" data-original-title="Enter Email Host" id="email_host" placeholder="Email Host" name="email_host" data-validation="required" data-validation-error-msg-container="#url-error" value="{{ email_gateway.email_host }}">
+							<span id="url-error"></span>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row" id="email_gateway_div">
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="name" class="col-sm-4 col-form-label">Email Port<span class="star">*</span> :</label>
+						<div class="col-sm-8">
+							<input type="text" class="form-control" data-toggle="tooltip" data-original-title="Enter Email Port" id="url" placeholder="Email Port" name="email_port" value="{{ email_gateway.email_port }}" onkeypress="return isNumber(event)" data-validation="required">
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="extension" class="col-sm-4 col-form-label">Template<span class="star camp_required">*</span> :</label>
+						<div class="col-sm-8">
+							<select class="form-control"  id="email_template" name="template" data-validation="required" data-validation-error-msg-container="#template_error" multiple>
+								{% for template in email_gateway.template.all %}
+									<option value="{{template.id}}"selected>{{ template.name }}</option>
+								{% endfor %}
+								{% for template in template_list %}
+									<option value="{{template.id}}">{{ template.name }}</option>
+								{% endfor %}
+							</select>
+							<div id="template_error"></div>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="default_email" class="col-sm-4 col-form-label">Default Email :</label>
+						<div class="col-sm-8"> 
+							<input type="email" class="form-control" data-toggle="tooltip" data-original-title="Enter Valid Email Id" placeholder="email" name="default_email" value="{{ email_gateway.default_email|default_if_none:''}}" data-validation="email" data-validation-optional="true" data-validation-error-msg-container="#email-error">
+							<span id="email-error"></span>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="default_email_password" class="col-sm-4 col-form-label">Default Email Password :</label>
+						<div class="col-sm-8">
+							<input type="password" class="form-control" id="default_email_password" data-toggle="tooltip" data-original-title="Enter Your Email Password" placeholder="email password" name="default_email_password" value="{{email_gateway.default_email_password|default_if_none:''}}" onpaste="pasteNumber(event)" data-validation="required" data-validation-depends-on="default_email" autocomplete="off">
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="extension" class="col-sm-4 col-form-label">Email Trigger On<span class="star camp_required">*</span> :</label>
+						<div class="col-sm-8">
+							<select class="form-control"  id="email_trigger_on" name="email_trigger_on" data-validation="required" data-validation-error-msg-container="#email_trigger_error">
+								<option value="">Select Trigger Action</option>
+								{% for action in trigger_action %}
+									{% if action.0 == email_gateway.email_trigger_on %}
+										<option value="{{action.0}}" selected>{{ action.1 }}</option>
+									{% else %}
+										<option value="{{action.0}}">{{ action.1 }}</option>
+									{% endif %}
+									
+								{% endfor %}
+							</select>
+							<div id="email_trigger_error"></div>
+						</div>
+					</div>
+				</div>										
+				<div class="col-md-6 d-none" id="disposition_div">
+					<div class="form-group row">
+						<label for="" class="col-sm-4 col-form-label">Disposition :</label>
+						<div class="col-sm-8">
+							<select class="form-control" name="disposition" id="disposition" multiple>
+							{% for dispo in email_gateway.disposition.all %}
+								<option value="{{ dispo.id }}" selected>{{ dispo.name }}</option>
+							{% endfor %}
+							{% for dispo in dispo_list %}
+									<option value="{{ dispo.id }}">{{ dispo.name }}</option>
+							{% endfor %}
+						</select>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="" class="col-sm-4 col-form-label">Status :</label>
+						<div class="col-sm-8">
+							{% if email_gateway %}
+							<select class="form-control" name="status">
+								{% for status in email_gateway_status %}
+								{% if status.0 == email_gateway.status %}
+								<option value="{{ status.0 }}" selected>{{ status.1 }}</option>
+								{% else %}
+								<option value="{{ status.0 }}">{{ status.1 }}</option>
+								{% endif %}
+								{% endfor %}
+							</select>
+							{% else %}
+							<select class="form-control" name="status">
+								{% for status in email_gateway_status %}
+								<option value="{{ status.0 }}">{{ status.1 }}</option>
+								{% endfor %}
+							</select>
+							{% endif %}
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row mt-4">
+				<div class="col-sm-6">
+					<div class="alert alert-danger d-none" id="script-err-msg">
+					</div>
+				</div>
+				<div class="col-sm-6">
+					<div class="float-right">
+						<button type="button" class="btn btn-light btn-icon-text cancel" id="" onclick="showSwal('warning-message-and-cancel','OK', '/EmailManagement/EmailGateway/')">
+							<i class="fas fa-arrow-left btn-icon-prepend"></i>Cancel
+						</button>
+						<button type="button" class="btn btn-success btn-icon-text ml-2" id="email-gateway-submit-btn">
+							<i class="far fa-check-square btn-icon-prepend"></i>{% if sms_gateway %}Update{% else %}Submit{% endif %}
+						</button>
+					</div>
+				</div>
+			</div>
+			<input type="hidden" name="gateway_id" value="{{ email_gateway.id }}" id="email_gateway_id">
+		</form>
+	</div>
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/script_editor.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/form-validator.min.js' %}"></script>
+<script type="text/javascript">
+	{% if can_view %}
+		$('#email_template, #disposition').select2()
+		$.validate({
+			modules : 'logic',
+			form:'#email-gateway-create-form',
+		});
+		$("#name").val("{{ email_gateway.name }}")
+		{% if email_gateway.email_trigger_on == "1" %}
+			$("#email_trigger_on").trigger("change")
+		{% endif %}
+		$("#mode-0").prop("checked",true)
+		var itemsToKeep = {{non_user_email_template|safe}}
+		$('#email_template').on('select2:unselecting', function(event) {
+			if (itemsToKeep.indexOf(event.params.args.data.text) > -1) {
+				event.preventDefault();
+				showDangerToast(`Opration can't perform`,`${event.params.args.data.text} campaign does not belong in your scope`,'top-right')
+			}
+		})
+	{% else %}
+		PermissionDeny();
+	{% endif %}
+	{% if not is_edit %}
+		disabled_fields()
+	{% endif %}
+</script>
+{% endblock extra-js %}

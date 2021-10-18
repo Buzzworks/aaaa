@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Charts{% endblock title %}
+
+{% block header %}Charts<small></small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Charts</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Charts</legend>
+				<!-- Pause Breaks tab and table -->
+				<div class="row">
+					<div class="col-lg-6 grid-margin">
+						<div class="card">
+							<div class="card-body">
+								<h4 class="card-title">Total Data </h4>
+								<div id="TD_piechart" style="height: 400px"></div>
+							</div>
+						</div>
+					</div>
+					<div class="col-lg-6 grid-margin overflow-auto">
+						<div class="card">
+							<div class="card-body">
+								<h4 class="card-title">Agent Calls</h4>
+								<div id="agent_HR_barChart" style="height: 400px"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock content%}
+{% block extra-js %}
+
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/charts.js'%}"></script>
+<script src="{% static 'js/highcharts.src.js' %}"></script>
+<script src="{% static 'js/exporting.js'%}"></script>
+<script type="text/javascript">
+	$(document).ready(function(){
+		piechart_live = new Highcharts.Chart(piechart_option);
+		TotalDataFunction()
+		barchart_live = new Highcharts.Chart(barchart_options);
+		AgentCallsPerHour()
+	})
+</script>
+
+{% endblock extra-js %}

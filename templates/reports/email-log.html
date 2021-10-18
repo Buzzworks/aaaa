@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load static %}
+
+
+{% block title %}Email Log{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+
+{% endblock extra-stylesheets %}
+
+{% block header %}Campaign<small>Email Log</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Email Log</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Email Log</legend>
+				{% include "search.html" %}
+				<div class="row">
+					<div class="col-12">
+						<table id="email-list-table" class="table display table-striped nowrap" style="width:100%">
+							<thead>
+								<tr>
+									<th class="avatar"></th>
+									<th data-data="0">Report Name</th>
+									<th data-data="1">From email</th>
+									<th data-data="2">To email</th>
+									<th data-data="3">Status</th>
+									<th data-data="4">DateTime</th>
+								</tr>
+							</thead>
+						</table>
+						{% include "vue_pagination.html" %}   
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>	
+ {% endif %}
+
+{% endblock content %}
+
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		{% if can_read %}
+			var emaillog = $('#email-list-table')
+			selective_datatable(emaillog); 	//datatbale jquery
+			edit_url = "{% url 'edit-skilledrouting' 123 %}"
+			get_pagination_data(1, true)
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+	} );
+</script>
+
+{% endblock extra-js %}

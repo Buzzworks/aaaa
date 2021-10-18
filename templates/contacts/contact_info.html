@@ -1,0 +1,458 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getcrmdata %}
+{% block title %}Contacts{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+<link rel="stylesheet" href="{% static 'css/datatablecss/buttons.bootstrap4.min.css' %}">
+<style type="text/css">
+	.popover{
+		z-index:1060;
+	}
+	.modal-open .modal {
+		overflow-y: hidden;
+	}
+	.accordion .card .card-body i{
+		font-size: 1rem;
+	}
+</style>
+{% endblock extra-stylesheets %}
+
+{% block header %}CRM<small>Contact Info</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Contact Info</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Contact Info</legend>
+				<!-- crm list tab and table -->
+				<div class="accordion" id="accordion" role="tablist">
+					<div class="card">
+						<div class="card-header" role="tab" id="heading-2">
+							<h6 class="mb-0">
+								<a class="" data-toggle="collapse" href="#collapse-1" aria-expanded="true" aria-controls="collapse-1">
+									Search Report
+								</a>
+							</h6>
+						</div>
+						<div id="collapse-1" class="collapse show" role="tabpanel" aria-labelledby="heading-2" data-parent="#accordion" style="">
+							<div class="card-body">
+								<form method="post" id="report_form">
+									{% csrf_token %}
+									<div class="row">
+										<div class="col-sm-6 col-md-3">
+											<div class="form-group">
+												<label for="extension" class="col-form-label mb-0">Campaign<span class=star>*</span>:</label>
+												<select class="form-control call_contact_status"  id="contact_campaign_select"name="campaign" multiple>
+													{% for campaign in campaign_list %}
+													<option value="{{ campaign.id}}">{{ campaign.name }}</option>
+													{% endfor %}
+												</select>
+											</div>
+										</div>
+										<div class="col-sm-6 col-md-3 contact-filter-div d-none">
+											<div class="form-group">
+												<label for="username" class="col-form-label mb-0">Phonebook:</label>
+												<select class="form-control"  id="contact_phonebook_select" name="phonebook" multiple>
+												</select>
+											</div>
+										</div>
+										<div class="col-sm-6 col-md-3 contact-filter-div d-none">
+											<div class="form-group">
+												<label class="col-form-label mb-0">User</label>
+												<select class="form-control select2-class" name="user" id="contact_agent_select" multiple>
+												</select>
+											</div>
+										</div>
+										<div class="col-sm-6 col-md-3 contact-filter-div d-none">
+											<div class="form-group">
+												<label class="col-form-label mb-0">Disposition</label>
+												<select class="form-control select2-class" name="disposition" id="disposition" multiple>
+												</select>
+											</div>
+										</div>
+										<div class="col-sm-6 col-md-3 contact-filter-div d-none">
+											<div class="form-group">
+												<label class="col-form-label mb-0">Numeric</label>
+												<input type="text" class="form-control" name="numeric" placeholder="Phone Number" id="destination_extension">
+											</div>
+										</div>
+										<div class="col-sm-6 col-md-3 contact-filter-div d-none">
+											<div class="form-group">
+												<label class="col-form-label mb-0">Unique ID</label>
+												<input type="text" class="form-control" name="uniqueid" placeholder="Unique ID">
+											</div>
+										</div>
+										<div class="col-sm-6 col-md-3 agent-datepicker contact-filter-div d-none">
+											<div class="form-group">
+												<label class="col-form-label mb-0">Start Date</label>
+												<div data-target-input="nearest" class="input-group date" id="start-date">
+													<div data-target="#start-date" data-toggle="datetimepicker" class="input-group datetimepicker">
+														<input type="text" name="start_date" placeholder="YYYY-MM-DD" data-target="#start-date" class="form-control crm-form-control datetimepicker-input" autocomplete="off">
+														<div class="input-group-addon input-group-append"></div>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="col-sm-6 col-md-3 agent-datepicker contact-filter-div d-none">
+											<div class="form-group">
+												<label class="col-form-label mb-0">End Date</label>
+												<div data-target-input="nearest" class="input-group date " id="end-date">
+													<div data-target="#end-date" data-toggle="datetimepicker" class="input-group">
+														<input type="text" name="end_date" placeholder="YYYY-MM-DD" data-target="#end-date" class="form-control crm-form-control datetimepicker-input" autocomplete="off">
+														<div class="input-group-addon input-group-append"></div>
+													</div>
+												</div>
+												<span class="text-danger d-none" id="end-date-error">End Date Should Be Greater Than Start Date</span>
+											</div>
+										</div>
+										<div class="col-sm-6 mt-2">
+											<button type="button" class="btn btn-success btn-sm btn-icon-text mr-sm-2 contact-filter-div d-none" id="filter_contacts_info"><i class="fas fa-filter"></i>Filter</button>
+											<div class="btn-group d-none" id="contact_info_download_toggle">
+												<button type="button" class="btn btn-primary btn-sm contact_info_download" id="xls"><i class="fa fa-download"></i></button>
+												<button type="button" class=" btn btn-primary btn-sm mr-sm-2 dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+												</button>
+												<div class="dropdown-menu">
+													<a class="dropdown-item contact_info_download" id="xls">Excel</a>
+													<a class="dropdown-item contact_info_download" id="csv" >Csv</a>
+												</div>
+											</div>
+										</div>
+									</div>
+									<input type="hidden" name="col_name_list" id="col_name_list">
+									<input type="hidden" name="col_title_list" id="col_title_list">
+									<input type="hidden" name="contact_info_download" id="contact_info_download_val">
+									<input type="hidden" name="contact_info_download_type" id="contact_info_download_type">
+								</form>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-12">
+						<table id="contact-info-table" class="table display table-striped nowrap">
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="crm">
+	<input type="hidden" id="model_name" value="Contact">
+	<input type="hidden" name="report_name" id="report_name" value="10"> 
+</div>
+<div class="modal fade" id="contact_info_modal" role="dialog" aria-hidden="true">
+	<div class="modal-dialog h-100 d-flex flex-column my-0 modal-lg" role="document">
+		<div class="modal-content" id="contact_info">
+			<div class="modal-header">
+				<h5 class="modal-title">Edit Contact</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body" style="overflow-y: auto; max-height: calc(100vh - 180px)">
+				<form id="edit-contact-info" class="px-3">
+					{% csrf_token %}
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="" class="col-sm-4 col-form-label">Phonebook</label>
+								<div class="col-sm-8">
+									<select class="form-control" name="phonebook">
+										<option v-for="(item , index) in phonebook_list" v-bind:key="index" :selected= "item.name == selected_phonebook" v-bind:value="item.id">
+											${item.name}
+										</option>
+									</select>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="user" class="col-sm-4 col-form-label">User :</label>
+								<div class="col-sm-8">
+									<input type="text" class="form-control" id="user" placeholder="user" name="user" v-bind:value="user" v-model="user">
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="first_name" class="col-sm-4 col-form-label">First Name :</label>
+								<div class="col-sm-8">
+									<input type="text" class="form-control" id="first_name" placeholder="" name="first_name" v-bind:value="first_name" v-model="first_name">
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="last_name" class="col-sm-4 col-form-label">Last Name:</label>
+								<div class="col-sm-8">
+									<input type="text" class="form-control" id="last_name" placeholder="" name="last_name" v-bind:value="last_name" v-model="last_name">
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="number" class="col-sm-4 col-form-label">Number :</label>
+								<div class="col-sm-8">
+									<input type="number" class="form-control" id="number" placeholder="" name="numeric" v-bind:value="numeric" data-validation="required" v-model="numeric">
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="alt_number" class="col-sm-4 col-form-label">Alternate Number:</label>
+								<div class="col-sm-8 ">
+									<div class="input-group">
+										<select class="form-control">
+											<option v-for="alt_num in alt_numeric" :value="alt_num['alt_value']">${alternateNameNumber(alt_num)}</option>
+										</select>
+										<div class="input-group-append">
+											<button class="btn btn-outline-secondary" data-toggle="popover" data-placement="bottom" title="Add Alternate Number" data-html="true" type="button">
+												<i class="fas fa-plus fa-sm text-dark"></i>
+											</button>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div id="popper-content" class="popper-content d-none" style="white-space: nowrap;">
+								<div v-for="alt_num,index in alt_numeric" class="mb-1" v-bind="index">
+									<span>${index+1}.</span>
+									<div class="editable-input" style="width:125px">
+										<input type="text" class="form-control form-control-sm p-1" v-model="alt_num['alt_label']">
+									</div>
+									<div class="editable-input" style="width:125px">
+										<input type="text" class="form-control form-control-sm p-1" v-model="alt_num['alt_value']" onkeypress="return isNumber(event)">
+									</div>
+									<div class="editable-buttons">
+										<span v-if="alt_numeric.length > 1" @click="removeAlternateNumber(index)" style="font-size: 18px; cursor: pointer;">
+											<i class="fas fa-times-circle text-danger remove-alternate"></i>
+										</span>
+										<span v-if="index+1 == alt_numeric.length && index+1 < 5" @click="addAlternateNumber(index+1)" style="font-size: 18px; cursor: pointer;">
+											<i class="fa fa-plus-circle text-success add-alternate"></i>
+										</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row mb-2">
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="email" class="col-sm-4 col-form-label">Email:</label>
+								<div class="col-sm-8">
+									<input type="text" class="form-control" id="email" placeholder="" name="email" v-bind:value="email">
+								</div>
+							</div>
+							
+						</div>
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="" class="col-sm-4 col-form-label">Status</label>
+								<div class="col-sm-8">
+									<select class="form-control" name="status" id="status">
+										<option v-for="(item , index) in status_list" v-bind:key="index" :selected= "item[0] == selected_status" v-bind:value="item[0]">
+											${item[0]}
+										</option>
+									</select>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div>
+						<crm-fields :field_schema="fields" :field_data="field_data"></crm-fields>
+					</div>
+					<input type="hidden" name="customer_raw_data" id="customer_raw_data">
+					<input type="hidden" name="alt_numeric" id="alt_num_input">
+				</form>
+			</div>
+			<div class="modal-footer d-block">
+				<div class="row">
+					<div class="col-sm-6">
+						<div class="alert alert-danger d-none" id="contact-err-msg"></div>
+					</div>
+					<div class="col-sm-6">
+						<div class="float-right">
+							<button type="button" class="btn btn-light btn-icon-text mr-sm-2" onclick="showSwal('warning-message-and-cancel','OK', '','','contact_info_modal')"><i class="fas fa-arrow-left btn-icon-prepend"></i>Cancel</button>
+							<button type="button" class="btn btn-success btn-icon-text" v-on:click="updateContactInfo(contact_id)"><i class="far fa-check-square btn-icon-prepend"></i>Update</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/crmField_component.js' %}"></script>
+<script type="text/javascript">
+	var contact_info_table
+	$(document).ready(function() {
+		{% if can_read %}
+		table = $('#contact-info-table')
+		$('#start-date').datetimepicker({
+			format: 'YYYY-MM-DD',
+			useCurrent: true,
+			defaultDate: new Date(),
+			maxDate: new Date()
+		})
+		$('#end-date').datetimepicker({
+			format: 'YYYY-MM-DD',
+			useCurrent: true,
+			defaultDate: new Date(),
+			maxDate: new Date()
+		})
+		$("#start-date").on("change.datetimepicker", function (e) {
+			$('#end-date').datetimepicker('minDate', e.date);
+		});
+		$("#end-date").on("change.datetimepicker", function (e) {
+			$('#start-date').datetimepicker('maxDate', e.date);
+		});
+		{% else %}
+		PermissionDeny();
+		{% endif %}
+	});
+	
+
+
+	var contact_info_vue = new Vue({
+		el: "#contact_info",
+		delimiters: ['${', '}'],
+		data :{
+			fields : {},
+			temp_data:{},
+			field_data: {},
+			alt_numeric: [],
+			numeric:'',
+			phonebook_list:[],
+			selected_phonebook:'',
+			user:'',
+			first_name:'',
+			last_name:'',
+			email:'',
+			selected_status:'',
+			status_list:[],
+			contact_id:''
+		},
+		methods:{
+			updateContactInfo(id){
+				var vm = this
+				var alt_numeric_dict = {}
+				custom_raw_data = {}
+				vm.alt_numeric.filter(function(val,index){
+					if(val['alt_label'] == ''){
+						val['alt_label'] = 'alt_num_'+(index+1)
+					}
+					alt_numeric_dict[val['alt_label']] = val['alt_value']
+				})
+				$('#alt_num_input').val(JSON.stringify(alt_numeric_dict))
+				$("#customer_raw_data").val(JSON.stringify(vm.field_data))
+				var form = $("#edit-contact-info").serialize()
+				if( $("#edit-contact-info").isValid()) {
+					$.ajax({
+						type: 'post',
+						headers: {"X-CSRFToken": csrf_token},
+						url: '/CRM/ContactInfo/'+id+'/',
+						data: form,
+						success: function (data) {
+							showSwal('success-message-without-reload', 'Contact Detail Updated', '','', "contact_info_modal")
+						},
+						error: function (data) {
+
+						}
+					});
+				}
+			},
+			createAlternateDict(value){
+				let vm = this
+				$.each(value, function(key,val){
+					let temp_dict = {}
+					temp_dict['alt_label'] = key
+					temp_dict['alt_value'] = val
+					vm.alt_numeric.push(temp_dict)
+				})
+			},
+			addAlternateNumber(index){
+				let check_input = this.alt_numeric.filter(val=>val['alt_label'] == '' || val['alt_value'] == '')
+				if (check_input.length >= 1) 
+					return
+				this.alt_numeric.push({'alt_label':'alt_num_'+(index+1),'alt_value':''})
+			},
+			removeAlternateNumber(index){
+				this.alt_numeric.splice(index,1)
+			},
+			alternateNameNumber(alt_num_dict){
+				return alt_num_dict['alt_label'] + ' : ' + alt_num_dict['alt_value']
+			},
+			resetFields(){
+				this.fields = {};
+				this.temp_data={};
+				this.field_data= {};
+				this.alt_numeric= [];
+				this.numeric='';
+				this.phonebook_list=[];
+				this.selected_phonebook='';
+				this.user='';
+				this.first_name='';
+				this.last_name='';
+				this.email='';
+				this.selected_status='';
+				this.status_list=[];
+				this.contact_id='';
+			}
+		},
+		watch : {
+			field_data:function(value){
+				var vm = this
+				if(Object.keys(value).length == 0){
+					vm.field_data = vm.temp_data
+				}else{
+					if($(Object.keys(vm.temp_data)).not(Object.keys(value)).length >0){
+						$.each($(Object.keys(vm.temp_data)).not(Object.keys(value)), function(index,sec_key){
+							value[sec_key] = {}
+							$.each(Object.keys(vm.temp_data[sec_key]) , function(index,field_key){
+								value[sec_key][field_key] = null;
+							})
+						})
+					}
+				}
+			}
+		}
+	})
+	$( document ).ready(function() {
+		$('[data-toggle="popover"]').popover({
+			html: true,
+			content: $('#popper-content')
+		}).on('show.bs.popover', function() {
+			$('#popper-content').removeClass('d-none')
+			if(contact_info_vue.alt_numeric.length == 0){
+				contact_info_vue.addAlternateNumber(0)
+			}
+		}).on('hide.bs.popover', function() {
+			contact_info_vue.alt_numeric = contact_info_vue.alt_numeric.filter(item => item.alt_value != '')
+		})
+	})
+	$('body').on('click', function (e) {
+		if ($(e.target).data('toggle') !== 'popover'
+			&& $(e.target).parents('[data-toggle="popover"]').length === 0
+			&& $(e.target).parents('.popover.fade').length === 0
+			&& !$(e.target).hasClass('remove-alternate') && !$(e.target).hasClass('add-alternate')) { 
+			$('[data-toggle="popover"]').popover('hide');
+	}
+})
+
+</script>
+{% endblock extra-js %}

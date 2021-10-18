@@ -1,0 +1,84 @@
+<div class="accordion accordion-solid-header" id="contact-detail-accordion">
+
+	<div class="card">
+		<div class="card-header p-0" role="tab" id="heading-1">
+			<h6 class="mb-0">
+				<a data-toggle="collapse" href="#basic-info-collapse" aria-expanded="true" aria-controls="basic-info-collapse" class="collapsed px-3 py-2">
+					Basic Information
+				</a>
+			</h6>
+		</div>
+		<div id="basic-info-collapse" class="collapse show" role="tabpanel" aria-labelledby="heading-1" data-parent="#contact-detail-accordion" style="">
+			<div class="card-body">
+				<div class="row">
+					<div class="col-6">
+						<div class="form-group row mb-0">
+							<label class="text-capitalize col-sm-4 col-form-label mb-0">Phone Number
+							<span class="float-sm-right">:</span></label>
+							<label class="font-weight-bold col-sm-8 col-form-label mb-0 pt-0 pt-sm-3">{{numeric}}</label>
+						</div>
+					</div>
+					<div class="col-6">
+						<div class="form-group row mb-0">
+							<label class="text-capitalize col-sm-4 col-form-label mb-0">Alt Number
+							<span class="float-sm-right">:</span></label>
+							<label class="font-weight-bold col-sm-8 col-form-label mb-0 pt-0 pt-sm-3">{{alt_numeric.values|join:", " }}</label>
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-6">
+						<div class="form-group row mb-0">
+							<label class="text-capitalize col-sm-4 col-form-label mb-0">First Name
+							<span class="float-sm-right">:</span></label>
+							<label class="font-weight-bold col-sm-8 col-form-label mb-0 pt-0 pt-sm-3">{{first_name}}</label>
+						</div>
+					</div>
+					<div class="col-6">
+						<div class="form-group row mb-0">
+							<label class="text-capitalize col-sm-4 col-form-label mb-0">Last Name
+							<span class="float-sm-right">:</span></label>
+							<label class="font-weight-bold col-sm-8 col-form-label mb-0 pt-0 pt-sm-3">{{last_name}}</label>
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-6">
+						<div class="form-group row mb-0">
+							<label class="text-capitalize col-sm-4 col-form-label mb-0">Email
+							<span class="float-sm-right">:</span></label>
+							<label class="font-weight-bold col-sm-8 col-form-label mb-0 pt-0 pt-sm-3">{{email}}</label>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	{% for key, customer_data in customer_raw_data.items %}
+		<div class="card">
+			<div class="card-header p-0" role="tab" id="heading-1">
+				<h6 class="mb-0">
+					<a data-toggle="collapse" href="#collapse-{{ forloop.counter0 }}" aria-expanded="false" aria-controls="collapse-{{ forloop.counter0 }}" class="collapsed px-3 py-2">
+						{{key}}
+					</a>
+				</h6>
+			</div>
+			<div id="collapse-{{ forloop.counter0 }}" class="collapse" role="tabpanel" aria-labelledby="heading-{{ forloop.counter0 }}" data-parent="#contact-detail-accordion" style="">
+				<div class="card-body">
+					<div class="row">
+						{% for key, data in customer_data.items %}
+							<div class="col-6">
+								<div class="form-group row mb-0">
+									<label class="text-capitalize col-sm-4 col-form-label mb-0">{{ key }}
+									<span class="float-sm-right">:</span></label>
+									<label class="font-weight-bold col-sm-8 col-form-label mb-0 pt-0 pt-sm-3">{{ data|default_if_none:"" }}</label>
+								</div>
+							</div>
+						{% endfor %}
+					</div>
+				</div>
+			</div>
+		</div>
+	{% endfor %}
+</div>
+	

@@ -1,0 +1,479 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+{% block title %}CSS{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+<link rel="stylesheet" href="{% static '/css/jquery.toast.min.css' %}" />
+<style>
+
+</style>
+{% endblock extra-stylesheets %}
+
+{% block header %}Campaign Management <small>{% if css %} Edit {% else %} Create {% endif %} css</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'css' %}">css</a></li>
+<li class="breadcrumb-item active" aria-current="page">{% if css %} Modify {% else %} Create {% endif %}</li>
+{% endblock breadcrumb %}
+{% block content %}
+{% if can_create %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card" id="add_more_query">
+			<div class="card-body">
+				{% if css %}
+				<legend>Css Edit : {{css.name}}</legend>
+				{% else %}
+				<legend>Css Create</legend>
+				{% endif %}
+				<form class="forms-sample" id="css-create-form" action="" method="POST">
+					{% csrf_token %}
+					<div class="row mb-2">
+						<div class="col-sm-6 col-md-4 mb-2 mb-md-0">
+							<div class="form-group">
+								<label for="name">Name<span class="star">*</span>:</label>
+								 <div class="">
+									<input type="text" name="name" id="name" class="form-control noSpace" data-toggle="tooltip" data-original-title="Enter the Name" data-validation-length="min4" data-validation="length alphanumeric"  data-validation-allowing="_" value="{{css.name}}" data-validation-error-msg-container="#css_name_error">
+									<span id="css_name_error"></span>
+								</div>
+							</div>
+						</div>
+						<div class="col-sm-6 col-md-4 mb-2 mb-md-0">
+							<div class="form-group">
+								<label for="campaign_select">Campaign<span class="star">*</span>:</label>
+								 <div class="">
+									<single-select class="form-control"  name="campaign" data-validation="required" data-validation-error-msg="Please select campaign" data-validation-error-msg-container="#campaign_error" id="campaign" :options="campaign_list" v-model="selected_campaign" :disabled="disable_campaign">
+										<option value="" disabled>Select Campaign</option>
+									</single-select>
+									<span id="campaign_error"></span>
+								</div>
+							</div>
+						</div>
+						<div class="col-sm-6 col-md-4 mb-2 mb-md-0">
+							<div class="form-group">
+								<label for="status">Status<span class="star">*</span> :</label>
+								 <div class="">
+									<select class="form-control select_status" id="status" data-validation="required" name="status" >
+											{% for stat in status %}
+												{% if stat.0 == css.status %}
+													<option selected="">{{ stat.1 }}</option>
+												{% else %}
+													<option >{{ stat.1 }}</option>
+												{% endif %}
+											{% endfor %}
+									</select>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row mb-2">
+						<div class="col-sm-6 col-md-4 mb-2 mb-md-0">
+							<div class="form-group">
+								<label for="table_name">PhoneBook:</label>
+								 <div class="">
+									<select2 class="form-control" id="phonebook_id" name="phonebook"  :options="css_phonebook_list" v-model='selected_phonebook' multiple :key="componentKey"></select2>
+								</div>
+							</div>
+						</div>
+						<div class="col-sm-6 col-md-4 mb-2 mb-md-0" v-if="selected_phonebook.length != 0">
+							<div class="form-group">
+								<label for="table_name">Phonebook Exclude / Include : <span class="star">*</span> :</label>
+								 <div class="">
+								 	<select class="form-control" name="phonebook_order" id="phonebook_order"  data-toggle="tooltip" data-original-title="Select logic" data-validation="required" data-validation-error-msg="Please select include or exclude" v-model=phonebook_order :key="componentKey">
+									<option value="">Select Phonebook </option>
+									<option value="include">Include</option>
+									<option value="exclude">Exclude</option>
+								</select>
+								</div>
+							</div>
+						</div>
+						<div class="col-sm-5 col-md-3 mb-2 mb-md-0">
+							<div class="form-group">
+								<label for="table_name">Table<span class="star">*</span> :</label>
+								 <div class="">
+									<input type="text" name="table_name" id="table" class="form-control slug_css" value="Contact" readonly>
+								</div>
+							</div>
+						</div>
+						<div v-show="!showForm" class="col-sm-1 col-md-1 mt-auto mb-1 p-0">
+							<button type="button" class="btn btn-info btn-sm" @click="addCss">Add Css</button>
+						</div>
+					</div>
+					<div v-show="showForm" class="accordion" role="tablist">
+						<div class="card">
+							<div class="card-header py-3" role="tab" id="">
+								<a data-toggle="collapse" href="#query_body" aria-expanded="false" aria-controls="collapse-1" class="collapsed">Query</a>
+							</div>
+							<div class="collapse collapse-div show" role="tabpanel"  data-parent="#add_more_query" style="" id="query_body">
+								<div class="card-body" style="padding: 0 1rem 1rem 1rem">
+									<div class="row mb-2">
+										<div class="col-sm-6 col-md-3 mb-2 mb-md-0">
+											<div class="form-group">
+												<label for="priority">Priority<span class="star">*</span> :</label>
+												<div class="">
+													<input type="text" placeholder='Priority' required="required" id="priority" name="priority" class="form-control" data-toggle="tooltip" data-original-title="Enter the priority" min="1" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)" data-validation="length alphanumeric" data-validation-length="min1"data-validation-error-msg="The input value was not a correct number" v-model="priority">
+												</div>
+											</div>
+										</div>
+										<div class="col-sm-6 col-md-3 mb-2 mb-md-0">
+											<div class="form-group">
+												<label for="status">Status<span class="star">*</span> :</label>
+												<div class="">
+													<select class="form-control select_status" id="select_status" data-validation="required" name="status" v-model="status">
+															{% for stat in status %}
+															<option value="{{stat.0}}">{{stat.1}}</option>
+															{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+										<div class="col-sm-6 col-md-3 mb-2 mb-md-0">
+											<div class="form-group">
+												<label for="" style="font-size: 16px">Condition</label>
+												<div class="">
+													<select class="form-control" v-model="condition" @change="changeCondition">
+														<option value="">Select Condition</option>
+														<option value="where">Where</option>
+														<option value="order by">Order By</option>
+													</select>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div v-if="condition == 'where'" v-for="(val,index) in query_list" v-bind:key="index" class="card">
+										<div class="card-header py-3" role="tab" id="">
+											<h6 class="mb-0">
+												<!-- <span v-if="query_list.length > 1" @click="removeCss(index)" class="d-inline fa fa-times-circle text-danger remove-section"></span> -->
+											</h6>
+										</div>
+										<div class="collapse show collapse-div" role="tabpanel" aria-labelledby="clone-crmf-heading"  style="">
+											<div class="card-body px-3">
+												<div class="row">
+													<div class="col-md-3 mb-2 mb-md-0">
+														<div class="form-group">
+															<label class="mb-0">WHERE <span class="star">*</span></label>
+															<div class="">
+																<single-select class="form-control" data-validation="required" v-model="val.table_column" data-toggle="tooltip" :options="orderCol_options" data-validation-error-msg="Please select a column" :key="componentKey" :query_no="index" v-on:where-change="checkCrmField(index,val)"  :id="'where-column_'+index">
+																	<option value="" disabled>Select column</option>
+																</single-select>
+															</div>
+														</div>
+													</div>
+													<div class="col-md-1 mb-2 mb-md-0" >
+														<div class="form-group">
+															<label class="mb-0"></label>
+															<div class="">
+																<select v-if="val.table_column =='disposition' || val.table_column == 'contact_status'" class="form-control" name="operator" data-validation="required" data-validation-error-msg="Please select operator" v-model="val.operator" data-toggle="tooltip" data-original-title="Equal to,Greater than,Greater than equal to,Less than,Less than equal to,Not equal to." v-on:change="val.dispo_status_val = ['']">
+																	<option value="" disabled>Operator</option>
+																		{% for op in operator %}
+																			{% if op.1 in '=,!=,IN,NOT IN,ISNULL,IS NOT NULL' %}
+																				<option value="{{op.1}}">{{op.0}}</option>
+																			{% endif %}
+																		{% endfor%}
+																</select>
+																<select v-else-if="['created_date','modified_date','last_dialed_date'].includes(val.table_column)" class="form-control" name="operator" data-validation="required" data-validation-error-msg="Please select operator" v-model="val.operator" data-toggle="tooltip" data-original-title="Equal to,Greater than,Greater than equal to,Less than,Less than equal to,Not equal to.">
+																		<option value="" disabled>Operator</option>
+																		{% for op in operator %}
+																			{% if op.1 not in 'IN,NOT IN,ISNULL,LIKE,IS NOT NULL' %}
+																				<option value="{{op.1}}" >{{op.0}}</option>
+																			{% endif %}
+																		{% endfor%}
+																</select>
+																<select v-else class="form-control" name="operator" data-validation="required" data-validation-error-msg="Please select operator" v-model="val.operator" data-toggle="tooltip" data-original-title="Equal to,Greater than,Greater than equal to,Less than,Less than equal to,Not equal to.">
+																		<option value="" disabled>Operator</option>
+																		{% for op in operator %}
+																			<option value="{{op.1}}" >{{op.0}}</option>
+																		{% endfor%}
+																</select>
+															</div>
+														</div>
+													</div>
+													<template v-if="(val.table_column =='disposition' || val.table_column == 'contact_status') && val.operator != 'ISNULL' && val.operator != 'IS NOT NULL'">
+														<div v-if="val.table_column =='disposition'" class="col-md-4 mb-2 mb-md-0">
+															<div v-if="val.operator =='IN' || val.operator =='NOT IN'" class="form-group">
+																<label class="mb-0">Select Dispositions: </label>
+																<div>
+																	<select2 class="form-control" id="dispositions" name="dispositions" :options="disposition_list" v-model='val.dispo_status_val' multiple :key="componentKey"></select2>
+																</div>
+															</div>
+															<div v-else class="form-group">
+																<label class="mb-0">Select Disposition: </label>
+																<div>
+																	<single-select class="form-control" name="dispositions" data-validation="required" v-on:input="val.dispo_status_val = [$event]" id="dispositions" data-toggle="tooltip"  :options="disposition_list" data-validation-error-msg="Please select a Disposition" :key="'disposition'" :query_no="index" :value="val.dispo_status_val">
+																		<option value="" disabled>Select Disposition</option>
+																	</single-select>
+																</div>
+															</div>
+														</div>
+														<div v-else class="col-md-4 mb-4 mb-md-0">
+															<div v-if="val.operator =='IN' || val.operator == 'NOT IN'" class="form-group">
+																<label class="mb-0">Select Contact status: </label>
+																<div>
+																	<select2 class="form-control" id="contact_status" name="contact_status" :options="contact_status_list" multiple :key="componentKey" v-model="val.dispo_status_val"></select2>
+																</div>
+															</div>
+															<div v-else class="form-group">
+																<label >Select Contact status: </label>
+																<div>
+																	<single-select class="form-control" name="contact_status" data-validation="required" id="contact_status" data-toggle="tooltip"  :options="contact_status_list" data-validation-error-msg="Please select a contact status" :key="'contact_status'" :query_no="index" v-on:input="val.dispo_status_val = [$event]" :value="val.dispo_status_val">
+																		<option value="" disabled>Select contact status</option>
+																	</single-select>
+																</div>
+															</div>
+														</div>
+													</template>
+													<template v-else-if="val.operator != 'ISNULL' && val.operator != 'IS NOT NULL'">
+														<div v-if="val.operator != 'IN' && val.operator !='NOT IN'" class="col-md-2 mb-2 mb-md-0">
+															<div class="form-group">
+																<label class="mb-0">Select Option:</label>
+																<div class="">
+																	<select class="form-control" v-model="val.selected_date_col">
+																		<option v-if="!['created_date','modified_date','last_dialed_date'].includes(val.table_column) && val.datatype != 'datetimefield' && val.datatype != 'datefield'" value="custom_val">Value</option>
+																		<option v-if="!['priority','dial_count','churncount'].includes(val.table_column) && val.datatype != 'integer' && val.datatype !='float' && val.datatype != 'timefield'" value="selectdp">select Datepicker</option>
+																		<option v-if="val.operator != 'LIKE' & !['priority','dial_count','churncount'].includes(val.table_column) && val.datatype != 'integer' && val.datatype !='float' && val.datatype != 'timefield'" value="custom">Custom Date</option>
+																	</select>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-2 mb-2 mb-md-0" v-if="val.selected_date_col === 'custom'">
+															<div class="form-group">
+																<label class="mb-0">Select Period</label>
+																<div class="">
+																	<select class="form-control" v-model="val.selected_period">
+																	<option value="days">Day</option>
+																	<option value="months">Month</option>
+																	<option value="years">Year</option>
+																</select>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-1 mb-2 mb-md-0" v-if="val.selected_date_col === 'custom'">
+															<div class="form-group">
+																<label class="mb-0"></label>
+																<div class="">
+																	<select class="form-control" v-model="val.arth_operation">
+																	<option value="+">+</option>
+																	<option value="-">-</option>
+																</select>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-1 mb-2 mb-md-0" v-if="val.selected_date_col === 'custom'">
+															<div class="form-group">
+																<label></label>
+																<div class="">
+																	<input type="text" placeholder='' required="required" id="priority" class="form-control" data-toggle="tooltip" data-original-title="Enter Number" min="1" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)" data-validation="length alphanumeric" data-validation-length="min1"data-validation-error-msg="The input value was not a correct number" v-model="val.arth_value">
+																</div>
+															</div>
+														</div>
+														<div class="col-md-3" v-if="val.selected_date_col !== 'custom'">
+															<div class="form-group" >
+																<label for="priority" class="mb-0"></label>
+																<div id="str_div">
+																	<datepicker v-if="val.selected_date_col === 'selectdp' && val.operator != 'IN' && val.operator != 'NOT IN'" v-on:set-date="val.value =  $event" :value="val.value"></datepicker>
+																	<input v-else-if="val.operator != 'IN' && val.operator != 'NOT IN'" type="text" placeholder='value' v-model="val.value" name="value" data-validation="required" class="form-control blockfirstspace" data-toggle="tooltip" data-original-title="Enter the valid value from the selected column, if not query does not execute" data-validation-error-msg="Please enter the value" :id="'value-field_value'+index" >
+																	<input v-else type="text" placeholder='Enter Options' v-model="val.value" name="value" data-validation="required" class="form-control blockfirstspace" data-toggle="tooltip" data-original-title="Enter correct Options with comma(,) seperator" data-validation-error-msg="enter values with comma(,) seperator" id="name_value" :id="'value-field_value'+index">
+																	<span class="help-block form-error d-none" :id="'value-column_'+index"></span>
+																</div>
+															</div>
+														</div>
+													</template>
+													<div class="col-md-2 mb-2 mb-md-0">
+														<div class="form-group">
+															<label class="mb-0">Select Condition</label>
+															<div class="">
+																<select class="form-control" name="logical_operator" v-model="val.logical_operator" data-toggle="tooltip" data-original-title="Select logic" data-validation-error-msg="Please select the logic" @change="addquerysection(index,val.logical_operator)">
+																	<option value="">Select Logic</option>
+																	<option v-if="index < 10" value="AND">AND</option>
+																	<option v-if="index < 10" value="OR">OR</option>
+																	<option v-if="index < 10" value="CAND">Combine AND</option>
+																	<option v-if="index < 10" value="COR">Combine OR</option>
+																	<option value="order by">Order By</option>
+																</select>
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div v-if="condition == 'order by' | (query_list.length > 0 && query_list[query_list.length - 1].logical_operator == 'order by')" class="card">
+										<div class="card-header py-3" role="tab">
+											<h6 class="mb-0">
+												<span></span>
+											</h6>
+										</div>
+										<div class="collapse show collapse-div" role="tabpanel">
+											<div class="card-body">
+												<div v-for="order_dict,index in order_list" class="row">
+													<div class="col-sm-6">
+														<div class="form-group">
+															<label for="" style="font-size: 16px">Query Order BY </label>
+															<div class="">
+																<select2 class="form-control" id="css_order_by" name="ordered_col"  :options="orderCol_options"  v-model="order_dict.columns" multiple :key="componentKey" data-validation="required" data-validation-error-msg="Please select atleast one column" :data-validation-error-msg-container="'#order_column_error'+index">
+																</select2>
+																<span :id="'order_column_error'+index"></span>
+															</div>
+														</div>
+													</div>
+													<div class="col-sm-6 col-md-3 mb-2 mb-md-0" id="css_order_div">
+														<div class="form-group">
+															<label for="" style="font-size: 16px">Order</label>
+															<div class="">
+																<select class="form-control" name="order" id="select_css_order"  data-toggle="tooltip" v-model="order_dict.order_type" data-original-title="Select logic" data-validation-error-msg="Please select the logic" :key="componentKey">
+																	<option value="ASC">ASC</option>
+																	<option value="DESC">DESC</option>
+																</select>
+																<span v-if="order_list.length > 1" @click="removeOrderBy(index)" class="d-inline fa fa-times-circle text-danger remove-section" style="float:right;font-size: 20px; position: relative;top: -30px;right: -30px"></span>
+																<span v-if="index+1 === order_list.length && index < 4"  @click="addOrderBy" class="d-inline fa fa-plus-circle text-success ml-1 add-section" style="float:right; font-size: 20px; position: relative;top: -30px;right: -75px"></span>
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-sm-6">
+											<div class="alert alert-danger d-none css-err-msg" id="css-err-msg"></div>
+										</div>
+										<div class="col-sm-6">
+											<div class="float-right">
+												<button type="button" class="btn btn-light btn-sm mr-sm-2" @click="cancelQuery">Discard</button>
+												<button type="button" class="btn btn-info btn-sm mr-sm-2" @click="createQuery">Create Query</button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div v-if="result.length > 0" class="row" style="padding: 25px 0 0 0px">
+						<div class="col-md-12">
+							<div style="overflow-x:auto;">
+								<table class="table display nowrap table-hover dataTable" id="query_table">
+									<thead>
+										<th class="">Querys</th>
+										<th >Priority</th>
+										<th >Status</th>
+										<th>Action</th>
+									</thead>
+									<tbody>
+										<tr v-for="(val,index) in result">
+											<td id="query">
+												<div style="min-width:250px; max-width:550px; white-space: normal; overflow-wrap: break-word;">${val.query_string|replaceQueue}</div>
+											</td>
+											<td>${val.priority}</td>
+											<td>${val.status}</td>
+											<td>
+												<button v-if="current_edit != index" type="button" class='btn btn-sm btn-link text-primary p-1' title='Edit Query' :key="componentKey" @click="onEdit(index, val)">
+													<i class='fas fa-edit'></i>
+												</button>
+												<button type="button" class='btn btn-sm btn-link text-danger p-1' title='Delete Query' @click="deleteQuery(index)">
+													<i class='fas fa-trash delete_row'  aria-hidden='true'></i>
+												</button>
+												<button type="button" class='btn btn-sm btn-link text-success p-1' title='Execute Query' @click='executeQuery(index)'>
+													<i class="fas fa-eye run_row"  aria-hidden="true"></i>
+												</button>
+											</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+					<div v-if="result.length > 0" class="row mt-3">
+						<div class="col-sm-12">
+							<div class="float-right">
+								<button type="button" class="btn btn-light btn-icon-text mr-sm-2" id="" onclick="showSwal('warning-message-and-cancel','OK', '{% url 'css' %}')"><i class="fas fa-arrow-left btn-icon-prepend"></i>Cancel</button>
+								<button type="button" class="btn btn-success btn-icon-text mr-sm-2" @click='SaveQuery'><i class="far fa-check-square btn-icon-prepend"></i>Submit</button>
+							</div>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+<form class="form-class" action="" method="POST">
+<!-- Model PopUp for displaying Queries  -->
+	<div class="modal fade show" id="query_modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel">
+		<div class="modal-dialog  modal-lg" role="document" style="top:100px">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="exampleModalLabel">Query Data </h5>
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">×</span>
+					</button>
+				</div>
+				<div class="modal-body" id="modal_body">
+					<div class="row px-4">
+						<table class="table table-bordered" id="result_table">
+							<thead class="thead-dark">
+								<th>ID</th>
+								<th>Campaign</th>
+								<th>Phonebook ID</th>
+								<th>User</th>
+								<th>Numeric</th>
+								<th>Status</th>
+							</thead>
+							<tbody>
+							</tbody>
+						</table>
+					</div>
+					<div class="row mt-3 px-4">
+						<div class="col-6">
+							Showing 1 to 5 of <span id="total_data_count"></span> entries
+						</div>
+						<div class="col-6 text-right">
+							<button type="button" class='btn btn-sm btn-primary btn-icon-text d-none' title='Download Result' id="download_query_data">
+								<i class="fa fa-download btn-icon-prepend run_row" aria-hidden="true"></i>
+								Download
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</form>
+{% endif %}
+{% endblock content %}
+{% block extra-js%}
+	<script type="text/x-template" id="single_select_template">
+		<select>
+			<slot></slot>
+		</select>
+	</script>
+	<script src="{% static 'js/mustache.js' %}"></script>
+	<script src="{% static 'js/jquery.toast.min.js' %}" ></script>
+	<script src="{% static 'js/toast_msg.js' %}"></script>
+	<script src="{% static 'js/admin.js' %}"></script>
+	<script src="{% static 'js/form-validator.min.js' %}"></script>
+	<script type="text/javascript">
+		$(document).ready(function(){
+			{% if can_create %}
+				{% for camp in campaigns %}
+					var option_dict = {}
+					option_dict['text'] = "{{camp.name}}"
+					option_dict['id'] = "{{camp.name}}"
+					option_dict['data-campaign-id'] = "{{camp.id}}"
+					css_query_vue.campaign_list.push(option_dict)
+				{% endfor %}
+				{% if css %}
+				css_query_vue.$nextTick(function () {
+					css_query_vue.selected_campaign = "{{css.campaign}}"
+					css_query_vue.css_id = {{css.id}}
+					css_query_vue.result = {{raw_query|convert_in_json|safe}}
+				})
+				{% endif %}
+			{%else%}
+				PermissionDeny();
+			{% endif %}
+		})
+		$('#datepicker-popup').datepicker({})
+	</script>
+{% endblock extra-js %}

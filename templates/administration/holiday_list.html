@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+
+{% block title %}Holidays{% endblock title %}
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+
+{% endblock extra-stylesheets %}
+{% block header %}Modules<small>Holidays</small>{% endblock header %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Holidays</li>
+{% endblock breadcrumb %}
+{% block content %}
+{% if can_read %}
+<div class="card">
+	<div class="card-body">
+		<legend>Holidays</legend>
+		{% csrf_token %}
+		<!-- department tab and table -->
+		{% include "search.html" %}    
+		<div class="">
+			<table id="holidays-list-table" class="table display table-striped nowrap avatar-table" style="width: 100%">
+				<thead>
+					<tr>
+						<th class="avatar"></th>
+						{% for column in col_list %}
+							<th data-data="{{column}}" class="{% if column == 'name' %}name{% endif %} text-capitalize">{{ column|table_header }}</th>
+						{% endfor %}
+						{% if can_update or can_delete %}
+							<th data-data="checkbox_col" class="all checkbox_col">
+								<div class="btn-group select-all-div">
+									<div class="form-check">
+										<label class="form-check-label ml-3">
+											<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+											<i class="input-helper"></i>
+										</label>
+									</div>
+									{% if can_delete %}
+									<div class="dropdown">
+										<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+											<span class="caret"></span></button>
+										<ul class="dropdown-menu">
+											<li class="dropdown-item" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">Delete</li>
+										</ul>
+									</div>
+									{% endif %}
+								</div>
+							</th>
+							<th data-data="action" class="all action">Action</th>
+						{% endif %}
+					</tr>
+				</thead>
+			</table>
+		</div>
+		{% include "vue_pagination.html" %} 
+	</div>
+</div>
+{% endif %}
+{% if can_create   %}
+<!-- action buttons -->
+<div class="bottom-menu" id="dispo_circle">
+	<div class="action-button-circle">
+		<a><div class="circle-button skin-black"><i class="fa fa-plus"></i></div></a>
+	</div>
+	<div class="fab-div-area" id="fab-div-area" style=" height: 175px; padding-top: 0px; margin-top: 0px; padding-bottom: 0px; margin-bottom: 0px;">
+		<ul class="fab-ul" style="height: 170px;">
+			<li class="li-style"><a class="fas fa-cloud-upload-alt fab-div-item" data-toggle="modal" data-target="#holidayupload-wizard-modal" title="Upload Holidays Template"></a></li><br>
+			<li class="li-style"><a class="fas fa-comment-alt fab-div-item" title="Add Holidays Template" href="{% url 'create-holidays' %}" style="font-weight: 800;"></a></li><br>
+		</ul>
+	</div>
+</div>
+<!-- model forms  -->
+<div class="modal fade" id="holidayupload-wizard-modal" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to create users."></i>
+					<b>Holiday List » Upload</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body pt-3">
+				<form id="holidays-upload-form" class="wizard-validation-form" action="{% url 'upload-holiday-list' %}" method="POST">
+					{% csrf_token %}
+					<div>
+						<div class="row">
+							<div class="col-6 mt-2 mb-2">
+								<select class="form-control" name="audio_file" id="audio_file" >
+									<option value="">Select Audio File</option>
+									{% for audio in audio_files %}
+										<option value="{{audio.id}}">{{ audio.name }}</option>
+									{% endfor %}
+								</select>
+							</div>
+						</div>
+						<section>
+							<div class="row">
+								<div class="col-6">
+									<input type="file" class="dropify phonebook-upload-file" id="uploaded-file" name="uploaded_file"/>
+								</div>
+								<div class="col-6 dropify-wrapper">
+									<div class="dropify-message d-flex justify-content-center">
+										<a download  class="mr-5 download-sample-file" file_type='csv' file_name="holidays">
+											<span class="csv-download"></span>
+											<span class="sample-csv-text">Sample Csv</span>
+										</a>
+										<a download  class="mr-5 download-sample-file" file_type="xls" file_name="holidays">
+											<span class="csv-download"></span>
+											<span class="sample-csv-text">Sample Xls</span>
+										</a>
+									</div>
+								</div>
+							</div>
+							<span class="help help-text"> Date format must be dd/mm/yyyy</span>
+							<div class="row">
+								<a id="improper-data" class="d-none upload-css text-danger" download>
+									<span class="fa fa-download download-file-css"></span>
+									<span class="msg"></span>
+								</a>
+							</div>
+							<div class="row d-none" id="proper-data">
+								<span class="fa fa-upload upload-css text-info" style="padding: 5px;"></span>
+								<p id="upload-file-msg" class="text-info upload-css " style="padding: 6px;"></p>
+							</div>
+							<div class="row pull-right">
+								<div class="upload-css">
+									<button type="button" class="btn btn-dark btn-fw validate-uploaded-file d-none" id="upload-holidays">Upload File</button>
+								</div>
+							</div>
+							<div class="form-group">
+								<p id="upload-file-error" class="text-danger">{{ msg }}</p>
+							</div>
+						</section>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="callcenter">
+	<input type="hidden" id="model_name" value="Holidays">
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'melody/js/dropify.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		{% if can_read %}
+			var script_table = $('#holidays-list-table')
+			selective_datatable(script_table);  //datatbale jquery
+			edit_url = "{% url 'edit-holidays' 123 %}"
+			get_pagination_data(1, true)
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+	});
+</script>
+
+{% endblock extra-js %}

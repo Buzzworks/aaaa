@@ -1,0 +1,775 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+{% block title %}Create Dispos{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+<style>
+.asColorPicker-preview, .asColorPicker-preview, .asColorPicker-alpha,
+.asColorPicker-alpha-vertical, .asColorPicker-palettes, .asColorPicker-hex{
+	display:none;
+}
+.asColorPicker-trigger{
+	margin: 0 18px 0 0;
+}
+.accordion .card .card-header a:before{
+	right: 15px
+}
+.remove-sub-dispo{
+	position: absolute;
+	right: 5px;
+	bottom: 16px;
+	font-size: 19px!important;
+	cursor: pointer;
+}
+.add-sub-dispo-child.outer-click{
+	position:absolute;
+	font-size: 19px;
+	top:15px;
+	right:-25px;
+	cursor:pointer;
+}
+	
+</style>
+{% endblock extra-stylesheets %}
+
+{% block header %}Campaign Management<small>Dispositions</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'dispositions' %}">Dispositions</a></li>
+<li class="breadcrumb-item active" aria-current="page">{% if disposition.id %}Edit{% else %}Create{% endif %}</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_create or can_update %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card" id="add_subdispo_div">
+			<div class="card-body">
+				<legend>{% if disposition.id %}Edit Dispositions: {{disposition.name}}{% else %}Create Dispositions {% endif %}</legend>
+				{% if not is_edit and disposition.status == 'Active' %}
+				<div class="alert alert-fill-warning mb-2 py-2"> 						
+					<i class="fa fa-exclamation-triangle fa-1x"></i>Status can not be change to inactive as agent is logged in to the campaign 
+				</div>
+				{% endif %}
+				<form id="submit-disposition-form">
+					{% csrf_token %}
+					<input type="hidden" name="dispos" id="dispos">
+					<input type="hidden" name="dispo_keys" id="dispo_keys">
+					<input type="hidden" name="show_dispo" id="show_dispo">
+					<div class="row mb-3 mb-sm-0">
+						<div class="col-md-3 mb-3">
+							<div class="form-group">
+								<label for="primary_dispo_name" class=""> Primary Dispo Name<span class="star">*</span>:</label>
+								<input type="text" class="form-control" id="primary_dispo_name" placeholder="Enter Primary Disposition" name="name" data-validation="required alphanumeric" data-validation-allowing="_ " data-validation-error-msg-container="#dispo-name-error" value="{{disposition.name}}" >
+								<span id="dispo-name-error"></span>
+							</div>
+						</div>
+						<div class="col-md-3 mb-3">
+							<div class="form-group">
+								<label for="dispo_type">Type :</label>
+								<select class="form-control" name="dispo_type" id="dispo_type" v-model="primaryDispo_type">
+									{% for type in dispo_field_type %}
+									<option value="{{type.0}}">{{type.1}}</option>
+									{% endfor %}
+								</select>
+							</div>
+						</div>
+						<div class="col-md-3 mb-3">
+							<div class="form-group">
+								<label for="dispo_color_pick"> Disposition Color:</label>
+								<input type="text" id="dispo_color_pick" class="form-control color-picker " data-mode="complex" value="#3a3f51" name="color_code" value={{disposition.color_code}} >
+							</div>
+						</div>
+						<div class="col-md-3 mb-3">
+							<div class="form-group">
+								<label for="dispo_status"> Status:</label>
+								{% if not is_edit %}
+								<select class="form-control" name="status" id="dispo_status" style="pointer-events: none;">
+								{% else %}
+								<select class="form-control" name="status" id="dispo_status">
+								{% endif %}
+								{% for status in dispo_status %}
+									{% if status.0 == disposition.status %}
+										<option value="{{status.1}}" selected>{{ status.0 }}</option>
+									{% else %}
+										<option value="{{status.1}}">{{ status.0 }}</option>
+									{% endif %}
+								{% endfor %}
+								</select>
+							</div>
+						</div>
+						
+					</div>
+					<div class="row mb-3 mb-sm-0">
+						<div class="col-md-3 mb-3">
+							<div class="form-group">
+								<label for="parent_import_dispo" class="">Template Type:</label>
+								<select class="form-control field_type" id="parent_import_dispo" @change="parent_template_change($event)">
+									<option value="default">Default</option>
+									<option class="import_dispo" value="import_disposition">Import Disposition</option>
+								</select>
+							</div>
+						</div>
+						<div v-if="showParentTemplate" class="col-md-3 mb-3">
+							<div class="form-group">
+								<label for="existing_dispo" class="">Existing Disposition</label>
+								<select class="form-control field_type" id="existing_dispo" @change="parent_ext_dispo_change($event)">
+									<option value="">Select Disposition</option>
+									{% for dispo in ext_disposition %}
+										<option value="{{ dispo.id }}">{{ dispo.name }}</option>
+									{% endfor %}
+								</select>
+							</div>
+						</div>
+						<div class="col-md-4">
+							<div class="form-group row">
+								<label for="update_lead" class="col-5 col-sm-12 mb-0 mb-sm-4">
+									<span class="d-flex ">Show OnConnected/NotConnected/Both</span>
+								</label>
+								<div class="form-inline col-7 col-sm-12 ml-sm-4">
+									<div class="form-check mr-sm-3 mr-md-2">
+										<label class="form-check-label">
+											<input type="checkbox"  class="form-check-input connected" data-id="connected">
+											<i class="input-helper"></i>
+											<span class="d-none d-sm-flex">OnConnected</span>
+										</label>
+									</div>
+									<div class="form-check mr-sm-3 mr-md-2">
+										<label class="form-check-label">
+											<input type="checkbox"  class="form-check-input notconnected" data-id="notconnected">
+											<i class="input-helper"></i>
+											<span class="d-none d-sm-flex">Not Connected</span>
+										</label>
+									</div>
+									<span class="text text-danger show_dispo_error d-none" >Atleast One Must be Selected</span>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-3">
+							<div class="form-group row">
+								<label for="update_lead" class="col-5 col-sm-12 mb-0 mb-sm-4">
+									<span class="d-flex d-sm-none">UpdateLead</span>
+								</label>
+								<div class="form-check col-7 col-sm-12 ml-sm-4" id="update_lead_div">
+									<label class="form-check-label">
+										<input type="checkbox" id="update_lead" class="form-check-input" name="updatelead" {% if disposition.updatelead %}checked {% endif %}>
+										<i class="input-helper"></i>
+										<span class="d-none d-sm-flex">UpdateLead</span>
+									</label>
+								</div>
+							</div>
+						</div>
+						<div v-if="dispo_dict.length == 0" class="col-md-2 mb-4 mt-auto text-right text-md-left">
+							<button type="button" class="btn btn-info btn-sm" @click="add_subdispo">Add</button>
+						</div>
+					</div>
+					<div v-show="dispo_dict.length" id="accordion" class="accordion pr-3" role="tablist">
+						<div v-for="item_list, index in dispo_dict" style="position: relative;">
+							<subdispo-temp :key="index" 
+										:current_index="index"
+										:item="item_list" 
+										:item_index="index" 
+										:parent_div="'#accordion'"
+										:parent_dict="dispo_dict"
+										:parent_type = "primaryDispo_type"
+										:error_index = "showError"
+										:item_length="dispo_dict.length"
+										@add-child="addSubComponent"
+							></subdispo-temp>
+							<i v-if="index+1 == dispo_dict.length" class="fa fa-plus-circle text-success add-sub-dispo-child" id="add-sub-dispo-child" @click="add_subdispo" style="position:absolute;font-size: 18px;top:16px;right:-29px"></i>
+						</div>
+					</div>
+					<div class="row mt-4">
+						<div class="col-md-6">
+							<div class="alert alert-danger d-none" id="dispo-err-msg"></div>
+						</div>
+						<div class="col-md-6" style="margin-top: 10px;">
+							<div class="float-right">
+								<button type="button" class="btn btn-light btn-icon-text" onclick="showSwal('warning-message-and-cancel','OK', '/CampaignManagement/Dispositions/')">
+									<i class="fas fa-arrow-left btn-icon-prepend"></i>Cancel
+								</button>
+								<button type="button" class="btn btn-success btn-icon-text ml-2" id="create-disposition-btn" @click="dispo_submit" data-operations="{{ disposition.id }}">
+									<i class="far fa-check-square btn-icon-prepend"></i>Submit
+								</button>
+							</div>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+<template id="subdispo_temp">
+	<div class="card">
+		<div class="card-header py-3" role="tab" id="dispo-heading" style="position: relative;">
+			<h6 class="mb-0">
+				<a data-toggle="collapse" :href="'#dispo-collaps-'+item_index" aria-expanded="false" aria-controls="collapse-1" class="sub-dispo-heading collapsed">
+					<span v-if="item.name">${item.name}</span>
+					<span v-else>Sub Dispo</span>
+				</a>
+			</h6>
+			<i class="fa fa-times-circle text-danger remove-sub-dispo" @click="remove_child(current_index)"></i>
+		</div>
+		<div :id="'dispo-collaps-'+item_index" :class="[current_index+1 == item_length ? 'show': '', 'collapse collapse-div']" role="tabpanel" aria-labelledby="lead-heading" :data-parent="parent_div">
+			<div class="card-body px-3">
+				<div class="row mb-3 mb-sm-0">
+					<div class="col-md-3 mb-3">
+						<div class="form-group">
+							<label for="primary_dispo_name" class="">Name<span class="star">*</span>:</label>
+							<input type="text" class="form-control" v-model.trim="item.name" :data-value=item.name :data-parent=item_index data-validation="alphanumeric" data-validation-allowing="-_/ " @blur="nameChange" :data-parent_name=parent_div>
+							<span v-show="error_index.includes(item_index)" class="text-danger">This Field is required</span>
+						</div>
+					</div>
+					<div class="col-md-2 mb-2">
+						<div class="form-group">
+							<label for="primary_dispo_name" class="">Template Type:</label>
+							<select class="form-control field_type" id="" v-model="item.template_type" @change="template_change($event, current_index)">
+								<option value="default">Default</option>
+								<option class="import_dispo" value="import_disposition">Import Disposition</option>
+							</select>
+						</div>
+					</div>
+					<div class="col-md-3 mb-3" :id="'existing-dispo-'+item_index" v-if="this.showExtDispoList">
+						<div class="form-group">
+							<label for="primary_dispo_name" class="">Existing Disposition</label>
+							<select class="form-control field_type" id="existing_dispo" @change="ext_dispo_change($event, current_index)">
+								<option value="">Select Disposition</option>
+								{% for dispo in ext_disposition %}
+									<option value="{{ dispo.id }}">{{ dispo.name }}</option>
+								{% endfor %}
+							</select>
+						</div>
+					</div>
+					<div class="col-md-2 mb-2">
+						<div class="form-group">
+							<label for="count" class="">Type:</label>
+							<select class="form-control field_type" id="" v-model="item.type" @change="type_change($event, current_index)">
+								<option v-if="item.children.length" value="" disabled>Select Type</option>
+								<option v-else value="">Select Type</option>
+								{% for type in field_types %}
+								<option v-if="parent_type == 'multifield' && '{{type.0}}' == 'multifield'" value="{{ type.0 }}" disabled>{{ type.1 }}</option>
+								<option v-else value="{{ type.0 }}">{{ type.1 }}</option>
+								{% endfor %}
+							</select>
+						</div>
+					</div>
+					<div class="col-md-2 mb-2 size-div" v-if="this.showSize">
+						<div class="form-group size-div">
+							<label for="" class="">Size<span class="star">*</span>:</label>
+							<input type="text" class="form-control select-size" id="select-size" placeholder="Size" data-validation="number" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)" v-model="item.size" v-on:blur="setDefaultSize">
+							<div class="d-none alert  alert-danger size_msg_error"></div>
+						</div>
+					</div>
+					<div  class="col-11 col-sm-5 col-md-3 form-inline">
+						<div class="form-group">
+							<div v-if="this.showRequired" class="form-check mr-sm-3">
+								<label class="form-check-label d-flex">
+									<input type="checkbox" name="" class="form-check-input" v-model="item.is_required">
+									Required
+									<i class="input-helper"></i>
+								</label>
+							</div>
+							<div v-show="showCallbackoption" class="form-check mr-sm-3">
+								<label class="form-check-label d-flex">
+									<input type="checkbox" name="" class="form-check-input" v-model="item.is_callback">
+									Callback Field
+									<i class="input-helper"></i>
+								</label>
+							</div>
+							<div v-show="showPreviousoption" class="form-check">
+								<label class="form-check-label d-flex">
+									<input type="checkbox" name="" class="form-check-input" v-model="item.previous_disabled">
+									Disable Previous
+									<i class="input-helper"></i>
+								</label>
+							</div>
+						</div>
+					</div>
+					<i v-if="item.children.length == 0" v-show="showAddbtn" class="fa fa-plus-circle text-success fa-5x add-sub-dispo-child col-form-label" id="add-sub-dispo-child" @click="$emit('add-child', [item,item_index])"></i>
+				</div>
+				<div :id="'subdispo-'+item_index" class="subdispo-child pr-3" style="position: relative;">
+					<div v-for="(child, child_index) in item.children" style="position: relative;">
+						<input type="hidden" id="sub-dispo-child-count" value="0">
+						<subdispo-temp v-show="item.children.length"
+										:key="child_index" 
+										:current_index="child_index"
+										:item="child" 
+										:item_index="item_index+'-'+child_index" 
+										:parent_div="'#subdispo-'+item_index"
+										:parent_dict="item.children"
+										:parent_type="item.type"
+										:error_index="error_index"
+										:item_length="item.children.length"
+										@add-child="$emit('add-child', $event)"
+						></subdispo-temp>
+						<i v-if="child_index + 1 == item.children.length" v-show="showAddbtn" class="fa fa-plus-circle text-success fa-5x add-sub-dispo-child outer-click" id="add-sub-dispo-child" @click="$emit('add-child', [item,item_index])"></i>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</template>
+<input type="hidden" id="count" value="0">
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/vendor.bundle.color.js' %}"></script>
+<script src="{% static 'js/form-validator.min.js' %}"></script>
+<script src="{%static 'melody/js/form-addons.js'%}"></script>
+<script src="{%static 'js/admin.js'%}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+			{% if can_create or can_update %}
+			$.validate({
+				form:'#submit-disposition-form',
+			});
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+
+		$('[data-toggle="tooltip"]').tooltip(); 
+		add_subdispo_vue.dispo_dict =  {{subdispo|convert_in_json|safe}}
+		{% if disposition.id %}
+		add_subdispo_vue.primaryDispo_type = '{{disposition.dispo_type}}'
+		{% endif %}
+	});
+	keyDict = []
+	function getDispoKyes(subdispo){
+		if (subdispo.length > 0){
+			$.each(subdispo,function(index,value){
+				if($.inArray(value.type,['multifield','dropdown','multiselect','checkbox','multiselectcheckbox','radio','']) == -1){
+					keyDict.push(value.name.replace(/  +/g,' ').replace(/ /g,"_").toLowerCase())
+				}else if($.inArray(value.type,['dropdown','multiselect','checkbox','multiselectcheckbox','radio']) != -1){
+					keyDict.push(value.name.replace(/  +/g,' ').replace(/ /g,"_").toLowerCase())
+					getDispoKyes(value.children)
+				}else{
+					getDispoKyes(value.children)
+				}
+			})
+		}
+	}
+		// vue component
+		Vue.component('subdispo-temp', {
+			template: '#subdispo_temp',
+			delimiters: ["${","}"],
+			props:['item', 'item_index', 'parent_div','parent_dict','current_index',
+					'error_index','item_length','parent_type'],
+			data() {
+				return {
+					showSize:false,
+					collapseOn:false,
+					showAddbtn:false,
+					showCallbackoption:false,
+					showPreviousoption:false,
+					showRequired: false,
+					showExtDispoList:false
+				}
+			},
+			methods: {
+				remove_child(index) {
+					this.parent_dict.splice(index, 1);
+				},
+				setDefaultSize(event) {
+					if (event.target.value == "") {
+							this.item.size=20
+					}
+				},
+				template_change(event, index) {
+					if(event.target.value =="import_disposition") {
+						this.showExtDispoList=true
+					}
+					else {
+						this.showExtDispoList=false
+					}
+				},
+				type_change(event, index) {
+					if($.inArray(event.target.value, ["text", "textarea", "integer",
+						"datefield", "timefield", "datetimefield"]) != -1) {
+						this.parent_dict[index]["children"] = []
+					}
+				},
+				ext_dispo_change(event, index) {
+					var cust_dispo = this.parent_dict[index]
+					var vm = this
+					$.ajax({
+						type: 'POST',
+						headers: {"X-CSRFToken": csrf_token},
+						url: `/CampaignManagement/get-existing-disposition/${event.target.value}/`,
+						data: {},
+						success: function (data) {
+							vm.parent_dict[index]['type'] = data["dispo_type"]
+							vm.$set(vm.parent_dict[index]['children'] = [...data['subdispo']])
+							vm.parent_dict[index]['template_type']='default'
+							vm.template_change(event, index)
+						},
+						error: function (data) {
+							
+						}
+					});
+				},
+				nameChange(event) {
+					if ($.inArray( this.item_index, this.error_index) == -1) {
+						if (this.item.name == "") {
+								this.error_index.push(this.item_index)
+						}
+						else{
+							this.error_index.splice(this.error_index.indexOf(this.item_index),1);
+						}
+					}
+					$(event.target).attr("data-value",event.target.value.trim())
+					var data_parent = $(event.target).attr("data-parent_name")
+					this.item.name = this.item.name.trim()
+					var data_value = this.item.name.trim()
+					if (data_value !="" && $(data_parent).find(`input[data-value="${data_value}"]`).length >= 2) {
+						this.item.name = ""
+						$(event.target).siblings('span').text("Disposition with this name already exist")
+						this.error_index.push(this.item_index)
+						// setTimeout(function(){ $(event.target).siblings('span').text(""); }, 3000);
+						if ($.inArray( this.item_index, this.error_index) == -1) {	
+						}
+					}else{
+						this.item.db_name = data_value.replace(/  +/g,' ').replace(/ /g,"_").toLowerCase()
+					}
+				}
+			},
+			watch:{
+				item:{
+					handler(value) {
+						if (value.type != "") {
+							if ($.inArray(value.type, ["text", "textarea", "integer"]) != -1) {
+								this.showSize = true
+								this.showAddbtn = false
+								this.showCallbackoption = false
+								this.showPreviousoption = false
+								this.showRequired = true
+							}
+							else if ($.inArray(value.type, ["datefield", "timefield", "datetimefield"]) != -1){
+								this.showSize = false
+								this.showAddbtn = false
+								this.showRequired = true
+								if(value.type == "timefield"){
+									this.showPreviousoption = false
+								} else {
+									this.showPreviousoption = true
+								}
+								if(value.type == "datetimefield"){
+									this.showCallbackoption = true
+								}else{
+									this.showCallbackoption = false
+								}
+							}
+							else if ($.inArray(value.type, ["link","dropdown"]) != -1){
+								this.showAddbtn = true
+								this.showSize = false
+								this.showCallbackoption = false
+								this.showPreviousoption = false
+								this.showRequired = true
+							}
+							else {
+								this.showSize =false
+								this.showAddbtn = true
+								this.showCallbackoption = false
+								this.showPreviousoption = false
+								this.showRequired = false
+								value.is_required = false
+							}
+						}
+						else{
+							this.showSize = false
+							this.showAddbtn = false
+							this.showCallbackoption = false
+							this.showPreviousoption = false
+							this.showRequired = false
+							value.is_required = false
+						}
+					},
+					deep:true,
+					immediate: true
+				},
+				showCallbackoption(value){
+					if(!value){
+						this.item.is_callback = false
+					}
+				},
+				showPreviousoption(value){
+					if(!value){
+						this.item.previous_disabled = false
+					}
+				},
+				parent_type(value){
+					var vm = this
+					if(value == 'multifield'){
+						if(vm.parent_dict.length){
+							vm.parent_dict.filter(function(child,index){
+								if(child.type == 'multifield'){
+									if(child.children.length){
+										child.type = 'dropdown'
+									}
+									else{
+										child.type = ''
+									}
+								}
+							})
+						}
+					}
+				}
+			},
+		});
+		//vue main component
+		add_subdispo_vue = new Vue({
+			el: '#add_subdispo_div',
+			delimiters: ["${","}"],
+			data() { 
+				return {
+					dispo_dict: {{subdispo|convert_in_json|safe}},
+					showError:[],
+					primaryDispo_type: 'dropdown',
+					showParentTemplate:false
+				}
+			},
+			methods: {
+				add_subdispo: function() {
+					var vm = this
+					var isEmpty= false
+					vm.$children.forEach(function(child, index) {
+						if ($.inArray( index, vm.showError) == -1) {
+							if (child.item.name =="") {
+									isEmpty = true
+									vm.showError.push(index)
+									$("a[href='dispo-collaps-"+index+"]").attr("aria-expanded", true)
+									$("dispo-collaps-"+index).addClass("show")
+								}
+							else {
+								vm.showError.splice(vm.showError.indexOf(index),1);
+							}
+						}
+						
+					})
+					if(isEmpty == false) {
+						$(".sub-dispo-heading").attr("aria-expanded", false)
+						$(".collapse-div").removeClass("show")
+						vm.dispo_dict.push(
+							{name:"",
+							db_name:"",
+							type:"",
+							size:"20",
+							is_required:false,
+							is_callback:false,
+							previous_disabled: false,
+							template_type:"default",
+							children: []
+							})
+					}
+				},
+				addSubComponent(item) {
+					this.addItem(item)
+				},
+				addItem: function (item) {
+						var vm = this
+						var isEmpty= false
+						if (item[0].name !="") {
+							if(item[0].children.length > 0){
+								item[0].children.filter(function(child, value) {
+									vm.showError = []
+									if ($.inArray(item[1]+"-"+value, vm.showError) == -1) {
+										if (child.name =="") {
+												isEmpty = true
+												vm.showError.push(item[1]+"-"+value)
+										}
+										else {
+											vm.showError.splice(vm.showError.indexOf(item[1]+"-"+value),1);
+										}
+									}
+								})
+							}
+							
+						}
+						else {
+							isEmpty = true
+							if ($.inArray(item[1], vm.showError) == -1) { 
+								vm.showError.push(item[1])
+							}
+						}
+						if (isEmpty == false) {
+							$("#subdispo-"+item[1]).find(".sub-dispo-heading").attr("aria-expanded", false)
+							$("#subdispo-"+item[1]).find(".sub-dispo-heading").find(".collapse-div").removeClass("show")
+							item[0].children.push({
+								name:"",
+								db_name:"",
+								type:"",
+								size:"20",
+								is_callback:false,
+								previous_disabled: false,
+								is_required:false,
+								template_type:"default",
+								children:[]
+							})
+						}
+				},
+				validate_form(dispo_dict) {
+					var input_error = jQuery("#accordion input").filter(function() {
+							if (this.value == "") {
+								var parent_id = $(this).attr("data-parent")
+								if(parent_id.split("-").length >0) {
+									var temp_id = parent_id.split("-")[0]
+									if ($(`a[href="#dispo-collaps-${temp_id}"`).attr("aria-expanded") == "false") {
+											$(`a[href="#dispo-collaps-${temp_id}"`).click()
+
+									}
+								}
+								if ($(`a[href="#dispo-collaps-${parent_id}"`).attr("aria-expanded") == "false"){
+										$(`a[href="#dispo-collaps-${parent_id}"`).click()
+									}
+					    	return !this.value;
+							}
+					}).siblings("span").css('display','block');
+					return input_error
+				},
+				dispo_submit(event) {
+					var is_error = this.validate_form(this.dispo_dict)
+					if (is_error.length == 0 && $("#submit-disposition-form").isValid()) {
+						var current_element = $('#create-disposition-btn')
+						form_name = $("#submit-disposition-form")
+						if(current_element.attr("data-operations")) {
+							form_url = '/CampaignManagement/Dispositions/'+current_element.attr("data-operations")+'/'
+						}
+						else {
+							form_url = '/CampaignManagement/Dispositions/create/'
+						}
+						if (this.primaryDispo_type == 'dropdown'){
+							keyDict.push('sub_dispo')
+						}
+						getDispoKyes(this.dispo_dict)
+						$("#dispos").val(JSON.stringify(this.dispo_dict))
+						$("#dispo_keys").val(JSON.stringify(keyDict))
+						if ($('.connected').prop('checked') == true && $('.notconnected').prop('checked') == false){
+							$('#show_dispo').val('1')
+						}else if ($('.connected').prop('checked') == false && $('.notconnected').prop('checked') == true){
+							$('#show_dispo').val('2')
+						}else{
+							$('#show_dispo').val('0')
+						}
+						$.ajax({
+							type: 'POST',
+							headers: {"X-CSRFToken": csrf_token},
+							url: form_url,
+							data: form_name.serialize(),
+							success: function (data) {
+									if(current_element.attr("data-operations")) {
+										showSwal('success-message', 'Disposition Updated successfully', '/CampaignManagement/Dispositions/')
+									}
+									else {
+										showSwal('success-message', 'Disposition Created successfully', '/CampaignManagement/Dispositions/')
+									}
+							},
+							error: function (data) {
+								if (data["responseJSON"]["name"]) {
+									$("#dispo-name-error").parent().find('input').addClass('error').removeClass('valid')
+									$("#dispo-name-error").addClass("has-error").html('<span class="help-block form-error">' + data["responseJSON"]["name"] +'</span>').removeClass("d-none")
+								}		
+							}
+						});
+						
+					}
+				},
+				parent_template_change(event, index) {
+					if(event.target.value =="import_disposition") {
+						this.showParentTemplate=true
+					}
+					else {
+						this.showParentTemplate=false
+						this.dispo_dict = []
+						this.primaryDispo_type = 'dropdown'
+					}
+				},
+				parent_ext_dispo_change(event) {
+					var vm = this
+					$.ajax({
+						type: 'POST',
+						headers: {"X-CSRFToken": csrf_token},
+						url: `/CampaignManagement/get-existing-disposition/${event.target.value}/`,
+						data: {},
+						success: function (data) {
+							vm.dispo_dict = [...data['subdispo']]
+							vm.primaryDispo_type = data["dispo_type"]
+						},
+						error: function (data) {
+							
+						}
+					});
+				}
+			},
+			watch:{
+				primaryDispo_type(value){
+					var vm = this
+					if(value == 'multifield'){
+						if(vm.dispo_dict.length){
+							vm.dispo_dict.filter(function(child,index){
+								if(child.type == 'multifield'){
+									child.type = 'dropdown'
+								}
+							})
+						}
+					}
+				}
+			}
+		})
+
+
+	
+</script>
+<script>
+	 if ($(".color-picker").length) {
+		$('#dispo_color_pick').asColorPicker();
+	}
+	$(document).on('keydown', '#sub-dispo-name', function(e) {
+		if (e.which === 32) {
+			return false;
+		}  
+	});
+	$(document).on('keypress', '#select-size, #select-subparent-size', function(evt){
+		 if (evt.which === 48 && evt.target.selectionStart === 0) {
+			return false;
+		}
+	})
+var show_dispo = ''
+	{% if disposition.show_dispo %}
+		show_dispos = {{disposition.show_dispo}} 
+	{% endif %}
+if(!$('#create-disposition-btn').data('operations')){
+	$('.connected').prop('checked',true)
+	$('.notconnected').prop('checked',true)
+}else{
+	if(show_dispos == 1){
+		$('.connected').prop('checked',true)
+	}else if(show_dispos == 2){
+		$('.notconnected').prop('checked',true)
+	}else{
+		$('.connected,.notconnected').prop('checked',true)
+	}
+}	
+
+$(document).on('change','.connected,.notconnected',function(){
+	if($(this).data('id') == 'connected'){
+		if(!$('.notconnected').prop('checked')){
+			setTimeout(function() {
+                        $(".show_dispo_error").addClass("d-none")
+                    }, 2000);
+			$(this).prop('checked',true)
+			$(".show_dispo_error").removeClass("d-none")
+		}
+	}else if($(this).data('id') == 'notconnected'){
+		if(!$('.connected').prop('checked')){
+			setTimeout(function() {
+                        $(".show_dispo_error").addClass("d-none")
+                    }, 2000);
+			$(this).prop('checked',true)
+			$(".show_dispo_error").removeClass("d-none")
+		}
+	}
+})	
+</script>
+{% endblock extra-js %}

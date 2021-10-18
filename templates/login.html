@@ -1,0 +1,353 @@
+{% load static %}
+{% load cache %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<!-- Required meta tags -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<meta http-equiv="Cache-control" content="no-cache">
+	<title>Flexydial</title>
+	<link rel="shortcut icon" href="{% static '/images/favicon.png' %}"/>
+	<!-- stylesheets -->
+	<link rel="stylesheet" type="text/css" href="{% static 'css/bootstrap.min.css' %}">
+	<link rel="stylesheet" href="{% static 'melody/vendors/iconfonts/font-awesome/css/all.min.css' %}">
+	<link rel="stylesheet" href="{% static 'melody/css/style.css' %}">
+	<!-- custom stylesheet -->
+	<link rel="stylesheet" href="{% static '/css/preloader.css' %}">
+	<link rel="stylesheet" type="text/css" href="{% static 'css/login.css' %}">
+	<link rel="stylesheet" href="{% static '/css/preloader.css' %}">
+<style type="text/css">
+ .pass-graybar {
+     height: 3px;
+     background-color: #ccc;
+     width: 100%;
+     position: relative
+ }
+
+ .pass-colorbar {
+     height: 3px;
+     background-image: url({% static "images/passwordstrength.jpg" %});
+     position: absolute;
+     top: 0;
+     left: 0
+ }
+
+ .pass-percent,
+ .pass-text {
+     font-size: 1em
+ }
+
+ .pass-percent {
+     margin-right: 5px
+ }
+ 
+ .star{
+     color:#FF0000;
+     font-size:15px;
+ }
+
+</style>
+<link rel="stylesheet" href="{% static '/css/password-strength.css' %}">
+</head>
+<body>
+	<div class="container-scroller">
+		<div class="container-fluid page-body-wrapper full-page-wrapper p-md-3">
+			<div class="content-wrapper d-flex align-items-stretch auth auth-img-bg">
+				<div class="preloader">
+					<center>
+						<span class="dot-opacity-loader">
+							<span style="background-color: #0860ad;"></span>
+							<span style="background-image: linear-gradient(to right,#0860ad, #45c5f3);"></span>
+							<span style="background-color: #45c5f3;"></span>
+						</span>
+						<br><br>
+						<div class="reload-page" style="color: white;"></div>
+					</center>
+				</div>
+				<div class="row flex-grow m-0" id="login-row">
+					<div class="col-md-6 d-none d-md-flex flex-row align-items-center justify-content-center" style="background: #3a3f51;">
+						<div class="d-flex flex-column align-items-end w-100" style="height: 60%;">
+							<div class="carousel slide caption-animate h-100"  id="login-carousel" data-ride="carousel">
+								<ol class="carousel-indicators">
+									<li data-target="#login-carousel" data-slide-to="0" class="active"></li>
+									<li data-target="#login-carousel" data-slide-to="1"></li>
+									<li data-target="#login-carousel" data-slide-to="2"></li>
+								</ol>
+								<div class="carousel-inner h-100 ">
+									<div class="carousel-item active">
+										<img src="{% static 'images/callcenter-home-image-1.jpg' %}" alt="callcenter-home-image-1">
+										<div class="carousel-caption">
+											<h5>Flexydial</h5>
+										</div>
+									</div>
+									<div class="carousel-item">
+										<img src="{% static 'images/callcenter-home-image-2.jpg' %}" alt="callcenter-home-image-2">
+										<div class="carousel-caption">
+											<h5>Version 4.0</h5>
+										</div>
+									</div>
+									<div class="carousel-item">
+										<img src="{% static 'images/callcenter-home-image-3.jpg' %}" alt="callcenter-home-image-3">
+										<div class="carousel-caption">
+											<h5>product</h5>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="text-white new-caption-area"></div>
+							<!-- <p class="text-white font-weight-medium text-center flex-grow align-self-end mt-auto">Copyright &copy; 2018  All rights reserved.</p> -->
+						</div>
+					</div>
+					<div class="col-md-6 d-flex align-items-center justify-content-center">
+						<div class="auth-form-transparent text-left p-3">
+							<div class="brand-logo mb-3">
+								<img src="{% static 'images/flexydial-logo.png' %}" alt="icon" alt="flexydial-logo">
+							</div>
+							<div id="loginForm_div" class="">
+								<div id="login-error" class="alert alert-danger d-none"></div>
+								<!-- <h4>Welcome back!</h4> -->
+								<!-- <h6 class="font-weight-light">Happy to see you again!</h6> -->
+								<form class="cmxform pt-3" id="loginForm" method="post">
+									<div class="form-group">
+									   <label for="username">Username {{ request.session.is_download }}<span class="star"> *</span></label>
+										<div class="input-group">
+											<div class="input-group-prepend bg-transparent">
+												<span class="input-group-text bg-transparent border-right-0">
+													<i class="fa fa-user text-dark"></i>
+												</span>
+											</div>
+											<input type="text" class="form-control form-control-lg border-left-0" id="username" placeholder="Username" name="username" required>
+										</div>
+									</div>
+									<div class="form-group">
+									<label for="password">Password<span class="star"> *</span></label>
+										<div class="input-group">
+											<div class="input-group-prepend bg-transparent">
+												<span class="input-group-text bg-transparent border-right-0">
+													<i class="fa fa-lock text-dark"></i>
+												</span>
+											</div>
+											<input type="password" class="form-control form-control-lg border-left-0" id="password" placeholder="Password" name="password" required autocomplete="off">
+										</div>
+									</div>
+									<div id="group_login_options">
+										<div class="my-2 d-flex justify-content-between align-items-center">
+											<a id="forgotPassword_link" href="#" class="auth-link text-black forgotPassword_link d-none">Forgot password?</a>
+											<a id="downloadCertificate_link" href="#" class="auth-link text-black">Download Cerificate</a>
+											<a id="changePassword_link" href="#" class="auth-link text-black">Change Password?</a>
+										</div>
+									</div>
+									<div class="my-2 d-flex justify-content-between align-items-center">
+										<a id="sign_in_redirect" href="#" class="auth-link text-black d-none">Back to Sign in?</a>
+									</div>
+									<div class="my-3">
+										<input class="btn btn-block btn-dark btn-lg font-weight-medium auth-form-btn mb-btn-primary" type="button" value="LOGIN" id="login_btn">
+									</div>
+									<input type="hidden" name="internet_failure_data" id="internet_failure_data">
+									<input type="hidden" name="client_time" id="client_time">
+									<input type="hidden" name="next" value="{{ request.GET.next }}" id="next_url">
+								</form>
+							</div>
+							<div id="downloadCertificate" class="" style="display: none">
+								<div id="downloadCertificate_error" class="alert alert-danger d-none"></div>
+								<form class="cmxform pt-3" id="downloadCertificateForm">
+									<div class="form-group">
+										<label for="username">Username<span class="star"> *</span></label>
+										<div class="input-group">
+											<div class="input-group-prepend bg-transparent">
+												<span class="input-group-text bg-transparent border-right-0">
+													<i class="fa fa-user text-dark"></i>
+												</span>
+											</div>
+											<input type="text" class="form-control form-control-lg border-left-0" id="download_username" placeholder="Username" name="username" required>
+										</div>
+									</div>
+									<div class="form-group">
+									<label for="password">Password<span class="star"> *</span></label>
+										<div class="input-group">
+											<div class="input-group-prepend bg-transparent">
+												<span class="input-group-text bg-transparent border-right-0">
+													<i class="fa fa-lock text-dark"></i>
+												</span>
+											</div>
+											<input type="password" class="form-control form-control-lg border-left-0" id="download_password" placeholder="Password" name="password" required autocomplete="off">
+										</div>
+									</div>
+									<div class="my-2 d-flex justify-content-between align-items-center">
+										<a id="forgotPassword_link" href="#" class="auth-link text-black forgotPassword_link d-none">Forgot password?</a>
+										<a href="#" class="auth-link text-black backtoSignIn_link">Back to Sign in?</a>
+									</div>
+									<div class="my-3">
+										<input class="btn btn-block btn-dark btn-lg font-weight-medium auth-form-btn mb-btn-primary" type="button" value="Download" id="download_certificate">
+									</div>
+								</form>
+							</div>
+							<div id="changePassword_div" class="" style="display: none">
+								<div id="changePassword_error" class="alert alert-danger d-none"></div>
+								<form class="cmxform pt-3" id="resetPassword_form">
+									<div class="form-group">
+										<label for="username">Username<span class="star"> *</span></label>
+										<div class="input-group">
+											<div class="input-group-prepend bg-transparent">
+												<span class="input-group-text bg-transparent border-right-0">
+													<i class="fa fa-user text-dark"></i>
+												</span>
+											</div>
+											<input type="text" class="form-control form-control-lg border-left-0" id="cp_username" placeholder="Username" name="username" required>
+										</div>
+									</div>
+									<div class="form-group">
+										<label for="old_password">Old Password<span class="star"> *</span></label>
+										<div class="input-group">
+											<div class="input-group-prepend bg-transparent">
+												<span class="input-group-text bg-transparent border-right-0">
+													<i class="fas fa-key text-dark"></i>
+												</span>
+											</div>
+											<input type="password" class="form-control form-control-lg border-left-0" id="old_password" placeholder="Enter Old Password" name="old_password" autocomplete="off">
+										</div>
+									</div>
+									<div class="form-group">
+										<label for="new_password">New Password<span class="star"> *</span></label>
+										<div class="input-group">
+											<div class="input-group-prepend bg-transparent">
+												<span class="input-group-text bg-transparent border-right-0">
+													<i class="fa fa-lock text-dark"></i>
+												</span>
+											</div>
+											<input type="password" class="form-control form-control-lg border-left-0 pr-password" id="new_password" placeholder="Enter New Password" name="new_password" autocomplete="off">
+										</div>
+									</div>
+									<div class="form-group">
+										<label for="confirm_password">Confirm Password<span class="star"> *</span></label>
+										<div class="input-group">
+											<div class="input-group-prepend bg-transparent">
+												<span class="input-group-text bg-transparent border-right-0">
+													<i class="fa fa-lock text-dark"></i>
+												</span>
+											</div>
+											<input id="confirm_password" type="password" class="form-control form-control-lg border-left-0"  placeholder="Confirm New Password" name="confirm_password" autocomplete="off">
+										</div>
+									</div>
+									<div class="my-2 d-flex justify-content-between align-items-center">
+										<a id="forgotPassword_link" href="#" class="auth-link text-black forgotPassword_link d-none">Forgot password?</a>
+										<a href="#" class="auth-link text-black backtoSignIn_link">Back to Sign in?</a>
+									</div>
+									<div class="my-3">
+										<input id="changePassword_submit" class="btn btn-block btn-dark btn-lg font-weight-medium auth-form-btn mb-btn-primary" type="button" value="Submit">
+									</div>
+								</form>
+							</div>
+							<div id="forgotPassword_div" class="" style="display: none" >
+								<div id="forgotPassword_error" class="alert alert-danger d-none"></div>
+								<div id="forgotPassword_success" class="alert alert-success d-none"></div>
+								<form class="cmxform pt-3" id="forgotpassword_form" >
+									<div class="form-group">
+										<label for="username">Username or Email Address <span class="star"> *</span></label>
+										<div class="input-group">
+											<div class="input-group-prepend bg-transparent">
+												<span class="input-group-text bg-transparent border-right-0">
+													<i class="fa fa-user text-dark"></i>
+												</span>
+											</div>
+											<input type="text" class="form-control form-control-lg border-left-0" id="cp_username" placeholder="Username" name="credentials" required>
+										</div>
+									</div>
+									<a href="#" class="auth-link text-black align-items-center backtoSignIn_link">Back to Sign in?</a>
+									<div class="my-3">
+										<div class="" id="email-loader" style="display: none;">
+											<div class="dot-opacity-loader" id="">
+												<span></span>
+												<span></span>
+												<span></span>
+												<span></span>
+											</div>
+										</div>
+										<input id="forgotpassword_submit" class="btn btn-block btn-dark btn-lg font-weight-medium auth-form-btn mb-btn-primary" type="button" value="Submit">
+									</div>
+								</form>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<!-- content-wrapper ends -->
+		</div>
+		<!-- page-body-wrapper ends -->
+	</div>
+	<!-- container-scroller -->
+</div>
+<!-- plugins:js -->
+
+
+<script src="{% static 'js/clear-cache.js' %}"></script>
+<script src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
+<script src="{% static 'js/encrypt.js' %}"></script>
+<script src="{% static 'js/jquery.validate.min.js' %}" ></script>
+<script src="{% static 'melody/js/alerts.js' %}"></script>
+<script src="{% static 'melody/js/owl-carousel.js' %}"></script>
+<script src="{% static 'js/password.js' %}"></script>
+<script src="{% static 'js/login.js' %}"></script>
+<script src="{% static 'js/moment.js' %}"></script>
+<script src="{% static 'js/bootstrap.min.js' %}"></script>
+<script type="text/javascript">
+	{% if forgot_password %}
+		$('.forgotPassword_link').removeClass('d-none')
+	{% endif %}
+	$(window).ready(function() {
+		$('.preloader').fadeOut("slow");
+	});
+	$(document).ready(function () {
+		$('.carousel').carousel();
+		var caption = $('div.carousel-item:nth-child(1) .carousel-caption');
+		$('.new-caption-area').html(caption.html());
+		caption.css('display', 'none');
+
+		$(".carousel").on('slide.bs.carousel', function (evt) {
+			var caption = $('div.carousel-item:nth-child(' + ($(evt.relatedTarget).index() + 1) + ') .carousel-caption');
+			$('.new-caption-area').html(caption.html());
+			caption.css('display', 'none');
+		});
+		$("#loginForm").validate({
+			errorPlacement: function(label, element) {
+				label.addClass('mt-2 text-danger');
+				label.insertAfter(element.parent());
+			},
+			highlight: function(element, errorClass) {
+				$(element).parent().parent().addClass('has-danger')
+				$(element).parent().addClass('form-control-danger')
+			}
+		});
+		{% if error %}
+		$("#login-error").removeClass("d-none").text("{{error}}")
+		setTimeout(function(){$("#login-error").addClass("d-none").text("")},3000)
+		{% endif %}
+		sessionStorage.clear()
+	});
+</script>
+<script type="text/javascript">
+	$(document).ready(function(){
+		// $('#new_password').password({
+		// 	field: '#cp_username',
+		// 	animate: true,
+		// });
+		$(".pr-password").passwordRequirements({});
+		$('.pass-wrapper').addClass("input-group")
+		$("#internet_failure_data").val(localStorage.getItem("connection_failure_data"));
+		localStorage.removeItem("connection_failure_data");
+	})
+	next_link = "{{ request.GET.next|default:"" }}"
+	if (next_link.indexOf("api/download-scheduled-report/") != -1) {
+		$("#group_login_options").addClass("d-none")
+		$("#sign_in_redirect").removeClass("d-none")
+		$("#login_btn").val("DOWNLOAD REPORT")
+	}
+	$("#sign_in_redirect").click(function() {
+		window.location.href ="/"
+	})
+</script>
+
+</body>
+
+</html>

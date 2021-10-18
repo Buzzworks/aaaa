@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+{% block title %}Alternate Number{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/datatablecss/buttons.bootstrap4.min.css' %}">
+<style type="text/css">
+	.accordion.accordion-solid-header .card .card-header a{
+		padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+	}
+	.accordion.accordion-solid-header .card .card-body{
+		padding:0.5rem;
+	}
+	.accordion .card .card-body i{
+		font-size: 1rem;
+	}
+</style>
+{% endblock extra-stylesheets %}
+
+{% block header %}Alternate Numbers<small>Alternate Numbers</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Alternate Numbers</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Alternate Numbers</legend>
+				<div class="mt-1">
+					<div class="accordion" id="accordion" role="tablist">
+						<div class="card">
+							<div class="card-header" role="tab" id="heading-2">
+								<h6 class="mb-0">
+									<a class="" data-toggle="collapse" href="#collapse-2" aria-expanded="true" aria-controls="collapse-2">
+										Search Report
+									</a>
+								</h6>
+							</div>
+							<div id="collapse-2" class="collapse show" role="tabpanel" aria-labelledby="heading-2" data-parent="#accordion" style="">
+								<div class="card-body">
+									<form id="report_form" action="{% url 'report-reschedule_callbacks' %}" method="post">
+										{% csrf_token %}
+										<div class="row">
+											<div class="col-md-3">
+												<div class="form-group">
+													<label class="col-form-label mb-0">UniqueId</label>
+													<input type="text" class="form-control" name="unique_id" id="unique_id" placeholder="Unique Id" value="{{ unique_id }}">
+												</div>
+											</div>
+											<div class="col-md-3 col-sm-6 agent-datepicker">
+												<div class="form-group">
+													<label class="col-form-label mb-0">Start Date</label>
+													<div data-target-input="nearest" class="input-group date" id="start-date">
+														<div data-target="#start-date" data-toggle="datetimepicker" class="input-group datetimepicker">
+															<input type="text" name="start_date" placeholder="YYYY-MM-DD HH:mm" data-target="#start-date" class="form-control crm-form-control datetimepicker-input"  autocomplete="off">
+															<div class="input-group-addon input-group-append"></div>
+														</div>
+													</div>
+												</div>
+											</div>
+											<div class="col-md-3 col-sm-6 agent-datepicker">
+												<div class="form-group">
+													<label class="col-form-label mb-0">End Date</label>
+													<div data-target-input="nearest" class="input-group date " id="end-date">
+														<div data-target="#end-date" data-toggle="datetimepicker" class="input-group">
+															<input type="text" name="end_date" placeholder="YYYY-MM-DD HH:mm" data-target="#end-date" class="form-control crm-form-control datetimepicker-input" autocomplete="off">
+															<div class="input-group-addon input-group-append"></div>
+														</div>
+													</div>
+													<span class="text-danger d-none" id="end-date-error">End Date Should Be Greater Than Start Date</span>
+												</div>
+											</div>
+											<div class="form-group">
+												<label class="col-form-label"></label>
+												<div>
+													<button type="button" class="btn btn-success btn-sm btn-icon-text mt-2" id="report-filter"><i class="fas fa-filter"></i>Filter</button>
+													<div class="btn-group">
+														<button type="button" class="btn btn-primary btn-sm mt-2 agent_reports_download" id="xls"><i class="fa fa-download"></i></button>
+														<button type="button" class="btn btn-primary btn-sm mt-2 dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+														</button>
+														<div class="dropdown-menu">
+															<a class="dropdown-item agent_reports_download" id="xls" href="#">Excel</a>
+															<a class="dropdown-item agent_reports_download" id="csv" href="#">Csv</a>
+														</div>
+													</div>
+													<button type="button" value=""  id="alternate-number-delete" class="btn btn-primary btn-sm mt-2" title="Bulk/Selected Delete"><i class="fas fa-trash-alt"></i></button>
+												</div>
+											</div>
+										</div>
+										<input type="hidden" name="page" id="nextPage_number" value="1">
+										<input type="hidden" name="paginate_by" id="page_length" value="10">
+										<input type="hidden" name="column_name" id="column_name_list">
+										<input type="hidden" name="agent_reports_download" id="call_details_flag" value="">
+										<input type="hidden" name="slected_entry" id="slected_entry" value="">
+										<input type="hidden" name="agent_reports_download_type" id="agent_reports_download_type">
+									</form>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-12">
+						<table id="alternate-numbers-table" class="table display table-striped nowrap mt-2" style="width: 100%">
+							<thead>
+								<tr id="column_name">
+									<th class="select-checkbox"></th>
+									{% for field in all_fields %}
+									<th data-data="{{field}}" data-field_name="{{ field}}">{{ field|table_header }}</th>
+									{% endfor %}
+								</tr>
+							</thead>
+						</table>
+						{% include "vue_report_pagination.html" %}  
+					</div>
+				</div>
+
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="crm">
+	<input type="hidden" id="model_name" value="AlternateContact">
+	<input type="hidden" name="report_name" id="report_name" value="14">
+</div>
+
+<!-- model forms  -->
+<div class="modal fade" id="upload-alternate-delete-contact" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="upload alternate numbers to delete"></i>
+					<b>Alternate Contact » Upload</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body pt-3">
+				<form id="ndnc-upload-form" class="wizard-validation-form" action="{% url 'alternate_number' %}" method="PUT">
+					{% csrf_token %}
+					<div>
+						<section>
+							<div class="row">
+								<div class="col-6">
+									<input type="file" class="dropify" id="uploaded-file" name="delta_file"/>
+								</div>
+								<div class="col-6 dropify-wrapper">
+									<div class="dropify-message d-flex justify-content-center">
+										<a download class="mr-5 download-sample-file" file_name="alt_numeric" file_type="csv">
+											<span class="csv-download"></span>
+											<span class="sample-csv-text">Sample Csv</span>
+										</a>
+										<a download class="download-sample-file" file_name="alt_numeric" file_type="xls">
+											<span class="csv-download"></span>
+											<span class="sample-csv-text">Sample xls</span>
+										</a>
+									</div>
+								</div>
+							</div>
+							<div class="row">
+								<a id="proper-data" class="d-none upload-css text-info" download>
+									<span class="fa fa-download download-file-css"></span>
+									<span class="msg"></span>
+								</a>
+							</div>
+							<div class="row">
+								<a id="improper-data" class="d-none upload-css text-danger" download>
+									<span class="fa fa-download download-file-css"></span>
+									<span class="msg"></span>
+								</a>
+							</div>
+							<div class="row pull-right">
+								<div class="upload-css">
+									<button type="button" class="btn btn-success btn-fw d-none" id="upload-priority">Upload</button>
+									<button type="button" class="btn btn-light btn-fw" id="cancel-contact-upload">Cancel</button>
+								</div>
+							</div>
+							<div class="form-group">
+								<p id="csv-error" class="text-danger">{{ msg }}</p>
+							</div>
+						</section>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/datatablejs/dataTables.select.min.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/reports.js' %}"></script>
+<script src="{% static 'js/dropify.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		$('#upload-alternate-delete-contact').on('hidden.bs.modal', function() {
+			$('#ndnc-upload-form')[0].reset()
+		});
+		var result = []
+		{% if can_read %}
+
+		url = location.pathname
+		var performance_table = $('#alternate-numbers-table')
+
+		report_visible_cols = []
+		{% if report_visible_cols %}
+		report_visible_cols={{report_visible_cols|safe}}
+		customPaginationTable(performance_table, report_visible_cols)
+		{% else %}
+		customPaginationTable(performance_table)
+		{% endif %}
+		$('#pending-callbackcall-table').on( 'length.dt', function ( e, settings, len ) {
+			$('#page_length').val(len)
+			customPaginationReport(url)
+		});
+		{% else %}
+		PermissionDeny();
+		{% endif %}
+	});
+</script>
+{% endblock extra-js %}

@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Group{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+<style type="text/css">
+.asColorPicker-hex,.asColorPicker-alpha-vertical,
+.asColorPicker-alpha, .asColorPicker-preview,
+.asColorPicker-palettes, a .asColorPicker-clear{
+	display:none;
+}
+.asColorPicker-clear{
+	display:none;
+}
+.asColorPicker-trigger{
+	margin: 0 18px 0 0;
+}
+.tooltip {
+    z-index: 100000000; 
+}
+</style>
+{% endblock extra-stylesheets %}
+
+{% block header %}User Management<small>Groups</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Groups</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Groups</legend>
+				<!-- department tab and table -->
+				<div class="col-12">
+					{% include "search.html" %}    
+				</div>
+				<div class="row append_table">
+					<div class="col-12">
+						<table id="group-list-table" class="table display table-striped nowrap avatar-table" style="width: 100%">
+							<thead>
+								<tr>
+									<th class="avatar"></th>
+									<th data-data="name" class="modal_name">Group Name</th>
+									<th data-data="users_name">Users In Group</th>
+									<th data-data="created_by">Created By</th>
+									<th data-data="status">Status</th>
+									<th data-data="created_date" class="list_date">created date</th>
+									<th data-data="modified_date" class="list_date">modified date</th>
+									{% if can_update or can_delete %}
+										<th data-data="checkbox_col" class="checkbox_col">
+											<div class="btn-group select-all-div">
+												<div class="form-check">
+													<label class="form-check-label ml-3">
+														<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+														<i class="input-helper"></i>
+													</label>
+												</div>
+												<div class="dropdown">
+													<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+														<span class="caret"></span></button>
+													<ul class="dropdown-menu">
+														{% if can_update %}
+														<li class="dropdown-item text-center" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make Active')">Active Selected</li>
+														<li class="dropdown-item text-center" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make InActive')">Inactive Selected</li>
+														{% endif %}
+														{% if can_delete %}
+														<li class="dropdown-item text-center" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">Delete</li>
+														{% endif %}
+													</ul>
+												</div>
+											</div>
+										</th>
+										<th data-data="action" class="action">Action</th>
+									{% endif %}
+								</tr>
+							</thead>
+						</table>
+						{% include "vue_pagination.html" %}  
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% if can_create %}
+<!-- action buttons -->
+<div class="bottom-menu">
+	<div class="action-button-circle" data-toggle="modal">
+		<a data-toggle="modal" data-target="#modal_add_group" title="Add Group">
+			<div class="circle-button skin-black">
+				<i class="fa fa-plus button-area add-group"></i>
+			</div>
+		</a>
+	</div>
+</div>
+<!-- model forms -->
+<div class="modal fade" id="modal_add_group" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to create department."></i>
+					<b>Group Wizard » Add New Group</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body">
+				<form id="group-form" class="wizard-form" action="#">
+					{% csrf_token %}
+					<div>
+						<h3>Add Group <br><small>Set details for User Group</small></h3>
+						<section>
+							<div class="form-group row">
+								<label for="group_name" class="col-sm-3 col-form-label">Name<span class="star">*</span> :</label>
+								<div class="col-sm-9">
+									<input type="text" name ="name" class="form-control" id="group_name" placeholder="Enter the group name"  data-toggle="tooltip" title="Enter Group Name" data-validation="length alphanumeric" data-validation-length="min2" data-validation-error-msg-container="#group-name-msg" data-validation-allowing="_">
+									<span id="group-name-msg"></span>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="status" name ="status" class="col-sm-3 col-form-label">Add Users :</label>
+								<div class="col-sm-9">
+									<select class="form-control" id="add_users" name="add_users" multiple>
+											{% for user in user_queryset %}
+												<option value="{{user.0}}">{{ user.1 }}</option>
+											{% endfor %}
+									</select>
+								</div>
+							</div>
+							<input type="hidden" name="add_users_save" id="add_users_save">
+							<div class="form-group row">
+								<label for="group_name" class="col-sm-3 col-form-label">Group Color :</label>
+								<div class="col-sm-9">
+									<div class="asColorPicker-wrap"><input type="text" data-html="true" data-toggle="tooltip" data-original-title="Enter Group Color in HexaDecimal Format Eg:#392C70" id="pick-group-color" class="color-picker form-control asColorPicker-hex asColorPicker-input" data-mode="complex" value="#392C70" name="color_code"></div>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="status" name ="status" class="col-sm-3 col-form-label">Status :</label>
+								<div class="col-sm-9">
+									<select class="form-control" id="update_status" name="status">
+										{% for status in group_status %}
+											<option value="{{ status.0 }}">{{ status.1 }}</option>
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+							
+						</section>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% if can_update %}
+<!-- modal form for updatng the form data ----------------->
+<div class="modal fade" id="modal_update_group" tabindex="-1"   role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to update department."></i>
+					<b>Group Wizard » Update Group</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" id="close_group_update" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body">
+				<form id="update-group-form" class="wizard-form" action="#">
+					{% csrf_token %}
+					<div>
+						<h3>Update Group <br><small>Change details for User Group</small></h3>
+						<section>
+							<input type="text" name ="name" class="form-control d-none" id="group_pk">
+							<div class="form-group row">
+								<label for="update_group_name" class="col-sm-4 col-form-label">Name<span class="star">*</span> :</label>
+								<div class="col-sm-8">
+									<input type="text" name ="name" data-toggle="tooltip" data-original-title="Update the Group Name" class="form-control" id="update_group_name" placeholder="Enter the group name" data-validation="length alphanumeric" data-validation-length="min2" data-validation-allowing="_" data-validation-error-msg-container="#group-msg">
+									<span id="group-msg"></span>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="group_name" class="col-sm-4 col-form-label">Update Users :</label>
+								<div class="col-sm-8">
+									<select class="form-control" name="update_user_in_group" id="update_user_in_group" multiple>
+									</select>
+								</div>
+							</div>
+							<input type="hidden" id="user_add_list" name="user_add_list" value="">
+							<input type="hidden" id="user_remove_list" name="user_remove_list" value="">
+							<div class="form-group row">
+								<label for="group_name" class="col-sm-4 col-form-label">Group Color :</label>
+								<div class="col-sm-8">
+									<div class="asColorPicker-wrap"><input type="text" data-toggle="tooltip" data-original-title="Update Group Color Eg:#392C70" id="update-group-color" class="color-picker form-control asColorPicker-hex" data-mode="complex"  name="color_code"></div>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="status" class="col-sm-4 col-form-label">Status :</label>
+								<div class="col-sm-8">
+									<select class="form-control" id="update_group_status" name="status">
+										{% for status in group_status %}
+											<option value="{{ status.0 }}">{{ status.1 }}</option>
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+							<div class="form-group row d-none" id="module_status">
+							    <div class="col-md-4 "></div>
+							    <div class="col-md-8">
+									<p class="text-danger text-center">If agent is active then status can not be change</p>
+								</div>
+							</div>
+							
+						</section>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+<input type="hidden" id="app_name" value="callcenter">
+<input type="hidden" id="model_name" value="Group">
+
+<!-- update modal form ends here ---------------->
+
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/vendor.bundle.color.js' %}"></script>
+<script src="{% static 'js/form-validator.min.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		{% if can_read %}
+			var group_table = $('#group-list-table')
+			selective_datatable(group_table);  //datatbale jquery
+			$.validate();
+			$(".wizard li a[href='#previous']").addClass("d-none");
+			$(".wizard li a[href='#finish']").text('Submit');
+			modal_url = '<a data-groupid="***" class="group-modify name-el">link_name</a>'
+			option_url = '<a id="group-modify" data-groupid="***" class="dropdown-item group-modify">Modify</a>'
+			get_pagination_data(1, true)
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+	
+});
+</script>
+<script>
+   if ($(".color-picker").length) {
+    $('#pick-group-color, #update-group-color').asColorPicker();
+  }
+</script>
+<script type="text/javascript">
+removed = []
+edit_url = ""
+$('#update_user_in_group').on("select2:select", function(e){
+	user_add_id = e.params.data.id
+	if(jQuery.inArray(user_add_id, removed) != -1){
+		removed.splice(removed.indexOf(user_add_id),1)
+	}
+	$('#user_add_list').val($(this).val())
+	$('#user_remove_list').val(removed)
+})
+$("#update_user_in_group").on("select2:unselect", function (e) {
+
+	user_remove_id = e.params.data.id
+	removed.push(user_remove_id)
+	$('#user_add_list').val($(this).val())
+	$('#user_remove_list').val(removed)
+
+});
+$('#add_users').on("select2:select", function(e){
+	user_save_id = e.params.data.id
+	$('#add_users_save').val($(this).val())
+})
+$('#add_users').on("select2:unselect", function(e){
+	user_save_remove_id = e.params.data.id
+	$('#add_users_save').val($(this).val())
+})
+</script>
+{% endblock extra-js %}

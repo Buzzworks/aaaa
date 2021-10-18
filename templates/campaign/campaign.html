@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Campaign{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+
+{% endblock extra-stylesheets %}
+
+{% block header %}Campaign Management<small>Campaigns</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Campaign</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Campaigns</legend>
+				
+				<div class="row append_table">
+					<div class="col-12">
+						{% include "search.html" %}    
+					</div>
+					<div class="col-12">
+						<table id="campaign-list-table" class="table display table-striped nowrap avatar-table" style="width:100%">
+							<thead>
+								<tr>
+									<th class="avatar"></th>
+									<th data-data="name" class="name">Campaign Name</th>
+									<th data-data="extension">Extension</th>
+									<th data-data="switch">Switch</th>
+									<th data-data="created_by_user">Created By</th>
+									<th data-data="wfh_caller_id">WFH Caller Id</th>
+									<th data-data="status">Status</th>
+									<th data-data="created_date" class="list_date">created date</th>
+									<th data-data="modified_date" class="list_date">modified date</th>
+									{% if can_update or can_delete %}
+										<th data-data="checkbox_col" class="checkbox_col">
+											<div class="btn-group select-all-div">
+												<div class="form-check">
+													<label class="form-check-label ml-3">
+														<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+														<i class="input-helper"></i>
+													</label>
+												</div>
+												<div class="dropdown">
+													<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+														<span class="caret"></span></button>
+													<ul class="dropdown-menu">
+														{% if can_update %}
+														<li class="dropdown-item" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make Active')">Active Selected
+														</li>
+														<li class="dropdown-item" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make InActive')">Inactive Selected</li>
+														{% endif %}
+														{% if can_delete %}
+															<li class="dropdown-item" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">Delete Selected
+															</li>
+														{% endif %}
+													</ul>
+												</div>
+											</div>
+										</th>
+										<th data-data="action" class="action">Action</th>
+									{% endif %}
+								</tr>
+							</thead>
+						</table>
+						{% include "vue_pagination.html" %}  
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% if can_create %}
+<!-- action buttons -->
+<div class="bottom-menu">
+	<div class="action-button-circle">
+		<a href="{% url 'create-campaigns' %}">
+			<div class="circle-button skin-black">
+				<i class="fa fa-plus button-area add-campaigns"></i>
+			</div>
+		</a>
+	</div>
+</div>
+{% endif %}
+<input type="hidden" id="app_name" value="callcenter">
+<input type="hidden" id="model_name" value="Campaign">
+{% endblock content %}
+
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/paginate.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		{% if can_read %}
+			var campaign_table = $('#campaign-list-table')
+			selective_datatable(campaign_table); 	//datatbale jquery
+			{% if id_list %}
+				query_set_list = {{id_list|safe}}
+			{% endif %}
+			edit_url = "{% url 'edit-campaigns' 123 %}"
+			get_pagination_data(1, true)
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+	} );
+</script>
+
+{% endblock extra-js %}

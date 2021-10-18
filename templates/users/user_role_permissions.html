@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Edit User Role{% endblock title %}
+
+{% block extra-stylesheets %}
+
+<link rel="stylesheet" href="{% static 'css/dataTables.bootstrap4.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/responsive.bootstrap4.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/select.dataTables.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+
+{% endblock extra-stylesheets %}
+
+{% block header %}User Management<small>Edit User Role</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'user-role' %}">User Role</a></li>
+<li class="breadcrumb-item active" aria-current="page">Modify</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_update %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>User Role</legend>
+				<!-- user Group tabs -->
+				<ul class="nav nav-tabs nav-justified" role="tablist">
+					<li class="nav-item">
+						<a class="nav-link active text-bold" id="user-group-tab" data-toggle="tab" href="#user-group-list" role="tab" aria-controls="user-group-list" aria-selected="true">User Role</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link text-bold" id="user-access-group-tab" data-toggle="tab" href="#user-access-group-list" role="tab" aria-controls="user-access-group-list" aria-selected="false">Permissions</a>
+					</li>
+				</ul>
+				<div class="tab-content">
+					<!-- campaign tab and table  -->
+					<div class="tab-pane fade show active" id="user-group-list" role="tabpanel" aria-labelledby="user-group-list">
+						<div class="card">
+							<div class="card-body">
+								<form class="forms-sample" id = "group-edit-form">
+									{% csrf_token %}
+									<div class="form-group row">
+										<label for="role_name" class="col-sm-3 col-form-label">User Group</label>
+										<div class="col-sm-9">
+											<input type="text" class="form-control" name = "role_name" id="role_name" value="{{ querysets.role_name }}" data-validation="required"
+											data-validation-error-msg-container="#name-msg">
+											<span id="name-msg"></span>
+										</div>
+									</div>
+									<div class="form-group row">
+										<label for="description" class="col-sm-3 col-form-label">Description</label>
+										<div class="col-sm-9">
+											<textarea class="form-control" name="description" rows="4" value="{{ querysets.description }}"></textarea>
+										</div>
+									</div>
+									<div class="form-group row">
+										<label for="role_status" class="col-sm-3 col-form-label">Group Status</label>
+										<div class="col-sm-9">
+											<select class="form-control" name = "role_status" values = "{{ querysets.role_status }}">
+												<option>Active</option>
+												<option>Inactive</option>
+											</select>
+										</div>
+									</div>
+									<input type="text" class="form-control d-none" id="permissions_input" name="permissions" value="" >
+									<div class="row justify-content-end px-4">
+										<div class="mr-sm-3" id = "permissions_btn">
+											<button type="button" class="btn btn-success mr-sm-2" id="edit-group-btn">Update</button>
+											<button class="btn btn-light" type="button" onclick="showSwal('warning-message-and-cancel','OK', '/UserManagement/UserRoles/')">Cancel</button>
+										</div>
+									</div>
+								</form>
+							</div>
+						</div>
+					</div>
+					<!-- disposition tab and table -->
+					<div class="tab-pane fade" id="user-access-group-list" role="tabpanel" aria-labelledby="user-access-group-list">
+						<div id="user-access-group-clone" class="">
+							<div class="permission_check " id="dashboard_access">
+								<div class="form-group row mt-4">
+									<label for="group_name" class="col-sm-4"><b class="float-sm-right">Dashboard</b></label>
+									<div class="col-sm-8 form-inline">
+										<div class="form-check mr-4" style="width:auto;">
+											<label class="form-check-label">
+												<input type="checkbox" id = "Dashboard" class="form-check-input">
+												Allow Dashboard View
+											</label>
+										</div>
+									</div>
+								</div>
+								<div class="permission_check" id ="table_access">
+									<div class="test_div d-none">
+										<div class="form-group row mt-4">
+											<label for="group_name" class="col-sm-4" id ="table_name"><b>NONE</b></label>
+											<div class="col-sm-8 form-inline">
+												<div class="form-check mr-4" style="width:auto;">
+													<label class="form-check-label">
+														<input type="checkbox" class="form-check-input permission_input" id ="C">
+														Create
+													</label>
+												</div>
+												<div class="form-check mr-4 read-div" style="width:auto;">
+													<label class="form-check-label">
+														<input type="checkbox" class="form-check-input" id = "R">
+														Read
+													</label>
+												</div>
+												<div class="form-check mr-4" style="width:auto;">
+													<label class="form-check-label">
+														<input type="checkbox" class="form-check-input permission_input" id = "U">
+														Update
+													</label>
+												</div>
+												<div class="form-check mr-4" style="width:auto;">
+													<label class="form-check-label">
+														<input type="checkbox" class="form-check-input permission_input" id = "D">
+														Delete
+													</label>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="row justify-content-end px-4">
+							<div class="mr-sm-3" id ="permissions_btn">
+								<button type="button" class="btn btn-success mr-2" id="edit-group-btn">Update</button>
+								<button class="btn btn-light" type="button" onclick="showSwal('warning-message-and-cancel','OK', '/UserManagement/UserRoles/')">Cancel</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- action buttons -->
+	<!-- model forms -->
+	{% endif %}
+	{% endblock content %}
+	{% block extra-js %}
+	
+	<script type="text/javascript">
+		var permissions = jQuery.parseJSON('{{ permissions|safe }}')
+		var pk = '{{ querysets.id }}'
+		console.log( "ready!" );
+		
+		$( document).ready(function() {
+			$.each(permissions, function(key, value) {
+				if (key != "Dashboard"){
+					var user_access_div = $('#table_access').clone();
+					user_access_div.find(".test_div").removeClass("d-none").attr("class",key)
+					user_access_div.find("#table_name").html("<b class='float-sm-right'>"+key+"</b>");
+					$.each(permissions[key], function( index, a_value ){
+						user_access_div.find( "#"+a_value).prop( "checked", true );
+						user_access_div.find( "#"+a_value).attr({"name":key+'_'+a_value, "values":key+'_'+a_value});
+					});
+					$('#user-access-group-clone').append(user_access_div)
+				}
+				else if(key == "Dashboard"){
+					if(!(jQuery.isEmptyObject(permissions[key]))) {
+						$('#Dashboard').prop("checked",true);
+					}
+				}
+			});
+		});
+		{% if not can_update %}
+		PermissionDeny();
+	{% endif %}
+	</script>
+	<script src="{% static 'js/admin.js' %}"></script>
+
+	{% endblock extra-js %}

@@ -1,0 +1,43 @@
+<form id="filter_form" method="GET">
+	{% csrf_token %}
+	<div class="row dataTables_wrapper dt-bootstrap4">
+		<div class="col-md-6">
+			<div class="dataTables_length">
+				<label>Show
+					<select class="custom-select custom-select-sm form-control form-control-sm" name="paginate_by" id="paginate_by">
+						{% for page in paginate_by_list %}
+							{% if paginate_by == page.0 %}
+								<option value="{{page.0}}" selected>{{ page.1 }}</option>
+							{% else %}
+								<option value="{{ page.0 }}">{{ page.1 }}</option>
+							{% endif %}
+						{% endfor %}
+					</select>
+					entries
+				</label>
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div id="example_filter" class="dataTables_filter d-block d-md-inline-flex">
+				<label>Search By:
+					<select class="form-control form-control-sm d-inline-block ml-1" name="column_name" id="column_name" style="width:auto;min-width: 130px;">
+						<option value="">Select Column</option>
+						{% for column in paginate_by_columns %}
+							{% if column_name == column.0 %}
+								<option value="{{column.0}}" selected>{{ column.1 }}</option>
+							{% else %}
+								<option value="{{ column.0 }}">{{ column.1 }}</option>
+							{% endif %}
+						{% endfor %}
+					</select>
+				</label>
+				<label>
+					<span class="d-sm-none">Search:</span>
+					<input type="text" class="form-control form-control-sm" id="search_by" placeholder="search" name="search_by" value="{{search_by }}">
+				</label>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" name="page" id="page" value="1">
+	<input type="hidden" name="refresh_cell" id="refresh_cell">
+</form>

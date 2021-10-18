@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+{% block title %}Pending AbandonedCall{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/datatablecss/buttons.bootstrap4.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/audioplayer.css'%}">
+<style type="text/css">
+	.accordion.accordion-solid-header .card .card-header a{
+		padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+	}
+	.accordion.accordion-solid-header .card .card-body{
+		padding:0.5rem;
+	}
+	.accordion .card .card-body i{
+		font-size: 1rem;
+	}
+</style>
+{% endblock extra-stylesheets %}
+
+{% block header %}AbandonedCall<small>Abandoned Call</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Abandoned Call</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Abandoned Call</legend>
+				<div class="mt-1">
+					<div class="accordion" id="accordion" role="tablist">
+						<div class="card">
+							<div class="card-header" role="tab" id="heading-2">
+								<h6 class="mb-0">
+									<a class="" data-toggle="collapse" href="#collapse-2" aria-expanded="true" aria-controls="collapse-2">
+										Search Report
+									</a>
+								</h6>
+							</div>
+							<div id="collapse-2" class="collapse show" role="tabpanel" aria-labelledby="heading-2" data-parent="#accordion" style="">
+								<div class="card-body">
+									<form id="report_form" action="{% url 'report-reschedule_abandoned_call' %}" method="post">
+										{% csrf_token %}
+										<div class="row">
+											<div class="col-md-3 col-sm-6">
+												<div class="form-group">
+													<label class="col-form-label">Campaign</label>
+													<select class="form-control" name="selected_campaign" id="agent_report_campaign">
+														<option value="">Select Campaign</option>
+														{% for campaign in campaign_list %}
+														<option value="{{ campaign.name }}" data-name="{{campaign.name}}">{{ campaign.name }}</option>
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+											<div class="col-md-3 col-sm-6">
+												<div class="form-group">
+													<label class="col-form-label">User</label>
+													<select class="form-control" name="selected_user" id="agent_activity_users" multiple>
+														<!-- <option value="">Select User</option> -->
+														{% for user in user_list %}
+														<option value="{{ user.extension }}">{{ user.username }}</option>
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+											<div class="col-md-3 col-sm-6 agent-datepicker">
+												<div class="form-group">
+													<label class="col-form-label">Start Date</label>
+													<div data-target-input="nearest" class="input-group date" id="start-date">
+														<div data-target="#start-date" data-toggle="datetimepicker" class="input-group datetimepicker">
+															<input type="text" name="start_date" placeholder="YYYY-MM-DD HH:mm" data-target="#start-date" class="form-control crm-form-control datetimepicker-input"  autocomplete="off">
+															<div class="input-group-addon input-group-append"></div>
+														</div>
+													</div>
+												</div>
+											</div>
+											<div class="col-md-3 col-sm-6 agent-datepicker">
+												<div class="form-group">
+													<label class="col-form-label">End Date</label>
+													<div data-target-input="nearest" class="input-group date " id="end-date">
+														<div data-target="#end-date" data-toggle="datetimepicker" class="input-group">
+															<input type="text" name="end_date" placeholder="YYYY-MM-DD HH:mm" data-target="#end-date" class="form-control crm-form-control datetimepicker-input" autocomplete="off">
+															<div class="input-group-addon input-group-append"></div>
+														</div>
+													</div>
+													<span class="text-danger d-none" id="end-date-error">End Date Should Be Greater Than Start Date</span>
+												</div>
+											</div>
+											<div class="form-group">
+												<div>
+													<button type="button" class="btn btn-success btn-sm btn-icon-text mt-3 mr-2" id="report-filter">
+														<i class="fas fa-filter"></i>Filter
+													</button>
+													<div class="btn-group">
+														<button type="button" class="btn btn-primary btn-sm mt-3 agent_reports_download" id="xls"><i class="fa fa-download"></i></button>
+														<button type="button" class="btn btn-primary btn-sm mt-3 dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+														</button>
+														<div class="dropdown-menu">
+															<a class="dropdown-item agent_reports_download" id="xls" href="#">Excel</a>
+															<a class="dropdown-item agent_reports_download" id="csv" href="#">Csv</a>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+										<input type="hidden" name="page" id="nextPage_number" value="1">
+										<input type="hidden" name="paginate_by" id="page_length" value="10">
+										<input type="hidden" name="all_users" id="all_users">
+										<input type="hidden" name="column_name" id="column_name_list">
+										<input type="hidden" name="agent_reports_download" id="call_details_flag" value="">
+										<input type="hidden" name="report_name" id="report_name" value="9">
+										<input type="hidden" name="agent_reports_download_type" id="agent_reports_download_type">
+									</form>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-12">
+						<table id="pending-callbackcall-table" class="table display table-striped nowrap mt-2" style="width: 100%">
+							<thead>
+								<tr id="column_name">
+									{% for field in all_fields %}
+									<th data-data="{{field}}" data-field_name="{{ field}}">{{ field|table_header }}</th>
+									{% endfor %}
+									<th class="modify-abandoned">modify</th>
+								</tr>
+							</thead>
+						</table>
+						{% include "vue_report_pagination.html" %}
+					</div>
+				</div>
+
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="callcenter">
+	<input type="hidden" id="model_name" value="CallDetail">
+</div>
+<div class="modal fade" id="abandoned-modal" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to create department."></i>
+					<b>Callback Wizard » Update Pending Abandoned Call</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body">
+				<form id="pending-abandoned-form" class="wizard-form" action="#">
+					{% csrf_token %}
+					<div>
+						<h3>Update Pending Abandoned <br><small>Assign call to user</small></h3>
+						<section>
+							<div class="form-group row">
+								<label for="campaign" class="col-sm-3 col-form-label">Campaign:</label>
+								<div class="col-sm-9">
+									<input type="text" class="form-control" name="campaign" id="campaign" readonly>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="user" class="col-sm-3 col-form-label">User :</label>
+								<div class="col-sm-9">
+									<select class="form-control select2-class" name="user" id="user">
+										<option value="">Select User</option>
+										{% for user in user_list %}
+										<option value="{{ user.extension }}">{{user.username}}</option>
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="numeric" class="col-sm-3 col-form-label">Full Name :</label>
+								<div class="col-sm-9">
+									<input type="text" class="form-control" id="full_name" readonly>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="numeric" class="col-sm-3 col-form-label">Numeric :</label>
+								<div class="col-sm-9">
+									<input type="text" class="form-control" id="numeric" name="numeric" readonly>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="disposition" class="col-sm-3 col-form-label">Status :</label>
+								<div class="col-sm-9">
+									<input type="text" class="form-control" id="status" name="status" readonly>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="disposition" class="col-sm-3 col-form-label">Created Date :</label>
+								<div class="col-sm-9">
+									<input type="text" class="form-control" id="created_date" name="created_date" readonly>
+								</div>
+							</div>
+							<input type="hidden" name="id" id="instance_id">
+						</section>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/reports.js' %}"></script>
+<script src="{% static 'js/audioplayer.js'%}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		{% if can_read %}
+		$(".wizard li a[href='#previous']").addClass("d-none");
+		$(".wizard li a[href='#finish']").text('Update');
+		url = location.pathname
+		var performance_table = $('#pending-callbackcall-table')
+		report_visible_cols = []
+		{% if report_visible_cols %}
+		report_visible_cols={{report_visible_cols|safe}}
+		customPaginationTable(performance_table, report_visible_cols)
+		{% else %}
+		customPaginationTable(performance_table)
+		{% endif %}
+		// customPaginationReport(url)
+		$('#pending-callbackcall-table').on( 'length.dt', function ( e, settings, len ) {
+			$('#page_length').val(len)
+			customPaginationReport(url)
+		});
+		{% else %}
+		PermissionDeny();
+		{% endif %}
+	});
+</script>
+{% endblock extra-js %}

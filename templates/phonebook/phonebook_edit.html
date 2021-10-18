@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Edit Lead List {% endblock title %}
+
+{% block extra-stylesheets %}
+<style>
+select[readonly].select2-class + .select2-container {
+  pointer-events: none;
+  touch-action: none;
+}
+select[readonly]+.select2-container .select2-selection--single{
+    background-color: #e9ecef;
+}
+</style>
+{% endblock extra-stylesheets %}
+
+{% block header %}CRM<small>Edit Lead List</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'phonebook' %}">Lead List</a></li>
+<li class="breadcrumb-item active" aria-current="page">Modify</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_update %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		
+		<div class="card">
+			<div class="card-body">
+				<legend>Edit Lead List </legend>
+				{% if not is_edit and phonebook.status == 'Active' %}
+				<div class="alert alert-fill-warning mb-2 py-2">
+					<i class="fa fa-exclamation-triangle fa-1x"></i>
+					Campaign or status can not be changed as agents are logged into this phonebook campaign
+				</div>
+				{% endif %}
+				<form class="forms-sample" id="phonebook-form" method="POST">
+					{% csrf_token %}
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="phonebook_name" class="col-sm-3 col-form-label">Name<span class="star">*</span> :</label>
+								<div class="col-sm-9">
+									<input type="text" class="form-control" data-toggle="tooltip" title="Update PhoneBook Name" id="phonebook_name" placeholder="Name" name="name" value="{{ phonebook.name }}" data-validation="length alphanumeric" data-validation-length="max100" data-validation-allowing="_" >
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="phonebook_slug" class="col-sm-3 col-form-label">Slug :</label>
+								<div class="col-sm-9">
+									<input type="text" class="form-control slug_css" id="phonebook_slug" placeholder="slug" name="slug" value="{{ phonebook.slug }}" readonly>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="description" class="col-sm-3 col-form-label">Description :</label>
+								<div class="col-sm-9 mb-3">
+									<textarea type="text" class="form-control" id="description" placeholder="Description" name="description" rows="4">{{ phonebook.description }}</textarea>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="priority" class="col-sm-3 col-form-label">Priority :</label>
+								<div class="col-sm-9">
+									<input type="number" class="form-control" id="priority" placeholder="Priority Level" name="priority" value="{{ phonebook.priority }}" min="1" max="9" data-toggle="tooltip" title="Priority between 1-9">
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="caller_id" class="col-sm-3 col-form-label">Caller ID :</label>
+								<div class="col-sm-9">
+									<input type="text" class="form-control" id="caller_id" placeholder="Caller ID" name="caller_id" value="{{ phonebook.caller_id }}" onkeypress="return isNumber(event)" autocomplete="off">
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="campaign" class="col-sm-3 col-form-label">Campaign<span class="star">*</span> :</label>
+								<div class="col-sm-9">
+									<select class="form-control select2-class" name="campaign" id="phonebook-campaign" data-validation="required" {% if not is_edit %}readonly style="pointer-events:none;"{% endif %}>
+										<option value="">Select Campaign</option>
+										{% for campaign in campaign %}
+											{% if campaign.id|stringformat:"i" == phonebook.campaign %}
+												<option value="{{ campaign.id }}" data-name="{{ campaign.name }}" selected >{{ campaign.name }}</option>
+											{% else %}
+												<option value="{{ campaign.id }}" data-name="{{ campaign.name }}">{{ campaign.name }}</option>
+											{% endif %}
+										{% endfor %}
+									</select>
+									<span id="field_error" class="text-danger d-none"></span>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="campaign" class="col-sm-3 col-form-label">Expire List Date:</label>
+								<div class="col-sm-9"> 
+								<div class="input-group date " id="expire-list-date" data-target-input="nearest">
+									<div class="input-group" data-target="#expire-list-date" data-toggle="datetimepicker">
+										<input type="text" class="form-control slug_css datetimepicker-input" data-target="#expire-list-date" name="expire_date" value="{{phonebook.expire_date|date:'Y/m/d H:i a'}}">
+										<div class="input-group-addon input-group-append"><i class="far fa-clock input-group-text" style="padding:9px; height: 38px;"></i></div>
+									</div>
+								</div>
+								</div>
+							</div>
+						</div>	
+					</div>
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="caller_id" class="col-sm-3 col-form-label">Order By :</label>
+								<div class="col-sm-9">
+									<select class="form-control" name="order_by">
+										{% for order in order_by %}
+											{% if order.0 == phonebook.order_by %}
+												<option value="{{ order.0 }}" selected>{{ order.1 }}</option>
+											{% else %}
+												<option value="{{ order.0 }}">{{ order.1 }}</option>
+											{% endif %}
+											
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="r_no_resp_time" class="col-sm-3 col-form-label">Action Type :</label>
+								<div class="col-sm-9">
+									<select class="form-control" name="action_type" id="action_type">
+										<option value="insert">Insert</option>
+										<option value="update">Update</option>
+										<option value="transfer_contacts">Transfer Contacts</option>
+										<option value="delete_contacts">Delete Contacts</option>
+									</select>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="caller_id" class="col-sm-3 col-form-label d-none" id="reference_field">Reference Field :</label>
+								<label for="caller_id" class="col-sm-3 col-form-label" id="duplicate_field">Duplicate Check :</label>
+								<div class="col-sm-9">
+									<select class="form-control" name="duplicate_check" id="duplicate_check">
+										<option value="{{ phonebook.duplicate_check}}" selected>{{ phonebook.duplicate_check }}</option>
+									</select>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="r_no_resp_time" class="col-sm-3 col-form-label">Status :</label>
+								<div class="col-sm-9">
+									<select class="form-control" name="status" {% if not is_edit %}readonly style="pointer-events:none;"{% endif %}>
+										{% for status in campaign_status %}
+											{% if status.0 == phonebook.status %}
+												<option value="{{ status.0 }}" selected>{{ status.1 }}</option>
+											{% else %}
+												<option value="{{ status.0 }}">{{ status.1 }}</option>
+											{% endif %}
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+						</div>
+						
+					</div>
+					<div class="row">
+						<div class="col-md-6" id="search_type_div">
+							<div class="form-group row">
+								<label class="col-sm-3 col-form-label">Search Mode :</label>
+								<div class="col-sm-9 form-inline">
+									<div class="form-inline">
+									{% for type in search_type %}
+										<div class="form-check mr-sm-3">
+											<label class="form-check-label">
+												<input type="radio" class="form-check-input" name="search_type" {% if type.0 == '1' %}checked=""{% endif %} value="{{type.0}}">
+												{{type.1}}
+												<i class="input-helper"></i>
+											</label>
+										</div>
+									{% endfor %}
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6 d-none" id="update_col_type">
+							<div class="form-group row">
+								<label class="col-sm-3 col-form-label">Select Columns :</label>
+								<div class="col-sm-9">
+									<select class="form-control" id="update_crm_fields" multiple></select>
+									<span class="help help-block">select column to get sample csv</span>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						{% if phonebook.deleted_contact_file %}
+						<div class="col-md-8">
+							<div class="form-group row">
+								<label for="r_no_resp_time" class="col-sm-3 col-form-label">Last Uploaded File To Delete Contact</label>
+								<div class="col-6 col-md-9">
+									<a class="btn btn-link" href="{{phonebook.deleted_contact_file.url}}" download>{{phonebook.deleted_contact_file_name}}</a>
+								</div>
+							</div>
+						</div>
+						{% endif %}
+					</div>
+					<div class="row">
+						{% if phonebook.transfer_contact_file %}
+						<div class="col-md-8">
+							<div class="form-group row">
+								<label for="r_no_resp_time" class="col-sm-3 col-form-label">Last Uploaded File To Tranasfer Contact</label>
+								<div class="col-6 col-md-9">
+									<a class="btn btn-link" href="{{phonebook.transfer_contact_file.url}}" download>{{phonebook.transfer_contact_file_name}}</a>
+								</div>
+							</div>
+						</div>
+						{% endif %}
+					</div>
+					<div class="card">
+						<div class="card-body">
+							<h4 class="card-title mb-2">File Upload</h4>
+							<p class="card-description">Select CSV File to change, Refer sample file for format of file.</p>
+							<div class="form-group row">
+								{% if phonebook.contact_file %}
+									<label class="col-6 col-md-3 col-form-label">Currently Uploaded File :</label>
+									<div class="col-6 col-md-9">
+										<a class="btn btn-link" href="{{phonebook.contact_file.url}}" download>{{ phonebook.contact_file_name }}</a>
+									</div>
+								{% endif %}
+							</div>
+							<div class="form-group row d-none" id="unique_id_update_js">
+								<label class="col-12 col-md-12 col-form-label text-danger">While Updating Contacts If You Change Unique Field value then reference for existing contact will also get updated which will affects already dialed call reports</label>
+							</div>
+							<div class="row">
+								<div class="col-6">
+									<input type="file" class="dropify phonebook-upload-file" id="uploaded-file" name="uploaded_file"/>
+								</div>
+								<div class="col-6 dropify-wrapper">
+									<div class="dropify-message d-flex justify-content-center">
+										<a download id="sample_phonebook" class="mr-5 sample_phonebook csv">
+											<span class="csv-download"></span>
+											<span class="sample-csv-text">Sample Csv</span>
+										</a>
+										<a download id="sample_phonebook" class="sample_phonebook xls">
+											<span class="csv-download"></span>
+											<span class="sample-csv-text">Sample Xls</span>
+										</a>
+									</div>
+								</div>
+							</div>
+							<div class="row mt-2 proper_data_div">
+								<a id="proper-data" class="d-none upload-css text-info" download>
+									<span class="fa fa-download download-file-css"></span>
+									<span class="msg"></span>
+								</a>
+							</div>
+							<div class="row mt-2 improper_data_div">
+								<a id="improper-data" class="d-none upload-css text-danger" download>
+									<span class="fa fa-download download-file-css"></span>
+									<span class="msg"></span>
+								</a>
+							</div>
+							<div class="row mt-2">
+								<div class="col-sm-8 col-md-5">
+									<div class="dot-opacity-loader phonebook-valid-loader" style="display:none">
+			                          <span></span>
+			                          <span></span>
+			                          <span></span>
+			                        </div>
+									<div class="alert alert-danger mb-sm-0 p-2 d-none" id="phonebook-err-msg">
+									</div>
+								</div>
+								<div class="col-md-4">
+									<div class="float-md-right">
+										<button type="button" class="btn btn-success btn-icon-text create-phonebook confirm-edit-phone ">
+										<i class="far fa-check-square btn-icon-prepend"></i>Submit</button>
+										<button type="button" class="btn btn-light btn-icon-text phonebook-cancel-btn " onclick="showSwal('warning-message-and-cancel','OK', '/CRM/phonebook/')">
+										<i class="fas fa-arrow-left btn-icon-prepend"></i>Cancel</button>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<input type="hidden" name="proper_file" id="upload-proper-file">
+					<input type="hidden" name="improper_file" id="upload-improper-file">
+					<input type="hidden" id="ext_duplicate_check" value="{{ phonebook.duplicate_check }}">
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+<div class="modal fade delete_contact_modal" id="upload_delete_modal" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to create users."></i>
+					<b>Phonebook Wizard » Bulk Delete Contact</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body pt-3">
+				<form id="delete-contact-upload-form" class="wizard-validation-form" action="{% url 'users-bulk-delete' %}" method="POST">
+					{% csrf_token %}
+					<div>
+						<button type="button" class="btn btn-dark btn-fw file-upload-label" id="">File Upload</button>
+						<section>
+							<div class="row">
+								<div class="col-md-8">
+									<div class="form-group row">
+										<label for="caller_id" class="col-sm-5 col-form-label">Select Crm Field :</label>
+										<div class="col-sm-7">
+											<select class="form-control" name="crm_field" id="crm_field">
+												<option value="" selected></option>
+											</select>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-6">
+									<input type="file" class="dropify" id="uploaded-delete-contactfile" name="uploaded_file"/>
+								</div>
+								<div class="col-6 dropify-wrapper">
+									<div class="dropify-message d-flex justify-content-center">
+										<a download class="mr-5 download-sample-contact-file" file_name="sample_contact_delete" file_type="csv">
+											<span class="csv-download"></span>
+											<span class="sample-csv-text">Sample Csv</span>
+										</a>
+										<a download class="download-sample-contact-file" file_name="sample_contact_delete" file_type="xls">
+											<span class="csv-download"></span>
+											<span class="sample-csv-text">Sample xls</span>
+										</a>
+									</div>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-12 d-none mt-3 contact_summery_div" id="summery_div">
+									<p class="">Total Contacts: <span id="all_contact_count"></span></p>
+									<p class="">Contacts Will Get Delete: <span id="count"></span></p>
+									<p class="error_text d-none" style="color:#dc3545;">Uploaded data contacts not available in this phonebook</p>
+								</div>
+								
+							</div>
+							<div class="row pull-right">
+								<div class="upload-css">
+									<button type="button" class="btn btn-info btn-fw btn-fw d-none" id="show_summery">Show Summary</button>
+									<button type="button" class="btn btn-dark btn-fw btn-fw d-none" id="submit-uploaded-file">Submit</button>
+									<button type="button" class="btn btn-light btn-fw d-none cancel-uploaded-file" id="cancel-uploaded-file">Cancel</button>
+
+								</div>
+							</div>
+							<div class="dot-opacity-loader user-valid-loader" style="display: none;top: -57px;right: 34px;height: 0px !important;">
+	                          <span></span>
+	                          <span></span>
+	                          <span></span>
+	                        </div>
+							<div class="form-group">
+								<p id="upload-file-error" class="text-danger"></p>
+								<p id="empty-data" class="text-danger"></p>
+							</div>
+						</section>
+					</div>
+					<input type="hidden" name="phonebook_id" value="{{phonebook.id}}">
+					<input type="hidden" name="crm_field_val" id="crm_field_val">
+					<input type="hidden" name="summery" id="show_summery_val">
+				</form>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="callcenter">
+	<input type="hidden" id="model_name" value="User">
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script type="text/javascript">
+	 phonebook_id = '{{phonebook.id}}'
+</script>
+<script src="{% static 'melody/js/settings.js' %}"></script>
+<script src="{% static 'melody/js/dragula.js' %}"></script>
+<script src="{% static 'melody/js/dropify.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	$.validate({
+		form:'#phonebook-form',
+	});
+	{% if not can_update %}
+		PermissionDeny();
+	{% endif %}
+	{% if phonebook.campaign %}
+		$("#phonebook-campaign").trigger("change");
+	{% endif %}
+
+</script>
+<script>
+	$(document).ready(function(){
+		$('#expire-list-date').datetimepicker({
+			orientation: 'bottom auto',
+			format:'YYYY-MM-DD HH:mm',
+		  	autoclose: true,
+		  	minDate: new Date(),
+		  	ignoreReadonly: true,
+		  	icons: {
+				time: 'fa fa-clock'
+			},
+		  });
+		
+	})
+$('#priority').keypress(function(e){
+  	 if (e.which == 48 ){
+      return false;
+   }
+  })
+	</script>
+{% endblock extra-js %}

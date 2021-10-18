@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Switch{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+<style>
+.tooltip{
+	z-index:100000000;
+}
+</style>
+
+{% endblock extra-stylesheets %}
+
+{% block header %}Campaign Management<small>Switch</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Switch</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Switch</legend>
+				<!-- switch tab and table -->
+				<div class="row append_table">
+					<div class="col-12">
+						{% include "search.html" %}    
+					</div>
+					<div class="col-12">
+						<table id="switch-list-table" class="table display table-striped nowrap avatar-table" style="width: 100%">
+							<thead>
+								<tr>
+									<th class="avatar"></th>
+									<th data-data="name" class="modal_name">Switch Name</th>
+									<th data-data="ip_address">IP Address</th>
+									<th data-data="created_by_user">Created By</th>
+									<th data-data="status">Status</th>
+									<th data-data="created_date" class="list_date">created date</th>
+									<th data-data="modified_date" class="list_date">modified date</th>
+									{% if can_update or can_delete %}
+										<th data-data="checkbox_col" class="checkbox_col">
+											<div class="btn-group select-all-div">
+												<div class="form-check">
+													<label class="form-check-label ml-3">
+														<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+														<i class="input-helper"></i>
+													</label>
+												</div>
+												<div class="dropdown">
+													<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+														<span class="caret"></span></button>
+													<ul class="dropdown-menu">
+														{% if can_update %}
+														<li class="dropdown-item" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make Active')">
+															Active Selected
+														</li>
+														<li class="dropdown-item" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make InActive')">
+															Inactive Selected
+														</li>
+														{% endif %}
+														{% if can_delete %}
+															<li class="dropdown-item" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">
+																	Delete Selected
+															</li>
+														{% endif %}
+													</ul>
+												</div>
+											</div>
+										</th>
+										<th data-data="action" class="action">Action</th>
+									{% endif %}
+								</tr>
+							</thead>
+						</table>
+						{% include "vue_pagination.html" %}  
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% if can_create %}
+
+<!-- action buttons -->
+<div class="bottom-menu">
+	<div class="action-button-circle" data-toggle="modal">
+		<a data-toggle="modal" data-target="#modal_add_switch" title="Add Switch">
+			<div class="circle-button skin-black">
+				<i class="fa fa-plus button-area add-switch"></i>
+			</div>
+		</a>
+	</div>
+</div>
+<!-- model forms -->
+<div class="modal fade" id="modal_add_switch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to create switch details."></i>
+					<b>Switch Wizard » <span id="modal_title">Add New Switch</span></b>
+				
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body">
+				<form id="switch-form" class="wizard-form" action="#">
+					{% csrf_token %}
+					<div>
+						<h3><span id="header_id">Add Switch</span> <br> <small><span id="subheader_id">Set</span>detail for Switch</small></h3>
+						<ul class="nav nav-tabs nav-justified" role="tablist">
+							<li class="nav-item" class="active">
+								<a class="nav-link active text-bold" id="switch-tab" style="display:block" data-toggle="tab" href="#switch" role="tab" aria-controls="switch" aria-selected="true">Switch</a>
+							</li>
+							<li class="nav-item">
+								<a class="nav-link text-bold" id="switch-settings-tab" data-toggle="tab" href="#switch-additional-settings" role="tab" aria-controls="switch-additional-settings" aria-selected="false">Additional Settings</a>
+							</li>
+						</ul>
+						<section >
+							<div class="tab-content">
+								<div class="tab-pane fade show active" id="switch" role="tabpanel" aria-labelledby="switch">
+									<div class="form-group row">
+										<label for="switch_name" class="col-4 col-form-label">Name<span class="star">*</span> :</label>
+										<div class="col-8">
+										<input type="text" name ="name" data-toggle="tooltip" data-original-title="Enter Switch Name" class="form-control" id="switch_name" placeholder="Enter the Switch name" data-validation="length alphanumeric" data-validation-length="min4" data-validation-allowing="_" data-validation-error-msg-container="#switch_name_msg">
+										<span id="switch_name_msg"></span>
+									</div>
+									</div>
+									<div class="form-group row">
+										<label for="ip_address" class="col-form-label col-4">IP Address<span class="star">*</span> :</label>
+										<div class="col-8">
+										<input type="text" name="ip_address" data-toggle="tooltip" data-original-title="Enter a Valid IP Address" class="form-control" id="ip_address" placeholder="Enter the ip address of switch" data-inputmask="'alias': 'ip'" data-validation="required" data-validation-error-msg-container="#switch_ip_address_msg">
+										<span id="switch_ip_address_msg"></span>
+									</div>
+									</div>
+									<div class="form-group row">
+										<label for="status" name ="status" class="col-form-label col-4">Status :</label>
+										<div class="col-8">
+										<select class="form-control" id="status" name="status">
+											<option>Active</option>
+											<option>Inactive</option>
+										</select>
+									</div>
+									</div>
+									<div class="form-group row d-none" id="module_status">
+										<div class="col-md-4 "></div>
+									    <div class="col-md-8">
+											<p class="text-danger text-center">If agent is active then status can not be change</p>
+										</div>
+									</div>
+								</div>
+								<div class="tab-pane fade" id="switch-additional-settings" role="tabpanel" aria-labelledby="switch-additional-settings">
+									<div class="form-group row">
+										<label for="sip_udp_port" class="col-form-label col-4">Sip Udp Port<span class="star">*</span> :</label>
+										<div class="col-8">
+										<input type="text" name="sip_udp_port" data-toggle="tooltip" data-original-title="Enter a Valid SIP UDP PORT" class="form-control" id="sip_udp_port" onkeypress="return isNumber(event)" placeholder="Enter the valid sip udp port of server" data-validation="required" data-validation-error-msg-container="#sip_udp_port_msg" >
+										<span id="sip_udp_port_msg"></span>
+									</div>
+									</div>
+									<div class="form-group row">
+										<label for="rpc_port" class="col-form-label col-4">RPC Port<span class="star">*</span> :</label>
+										<div class="col-8">
+										<input type="text" name="rpc_port" data-toggle="tooltip" data-original-title="Enter a Valid RPC PORT" class="form-control" id="rpc_port" onkeypress="return isNumber(event)" placeholder="Enter the valid RPC port of server" data-validation="required" data-validation-error-msg-container="#rpc_port_msg" >
+										<span id="rpc_port_msg"></span>
+									</div>
+									</div>
+									<div class="form-group row">
+										<label for="wss_port" class="col-form-label col-4">WSS Port<span class="star">*</span> :</label>
+										<div class="col-8">
+										<input type="text" name="wss_port" data-toggle="tooltip" data-original-title="Enter a Valid WSS PORT" class="form-control" id="wss_port" onkeypress="return isNumber(event)" placeholder="Enter the valid WSS port of server" data-validation="required" data-validation-error-msg-container="#wss_msg" >
+										<span id="wss_msg"></span>
+									</div>
+									</div>
+								</div>
+							</div>
+						</section>
+					</div>
+					<input type="text" class="form-control d-none" id="update_switch_pk">
+					<input type="hidden" name="created_by" value="{{user.id}}">
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+<input type="hidden" id="app_name" value="callcenter">
+<input type="hidden" id="model_name" value="Switch">
+
+<!-- update modal form ends here ---------------->
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/form-validator.min.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		{% if can_read %}
+			var switch_table = $('#switch-list-table')
+			modal_url = '<a data-switchid="***" class="name-el switch-modify">link_name</a>'
+			option_url = ""
+			{% if can_update %}
+				option_url = '<a id="switch-modify" data-switchid="***" class="dropdown-item ">Modify</a>'
+			{% endif %}
+
+			selective_datatable(switch_table);  //datatbale jquery
+			//default port values
+			$('#sip_udp_port').val({{default_port.sip_udp_port}})
+            $('#rpc_port').val({{default_port.rpc_port}})
+            $('#wss_port').val({{default_port.wss_port}})
+            $('#event_socket_port').val({{default_port.event_socket_port}})
+			$.validate();
+			$(".wizard li a[href='#previous']").addClass("d-none");
+			$(".wizard li a[href='#finish']").text('Submit');
+			$("#modal_update_switch,#modal_add_switch").on('hidden.bs.modal', function () {
+				var model_form = $(this).find('form')
+				model_form[0].reset();
+				$('#sip_udp_port').val({{default_port.sip_udp_port}})
+				$('#rpc_port').val({{default_port.rpc_port}})
+                $('#wss_port').val({{default_port.wss_port}})
+				$('#modal_title').text('Add Switch')
+            	$('#header_id').text('Add Switch')
+            	$('#subheader_id').text('Set ')
+			});
+			edit_url = ""
+			get_pagination_data(1, true)
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+	} );
+</script>
+
+{% endblock extra-js %}

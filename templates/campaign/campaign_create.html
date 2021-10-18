@@ -1,0 +1,1086 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+
+{% block title %}Create Campaign{% endblock title %}
+
+{% block extra-stylesheets %}
+
+<style>
+	.popover-header {
+		color:#fff !important;
+		background-color:#3a3f51 !important; 
+	}
+
+</style> 
+
+{% endblock extra-stylesheets %}
+
+{% block header %}Campaign Management<small>Campaign</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'campaigns' %}">Campaign</a></li>
+<li class="breadcrumb-item active" aria-current="page">Create</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_create %}
+<div class="row" id="">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Create Campaigns</legend>
+				<div class="row">
+					<div class="col-md-4">
+						<div class="form-group row">
+							<label for="" class="col-sm-4 col-form-label">Template Type<span class="star">*</span> :</label>
+							<div class="col-sm-8">
+								<select class="form-control" name="" id="campaign_template">
+									<option value="default">Default</option>
+									<option value="existing_campaign">Existing Campaign</option>
+								</select>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-4 d-none" id="show-campaign">
+						<div class="form-group row">
+							<label for="" class="col-sm-4 col-form-label">Select Campaign:</label>
+							<div class="col-sm-8">
+								<select class="form-control select2-class" id="existing_camp_data">
+									<option value="">Select Campaign</option>
+									{% for campaign in all_campaign %}
+									<option value="{{ campaign.id }}">{{ campaign.name }}</option>
+									{% endfor %}
+								</select>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-4" id="campaign-show-all-fields">
+						<div class="form-group row">
+							<label for="" class="col-5 col-form-label">Show All Fields :</label>
+							<div class="col-7 form-inline">
+								<div class="form-check">
+									<label class="form-check-label">
+										<input type="checkbox" class="form-check-input" id="campaign-show_all_fields">
+										<i class="input-helper"></i>
+									</label>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<ul class="nav nav-tabs nav-justified" role="tablist">
+					<li class="nav-item">
+						<a class="nav-link active text-bold" id="user-tab" data-toggle="tab" href="#campaign" role="tab" aria-controls="user" aria-selected="true">Campaign</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link text-bold" id="lead-settings-tab" data-toggle="tab" role="tab" aria-controls="user" aria-selected="true">Lead Recycle</a>
+					</li>
+				</ul>
+				<div class="">
+					<form class="forms-sample" id="campaign-create-form">
+						<div class="tab-content p-2 p-sm-3">
+							<input type="hidden" name="dial_method" id="dial_method">
+							<input type="hidden" name="weburl" id="weburl">
+							<div class="tab-pane fade show active" id="campaign" role="tabpanel" aria-labelledby="campaign">
+								<div class="col-12 grid-margin stretch-card">
+									<div class="card">
+										<div class="card-body">
+											{% csrf_token %}
+											<div class="row">
+												<div class="col-md-6">
+													<div class="form-group row">
+														<label for="campaign-name" class="col-sm-4 col-form-label">Name<span class="star">*</span> :</label>
+														<div class="col-sm-8">
+															<input type="text" data-toggle="tooltip" data-original-title="Enter Campaign Name" class="form-control" id="campaign-name" placeholder="Name" name="name" data-validation="length alphanumeric" data-validation-length="max100" data-validation-allowing="_",data-validation-error-msg-container="#camp_name_exist">
+															<span id="camp_name_exist"></span>
+														</div>
+													</div>
+												</div>
+												<div class="col-md-6">
+													<div class="form-group row">
+														<label for="campaign-slug" class="col-sm-4 col-form-label">Slug :</label>
+														<div class="col-sm-8">
+															<input type="text" name="slug" class="form-control" id="campaign-slug" value="{{ campaign.slug}}" readonly>
+														</div>
+													</div>
+												</div>
+												<div class="col-md-6">
+													<div class="form-group row">
+														<label for="extension" class="col-sm-4 col-form-label">Extension<span class="star">*</span> :</label>
+														<div class="col-sm-8">
+															<input type="text" data-toggle="tooltip" data-original-title="Enter 3 Digit Unique Extension Number" class="form-control" id="" placeholder="Extension" name="extension" data-validation="number" data-validation-allowing="range[100;999]" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)" value="{{extension}}" readonly>
+														</div>
+													</div>
+												</div>
+												<div class="col-md-6">
+													{% comment %}
+													<div class="form-group row">
+														<label for="caller_id" class="col-sm-4 col-form-label">Caller Id:</label>
+														<div class="col-sm-8">
+															<input type="text" data-toggle="tooltip" data-original-title="Add Caller Id Eg:0xxxxx" class="form-control" id="caller_id" placeholder="caller_id" name="caller_id" value="" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)",data-validation-error-msg-container="#camp_callerid_exist">
+															<span id="camp_callerid_exist"></span>
+														</div>
+													</div>
+													{% endcomment %}
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-6">
+													<div class="form-group row">
+														<label for="dial_method" class="col-sm-4 col-md-4 col-form-label">Dial Method<span class="star" data-validation-err-msg="this is required field">*</span> :</label>
+														<div class="col-sm-8 col-md-8 form-inline">
+															<div class="form-check mr-sm-3 mr-md-2">
+																<label class="form-check-label">
+																	<input type="checkbox" id="campaign_manual" class="form-check-input" checked>
+																	<i class="input-helper"></i>
+																	Manual
+																</label>
+															</div>
+															<div class="form-check mx-sm-3 mx-md-2">
+																<label class="form-check-label">
+																	<input type="checkbox" id="campaign_inbound" class="form-check-input" name="">
+																	<i class="input-helper"></i>
+																	Inbound
+																</label>
+															</div>
+															<div class="form-check ml-sm-3 ml-md-2">
+																<label class="form-check-label">
+																	<input type="checkbox" id="camp_outbound_check" class="form-check-input" name="">
+																	<i class="input-helper"></i>
+																	Outbound
+																</label>
+															</div>
+															
+															<div class="form-check ml-sm-3 ml-md-2 d-none" id=ibc_div>
+																<label class="form-check-label">
+																	<input type="checkbox" id="ibc_popup" class="form-check-input" name="">
+																	<i class="input-helper"></i>
+																	Ibc_popup														
+																</label>
+															</div>
+															<div class="form-check ml-sm-3 ml-md-2 d-none" 	id=no_agent_audio_div>
+																<label class="form-check-label">
+																<input type="checkbox" id="no_agent_audio" class="form-check-input" name="">
+															<i class="input-helper"></i>
+															No Agent Audio
+															</label>
+														</div>
+														</div>
+													</div>
+												</div>
+												<div class="col-md-6">
+													<div class="form-group row d-none" id="outbound-div">
+														<label for="" class="col-sm-4 col-md-4 col-form-label">Outbound Method</label>
+														<div class="col-sm-8 col-md-8">
+															<select class="form-control" name="" id="camp_outbound">
+																{% for outbound in outbound_type %}
+																<option value="{{ outbound.0 }}">{{outbound.1 }}</option>
+																{% endfor %}
+															</select>
+														</div>
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-6 d-none" id="inbound_threshold_div">
+													<div class="form-group row">
+														<label for="inbound_threshold" class="col-sm-4 col-form-label"> Inbound Threshold:</label>
+														<div class="col-sm-8">
+															<input type="text" class="form-control" placeholder="inbound_threshold" name="inbound_threshold" id="inbound_threshold" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)" value="0" data-validation="required" data-validation-help="Number should be zero or more ">
+															<i class="input-helper"></i>
+														</div>
+													</div>
+												</div>
+												<div class="col-md-6 d-none" id="sticky_agent_map_div">
+													<div class="form-group row">
+														<label for="sticky_agent_map" class="col-sm-4 col-form-label"> Sticky Agent Map:</label>
+														<div class="col-sm-7 form-inline">
+															<div class="form-check">
+																<label class="form-check-label">
+																	<input type="checkbox" id="sticky_id" class="form-check-input" name="sticky_agent_map" value=""/>
+																	<i class="input-helper"></i>
+																</label>
+															</div>
+														</div>
+													</div>
+												</div>
+												<div class="col-md-6 d-none" id="progressive_time_div" >
+													<div class="form-group row">
+														<label for="name" class="col-sm-4 col-form-label"> Progressive Time :</label>
+														<div class="col-sm-8">
+															<div class="input-group date" id="progressive-timepicker" data-target-input="nearest">
+																<div class="input-group" data-target="#progressive-timepicker" data-toggle="datetimepicker">
+																	<input type="text" class="form-control datetimepicker-input" data-target="#progressive-timepicker" name="auto_progressive_time" data-toggle="tooltip" title="Select time for progressive Time" placeholder="mm:ss" data-validation="required" data-validation="time" id="progressive_time">
+																	<div class="input-group-addon input-group-append"><i class="far fa-clock input-group-text" style="padding:9px; height: 38px;"></i>
+																	</div>
+																</div>
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+										</fieldset>
+											<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+											<div class="row">
+												<div  class="col-md-6">
+													<div class="form-group row">
+														<label for="" class="col-sm-4 col-form-label">Switch<span class="star">*</span> :</label>
+														<div class="col-sm-8">
+															<select class="form-control" name="switch" id="campaign-server" data-validation="required">
+																<option value="">Select Switch</option>
+																{% for switch in switch_detail %}
+																<option value="{{ switch.id }}">{{switch.name}}</option>
+																{% endfor %}
+															</select>
+														</div>
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-6">
+													<div class="form-group row">
+														<label for="trunk_type" class="col-sm-4 col-form-label">Trunk Type :</label>
+														<div class="col-sm-8 form-inline">
+															<div class="form-check mr-sm-3">
+																<label class="form-check-label">
+																	<input type="radio" class="form-check-input trunk_type" name="trunk_type" value="single_trunk" checked>
+																	Single Trunk
+																</label>
+															</div>
+															<div class="form-check mr-sm-3">
+																<label class="form-check-label">
+																	<input type="radio" class="form-check-input trunk_type" name="trunk_type" value="trunk_group">
+																	Trunk Group
+																</label>
+															</div>
+														</div>
+														<div class="col-sm-8 form-inline">
+														</div>
+													</div>
+												</div>
+												{% comment %}
+												<div class="col-md-6">
+													<div class="form-group row d-none">
+														<label for="" class="col-sm-4 col-form-label">Dial Trunk :</label>
+														<div class="col-sm-8">
+															<select class="form-control" name="trunk" id="carrier_list">
+																<option value="">Select Dial Trunk</option>
+																{% for trunk in dial_trunk %}
+																<option value="{{trunk.id}}">{{trunk.name }}</option>
+																{% endfor %}
+															</select>
+														</div>
+													</div>
+												</div>
+												{% endcomment %}
+												<div class="col-sm-6 d-none" id="trunk_group">
+													<div class="form-group row" >
+														<label class="col-sm-4 col-form-label"> Dial Trunk Group</label>
+														<div class="col-sm-8">
+															<select class="form-control" name="trunk_group" id="trunk_group_select" data-validation="required">
+																<option value="">Select Trunk Group</option>
+																{% for trunk in trunk_group %}
+																	<option value="{{trunk.id }}">{{ trunk.name }}</option>
+																{% endfor %}
+															</select>
+														</div>
+													</div>
+												</div>
+											</div>
+											<div id="carrier-div">
+												<div id="add_trunk_div">
+													{% include "campaign/trunk_group_expansion.html" %} 
+												</div>
+											</div>
+										</fieldset>
+											<div class="d-none" id="campaign-all-fields">
+												<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+													<div class="form-group row">
+														<label for="extension" class="col-5 mb-0 col-form-label">Available Users Group (drag and drop):</label>
+														<label for="extension" class="col-2 mb-0 col-form-label">
+														</label>
+														<label for="extension" class="col-5 mb-0 col-form-label">Selected Users Group :</label>
+													</div>
+													<div class="form-group row">
+														<div class="col-5 h-100 mb-3">
+															<div class="dropify-border">
+																<div id="profile-list-left" class="available-departments dropify-list">
+																	{% for group in groups %}
+																	<div class="badge btn-dark badge-pill" style="background-color: {{ group.color_code }}" data-toggle="popover" data-content="{% for user in group.users %} {{user.username}}, {% endfor %}" data-title="{{ group.name }}" data-id="{{ group.id}}" data-grp-id="{{group.id}}"  data-color="{{ group.color_code|default:'#3a3f51' }}" data-user_count={{ group.users|length }} data-element="group">{{group.name}} 
+																	</div>
+																	{% endfor %}
+																</div>
+															</div>
+														</div>
+														<div class="col-1 h-100 mb-3 justify-content-center align-self-center text-right">
+															<i class="fa fa-arrow-left" aria-hidden="true" onclick="selectUnselectAll('#profile-list-right','#profile-list-left','selected-groups')" style="font-size: 29px;"></i>
+														</div>
+														<div class="col-1 h-100 mb-3 justify-content-center align-self-center text-left">
+															<i class="fa fa-arrow-right" aria-hidden="true" onclick="selectUnselectAll('#profile-list-left', '#profile-list-right','available-departments')" style="font-size: 29px;"></i>
+														</div>
+														<div class="col-5 h-100 mb-3">
+															<div class="dropify-border">
+																<div id="profile-list-right" class="selected-groups dropify-list">
+																</div>
+															</div>
+														</div>
+														<div class="col-md-6">
+															<div class="form-group row">
+																<label for="" class="col-sm-4 col-form-label">Assign Users  :</label>
+																<div class="col-sm-8 mb-3">
+																	<select class="form-control camp_users" name="users" id="users" multiple>
+																		{% for user in users %}
+																		<option value="{{ user.id}}" data-username="{{ user.username }}">{{ user.username }}</option>
+																		{% endfor %}
+																	</select>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-6">
+															<div class="form-group row">
+																<label for="dial_ratio" class="col-sm-4 col-form-label">Dial Ratio :</label>
+																<div class="col-sm-8">
+																	<select class="form-control" name="dial_ratio" id="dial_ratio">
+																		{% for ratio in dial_ratio %}
+																		<option value="{{ ratio.0}}">{{ ratio.1 }}</option>
+																		{% endfor %}
+																	</select>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-6">
+															<div class="form-group row">
+																<label for="extension" class="col-sm-4 col-form-label">Hopper Level:</label>
+																<div class="col-sm-8">
+																	<input type="number" class="form-control"  data-name="hopper_level" id="hopper_level" placeholder="Hopper Level" data-color="#3a3f51"  name="hopper_level" value="0" onkeypress="return isNumber(event)" data-validation="number" min="0" onpaste="pasteNumber(event)">
+															<span class="help help-block d-none" id="portfolio_hopper"> </span>
+																</div>
+															</div>
+														</div>
+													</div>
+												</fieldset>
+												<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+													<div class="row">
+														<div class="col-md-6">
+															<div class="form-group row">
+																<label for="" class="col-sm-5 col-form-label">Auto WrapUp :</label>
+																<div class="col-sm-7 form-inline">
+																	<div class="form-check">
+																		<label class="form-check-label">
+																			<input type="checkbox" class="form-check-input" name="auto_feedback" id="feedback-timer-checkbox">
+																			<i class="input-helper"></i>
+																		</label>
+																	</div>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-6">
+															<div class="form-group row d-none" id="feedbacktime_div">
+																<label for="name" class="col-sm-4 col-form-label">Auto WrapUp Time :</label>
+																<div class="col-sm-8">
+																	<div class="input-group date" id="feedback-timepicker" data-target-input="nearest">
+																		<div class="input-group" data-target="#feedback-timepicker" data-toggle="datetimepicker">
+																			<input type="text" class="form-control datetimepicker-input" data-target="#feedback-timepicker" data-validation="required" data-toggle="tooltip" id="feedback-time" data-validation="time" name="auto_feedback_time" title="Enter Minutes:Seconds" placeholder="mm:ss">
+																			<div class="input-group-addon input-group-append"><i class="far fa-clock input-group-text" style="padding:9px; height: 38px;"></i>
+																			</div>
+																		</div>
+																	</div>
+																</div>
+															</div>
+														</div>
+													</div>
+													<div class="row">
+														<div class="col-md-6">
+															<div class="form-group row">
+																<label for="" class="col-sm-5 col-form-label">Transfer :</label>
+																<div class="col-sm-7 form-inline">
+																	<div class="form-check">
+																		<label class="form-check-label">
+																			<input type="checkbox" class="form-check-input" name="transfer" id="transfer_call">
+																			<i class="input-helper"></i>
+																		</label>
+																	</div>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-6">
+															<div class="form-group row">
+																<label for="" class="col-sm-5 col-form-label">CSS :</label>
+																<div class="col-sm-7 form-inline">
+																	<div class="form-check">
+																		<label class="form-check-label">
+																			<input type="checkbox" class="form-check-input" name="css" id="css_checkbox">
+																			<i class="input-helper"></i>
+																		</label>
+																	</div>
+																</div>
+															</div>
+														</div>
+													</div>
+													<div class="row">
+														<div class="col-md-6">
+															<div class="form-group row">
+																<label for="" class="col-5 col-form-label">Conference :</label>
+																<div class="col-7 form-inline">
+																	<div class="form-check">
+																		<label class="form-check-label">
+																			<input type="checkbox" class="form-check-input" name="conference" id="conference">
+																			<i class="input-helper"></i>
+																		</label>
+																	</div>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-6">
+															<div class="form-group row">
+																<label for="" class="col-5 col-form-label">PortFolio :</label>
+																<div class="col-7 form-inline">
+																	<div class="form-check">
+																		<label class="form-check-label">
+																			<input type="checkbox" class="form-check-input" name="portifolio" id="portifolio">
+																			<i class="input-helper"></i>
+																		</label>
+																	</div>
+																</div>
+															</div>
+														</div>
+													</div>
+													<div class="row">
+														<div class="col-md-6">
+															<div class="form-group row">
+																<label for="" class="col-sm-4 col-form-label">CallBack Mode:</label>
+																<div class="col-sm-8 form-inline">
+																	<div class="form-check mr-sm-3">
+																		<label class="form-check-label">
+																			<input type="radio" class="form-check-input" name="callback_mode" value="self" data-validation="required" checked>
+																			<i class="input-helper"></i>
+																			Self
+																		</label>
+																	</div>
+																	<div class="form-check mx-sm-3">
+																		<label class="form-check-label">
+																			<input type="radio" class="form-check-input" name="callback_mode" value="queue" data-validation="required">
+																			<i class="input-helper"></i>
+																			Queue
+																		</label>
+																	</div>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-6">
+															<div class="form-group row">
+																<label for="" class="col-sm-4 col-form-label">DNC :</label>
+																<div class="col-sm-8 form-inline">
+																	<div class="form-check mr-sm-1 mr-lg-3">
+																		<label class="form-check-label">
+																			<input type="checkbox" class="form-check-input" name="dnc" value="local" checked="">
+																			<i class="input-helper"></i>
+																			Campaign DNC
+																		</label>
+																	</div>
+																	<div class="form-check mr-sm-1 mx-lg-3">
+																		<label class="form-check-label">
+																			<input type="checkbox" class="form-check-input" name="dnc" value="global" >
+																			<i class="input-helper"></i>
+																			Global DNC
+																		</label>
+																	</div>
+																	<span class="help-block form-error d-none " id="dnc_method_msg">This is a required field</span>
+																</div>
+															</div>
+														</div>
+													</div>
+													<div class="row">
+														<div class="col-md-6">
+															<div class="form-group row">
+																<label for="" class="col-sm-4 col-form-label">Auto Queue Call Back Dial:</label>
+																<div class="col-sm-8 form-inline">
+																	<div class="form-check mr-sm-3">
+																		<label class="form-check-label">
+																			<input type="checkbox" class="form-check-input" name="auto_qcb_dial" id="auto_qbc_dial" >
+																			<i class="input-helper"></i>
+																		</label>
+																	</div>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-6">
+															<div class="form-group row">
+																<label for="" class="col-sm-4 col-form-label">Auto Abandoned Call Dial:</label>
+																<div class="col-sm-8 form-inline">
+																	<div class="form-check mr-sm-3">
+																		<label class="form-check-label">
+																			<input type="checkbox" class="form-check-input" name="auto_ac_dial" id="auto_abc_dial" >
+																			<i class="input-helper"></i>
+																		</label>
+																	</div>
+																</div>
+															</div>
+														</div>
+													</div>
+													
+														<div class="col-md-6">
+															<div class="form-group row">
+																<label for="threshold" class="col-sm-4 col-form-label">Callback Threshold :</label>
+																<div class="col-sm-8">
+																	<input type="text" class="form-control" id="threshold" placeholder="Number of days" name="callback_threshold"  onkeypress="return isNumber(event)" onpaste="pasteNumber(event)" value="0" data-validation="number" data-validation-allowing="range[0;100]" data-validation-help="Number should be zero or more ">
+																</div>
+															</div>
+														</div>
+														<!-- <div class="col-md-6">
+															<div class="form-group row">
+																<label for="prefix" class="col-sm-4 col-form-label">Prefix :</label>
+																<div class="col-sm-8">
+																	<input type="text" class="form-control" id="prefix" placeholder="Prefix" name="prefix" >
+																</div>
+															</div>
+														</div> -->
+													</div>
+													<div class="row">
+														<div class="col-md-6 d-none">
+															<div class="form-group row">
+																<label for="" class="col-9 col-sm-5 col-form-label">Show Queue Call Count :</label>
+																<div class="col-3 col-sm-7 form-inline">
+																	<div class="form-check form-check-flat form-check-primary">
+																		<label class="form-check-label">
+																			<input type="checkbox" class="form-check-input" name="show_queue_call_count" id="que_call_count">
+																			<i class="input-helper"></i>
+																		</label>
+																	</div>
+																</div>
+															</div>
+														</div>
+													</div>
+													<div class="row">
+														
+													</div>
+												</fieldset>
+
+												<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+
+										<div class="form-group row">
+											<label for="extension" class="col-5 mb-0 col-form-label">Select Disposition (drag and drop)<span class="star">*</span> :</label>
+											<label class="col-2"></label>
+											<div class="col-5 form-inline">
+												<label for="extension" class="mb-0 col-form-label">Selected Disposition</label>
+												<span class="help-block form-error d-none m-0 ml-sm-3"  id="dispo-err-msg">This is a required field</span>
+											</div>
+										</div>
+										<div class="form-group row">
+											<div class="col-5 h-100 mb-3">
+												<div class="dropify-border">
+													<div id="disposition-list-left" class="available-disposition dropify-list">
+														{% for dispo in disposition %}
+														<div class="badge btn-dark badge-pill" style="background-color:{{ dispo.color_code }}"data-name="{{ dispo.name }}" data-color="{{ dispo.color_code|default:'#3a3f51'}}" data-content="{% for disp in dispo.dispos  %} {{ disp.name }}, {% for child in disp.children  %}{% if child|length > 0 %} {{ child.name }}, {% endif %}{% endfor %}{% endfor %}" data-title="{{ dispo.name }}" data-color="{{ dispo.color_code|default:'#3a3f51'}}" data-toggle="popover" data-id="{{dispo.id}}"
+														data-element="group">{{ dispo.name }}</div>
+														{% endfor %}
+													</div>
+												</div>
+											</div>
+											<div class="col-1 h-100 mb-3 justify-content-center align-self-center text-right">
+												<i class="fa fa-arrow-left" aria-hidden="true" onclick="selectUnselectAll('#disposition-list-right','#disposition-list-left','selected-disposition')" style="font-size: 29px;"></i>
+											</div>
+											<div class="col-1 h-100 mb-3 justify-content-center align-self-center text-left">
+												<i class="fa fa-arrow-right" aria-hidden="true" onclick="selectUnselectAll('#disposition-list-left', '#disposition-list-right','available-disposition')" style="font-size: 29px;"></i>
+											</div>
+											<div class="col-5 h-100 mb-3">
+												<div class="dropify-border">
+													<div id="disposition-list-right" class="selected-disposition dropify-list" data-validation="required">
+														{% for dispo in default_dispo %}
+														<div class="badge btn-dark badge-pill" style="background-color:{{ dispo.color_code }}"data-name="{{ dispo.name }}" data-color="{{ dispo.color_code|default:'#3a3f51'}}" data-content="{% for disp in dispo.dispos  %} {{ disp.name }}, {% for child in disp.children  %}{% if child|length > 0 %} {{ child.name }}, {% endif %}{% endfor %}{% endfor %}" data-title="{{ dispo.name }}" data-color="{{ dispo.color_code|default:'#3a3f51'}}" data-toggle="popover" data-id="{{dispo.id}}"
+														data-element="group">{{ dispo.name }}</div>
+														{% endfor %}
+													</div>
+												</div>
+											</div>
+										</div>
+									</fieldset>
+
+									<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+										<div class="form-group row">
+											<label for="extension" class="col-6 mb-0 col-form-label">Select Relationship Tags (drag and drop):</label>
+											<div class="col-6 form-inline">
+												<label for="extension" class="mb-0 col-form-label">Selected Relationship Tags</label>
+												<span class="help-block form-error d-none m-0 ml-sm-3"  id="relation-err-msg">This is a required field</span>
+											</div>
+										</div>
+
+										<div class="form-group row">
+											<div class="col-5 h-100 mb-3">
+												<div class="dropify-border">
+													<div id="relationtag-list-left" class="available-relationtag dropify-list">
+														{% for relation in relationtag_list %}
+														<div class="badge btn-dark badge-pill" style="background-color:{{ relation.color_code }}"data-name="{{ relation.name }}" data-color="{{ relation.color_code|default:'#3a3f51'}}" data-content="{% for rel in relation.relation_fields  %} {{ rel.name }}, {% for child in rel.children  %}{% if child|length > 0 %} {{ child.name }}, {% endif %}{% endfor %}{% endfor %}" data-title="{{ relation.name }}" data-color="{{ relation.color_code|default:'#3a3f51'}}" data-toggle="popover" data-id="{{relation.id}}"
+														data-element="group">{{ relation.name }}</div>
+														{% endfor %}
+													</div>
+												</div>
+											</div>
+											<div class="col-1 h-100 mb-3 justify-content-center align-self-center text-right">
+												<i class="fa fa-arrow-left" aria-hidden="true" onclick="selectUnselectAll('#relationtag-list-right','#relationtag-list-left','selected-relationtag')" style="font-size: 29px;"></i>
+											</div>
+											<div class="col-1 h-100 mb-3 justify-content-center align-self-center text-left">
+												<i class="fa fa-arrow-right" aria-hidden="true" onclick="selectUnselectAll('#relationtag-list-left', '#relationtag-list-right','available-relationtag')" style="font-size: 29px;"></i>
+											</div>
+											<div class="col-5 h-100 mb-3">
+												<div class="dropify-border">
+													<div id="relationtag-list-right" class="selected-relationtag dropify-list">
+														
+													</div>
+												</div>
+											</div>
+
+										</div>
+									</fieldset>
+
+												<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+												<div class="row">
+													<!-- <div class="col-md-6">
+														<div class="form-group row">
+															<label for="" class="col-sm-4 col-form-label">Select Disposition<span class="star">*</span>:</label>
+															<div class="col-sm-8 mb-3">
+																<select class="form-control selected-disposition" name="disposition" id="disposition" data-validation="required" multiple>
+																{% for dispo in default_dispo %}
+																	<option value="{{ dispo.id}}" data-username="{{ dispo.name }}"  data-toggle="popover" data-color="{{ dispo.color_code|default:'#3a3f51'}}" data-name="{{ dispo.name }}" data-id="{{ dispo.id }}" data-title={{dispo.name}} title="{{dispo.name}}"selected >{{ dispo.name }}</option>
+																{% endfor %}
+																{% for dispo in dispo_list %}
+																	<option value="{{ dispo.id}}" data-username="{{ dispo.name }}"  data-toggle="popover" data-color="{{ dispo.color_code|default:'#3a3f51'}}" data-name="{{ dispo.name }}" data-id="{{ dispo.id }}" data-title={{dispo.name}} title="{{dispo.name}}" >{{ dispo.name }}</option>
+																{% endfor %}
+																</select>
+															</div>
+														</div>
+													</div> -->
+													<!-- <div class="col-md-6">
+														<div class="form-group row">
+															<label for="" class="col-sm-4 col-form-label">Select Relation Tag:</label>
+															<div class="col-sm-8 mb-3">
+																<select class="form-control selected-relation" name="relation_tag" id="relation_tag" multiple>
+																{% for relation in relationtag_list %}
+																	<option value="{{ relation.id}}" style="background-color: {{ relation.color_code }}" data-toggle="popover"  data-color="{{ relation.color_code|default:'#3a3f51'}}" data-name="{{ relation.name }}" data-id="{{ relation.id }}" data-title={{relation.name}} title="{{relation.name}}" >{{ relation.name }}</option>
+																{% endfor %}
+																</select>
+															</div>
+														</div>
+													</div> -->
+													<div class="col-md-6">
+															<div class="form-group row">
+																<label for="" class="col-sm-4 col-form-label">Select Breaks:</label>
+																<div class="col-sm-8 mb-3">
+																	<select class="form-control selected-relation" name="breaks" id="breaks" multiple>
+																	{% for agent_status in agent_status_list %}
+																		<option value="{{ agent_status.id}}" style="background-color: {{ agent_status.break_color_code }}" data-id="{{ agent_status.id}}">{{agent_status.name}}</option>
+																	{% endfor %}
+																	</select>
+																</div>
+															</div>
+														</div>
+														
+												</div>
+												</fieldset>
+												<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+													<div class="row">
+														<div class="col-md-6">
+															<div class="form-group row">
+																<label for="" class="col-sm-4 col-form-label">SMS Gateway List:</label>
+																<div class="col-sm-8">
+																	<select class="form-control" name="sms_gateway" id="sms_gateway">
+																		<option value="">Select Gateway</option>
+																		{% for gateway in gateway_list %}
+																		<option value="{{ gateway.id }}">{{ gateway.name }}</option>
+																		{% endfor %}
+																	</select>
+																</div>
+															</div>
+														</div>
+													</div>
+												</fieldset>
+												<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+													<div class="row">
+														<div class="col-md-6">
+															<div class="form-group row">
+																<label for="" class="col-sm-4 col-form-label">Shift Time:</label>
+																<div class="col-sm-8">
+																	<select class="form-control" name="schedule" id="schedule">
+																		<option value="">Select Shift</option>
+																		{% for time in call_time %}
+																		<option value="{{ time.id }}">{{ time.name }}</option>
+																		{% endfor %}
+																	</select>
+																</div>
+															</div>
+														</div>
+													</div>
+												</fieldset>
+												<fieldset>
+													<div class="row">
+														<div class="col-md-6">
+															<div class="form-group row">
+																<label for="description" class="col-sm-4 col-form-label">Description :</label>
+																<div class="col-sm-8 mb-3">
+																	<textarea class="form-control" placeholder="Description" name="description" id="description" data-toggle="tooltip" data-original-title="Campaign Description" rows="4"></textarea>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-6">
+															<div class="form-group row">
+																<label for="" class="col-sm-4 col-form-label">Status</label>
+																<div class="col-sm-8">
+																	<select class="form-control" name="status" id="status">
+																		{% for status in campaign_status %}
+																		<option value="{{ status.0 }}">{{ status.1 }}</option>
+																		{% endfor %}
+																	</select>
+																</div>
+															</div>
+														</div>
+													</div>
+												</fieldset>
+										<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+											<div class="row {% if not enable_wfh %}d-none{% endif %}">
+												<div class="col-md-6">
+													<div class="form-group row">
+														<label for="" class="col-sm-5 col-form-label">Work From Home :</label>
+														<div class="col-sm-7 form-inline">
+															<div class="form-check">
+																<label class="form-check-label">
+																	<input type="checkbox" class="form-check-input" name="wfh" id="wfh"><i class="input-helper"></i>
+																</label>
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+											<div class="row d-none" id="wfh_vue">
+												<div class="col-md-6">
+													<div class="form-group row">
+														<label for="wfh_caller_id" class="col-sm-4 col-form-label">WHF Caller Id:</label>
+														<div class="col-sm-8">
+															<input type="text" data-toggle="tooltip" data-original-title="Update Caller Id" class="form-control" id="wfh_caller_id" placeholder="WHF Caller Id" name="wfh_caller_id" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)" data-validation-error-msg-container="#camp_callerid_exist">
+															<span id="camp_callerid_exist"></span>
+														</div>
+													</div>
+												</div>
+												<div class="col-md-6">
+												</div>
+												<div class="col-md-6" v-for="(val,index) in wfh_list" v-bind:key="index">
+													<div class="form-group row">
+															<label for="" class="col-form-label" >${index+1} </label>
+													 <div class="col-sm-9">
+														<input  type="text" class="form-control" v-model="wfh_list[index]"  name="wfh_dispo" :readonly="index in [0,1]? true :false" :readonly="index == 1? true :false">
+														<span v-if="index >= 2" @click="RemoveSkill(index)" class="d-inline fa fa-times-circle text-danger remove-section" style="float:right;font-size: 20px; position: relative;top: -30px;right: -30px"></span>
+														<span v-if="index+1 === wfh_list.length && index < 8"  @click="AddSkill" class="d-inline fa fa-plus-circle text-success ml-1 add-section" style="float:right; font-size: 20px; position: relative;top: -30px;right: -75px"></span>
+													</div>
+												</div>
+											</div>
+										</div>
+										</fieldset>
+											<div class="row">
+												<div class="col-sm-6">
+													<div class="alert alert-danger campaign-err-msg d-none" id="campaign-err-msg">
+
+													</div>
+												</div>
+												<div class="col-sm-6">
+													<div class="float-right">
+														<button type="button" class="btn btn-success btn-icon-text mr-sm-2 create-campaign-btn" id="create-campaign-btn"><i class="far fa-check-square btn-icon-prepend"></i>Submit</button>
+														<button type="button" class="btn btn-light btn-icon-text" id="" onclick="showSwal('warning-message-and-cancel','OK', '/CampaignManagement/Campaigns/')"><i class="fas fa-arrow-left btn-icon-prepend"></i>Cancel</button>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="tab-pane fade" id="lead-recycle-settings" role="tabpanel" aria-labelledby="lead-recycle-settings">
+								<div class="row">
+									<div class="col-12 grid-margin stretch-card">											
+										<div class="col-12">
+											<div class="accordion" id="accordion" role="tablist">
+												<div class="card clone_this_lead_div" id="lead-card-1">
+													<div class="card-header" role="tab" id="lead-heading-1">
+														<div class="row">
+															<div class="col-11 pr-0 pr-2">
+																<h6 class="mb-0">
+																	<a data-toggle="collapse" href="#lead-collaps-1" aria-expanded="false" aria-controls="collapse-1" class="lead-heading collapsed">
+																		Lead Recycle
+																	</a>
+																</h6>
+															</div>
+															<div class="col-1 pl-0 pl-2">
+																<i class="fa fa-times-circle text-danger fa-5x remove-lead"></i>
+															</div>
+														</div>
+													</div>
+													<div id="lead-collaps-1" class="collapse show collapse-div" role="tabpanel" aria-labelledby="lead-heading-1" data-parent="#accordion">
+														<div class="card-body">
+															<div class="row">
+																<div class="col-md-4">
+																	<div class="form-group row">
+																		<label for="lead_name" class="col-sm-4 col-form-label">Name:</label>
+																		<div class="col-sm-8">
+																			<select class="form-control lead_name" name="" id="lead_name-1" data-parent="{{ forloop.counter}}">
+																				<option value="Select Disposition">Select Disposition</option>
+																			</select>
+																		</div>
+																	</div>
+																</div>
+																<div class="col-md-4">
+																	<div class="form-group row">
+																		<label for="count" class="col-sm-4 col-form-label">Count:</label>
+																		<div class="col-sm-8">
+																			<input type="text" class="form-control" id="count" placeholder="Lead Count" name="count" value="0" data-validation="number" data-parent="#lead-card-1">
+																		</div>
+																	</div>
+																</div>
+																<div class="col-md-4">
+																	<div class="form-group row">
+																		<label for="" class="col-sm-4 col-form-label">Status:</label>
+																		<div class="col-sm-8">
+																			<select class="form-control" id="lead-status">
+																				{% for status in lead_status %}
+																				<option value="{{ status.0 }}">{{ status.1 }}</option>
+																				{% endfor %}
+																			</select>
+																		</div>
+																	</div>
+																</div>
+															</div>
+															<div class="row">
+																<div class="col-md-4">
+																	<div class="form-group row">
+																		<label for="" class="col-sm-4 col-form-label pt-sm-1">Schedule Type:</label>
+																		<div class="col-sm-8">
+																			<select class="form-control schedule_type" name="" id="schedule_type" data-parent="1">
+																				<option>Select Time</option>
+																				<option value="schedule_time">Schedule Time</option>
+																				<option value="recycle_time">Recycle Time</option>
+																			</select>
+																		</div>
+																	</div>
+																</div>
+																<div class="col-md-4 d-none" id="lead-start-time">
+																	<div class="form-group row">
+																		<label for="count" class="col-sm-4 col-form-label">Start Time:</label>
+																		<div class="col-sm-8">
+																			<div class="input-group date lr-start-time" id="start_timepicker_1" data-target-input="nearest">
+																				<div class="input-group" data-target="#start_timepicker_1" data-toggle="datetimepicker">
+																					<input type="text" class="form-control datetimepicker-input" data-target="#start_timepicker_1" id="lr_start_time" data-parent="#lead-card-1"/>
+																					<div class="input-group-addon input-group-append"><i class="far fa-clock input-group-text"></i></div>
+																				</div>
+																			</div>
+																		</div>
+																	</div>
+																</div>
+																<div class="col-md-4 d-none" id="lead-end-time">
+																	<div class="form-group row">
+																		<label for="count" class="col-sm-4 col-form-label">End Time:</label>
+																		<div class="col-sm-8">
+																			<div class="input-group date lr-end-time" id="end_timepicker_1" data-target-input="nearest">
+																				<div class="input-group" data-target="#end_timepicker_1" data-toggle="datetimepicker">
+																					<input type="text" class="form-control datetimepicker-input" id="lr_end_time" data-target="#end_timepicker_1" data-parent="#lead-card-1"/>
+																					<div class="input-group-addon input-group-append"><i class="far fa-clock input-group-text"></i></div>
+																				</div>
+																			</div>
+																		</div>
+																	</div>
+																</div>
+																<div class="col-md-4 d-none" id="lead-time-div">
+																	<div class="form-group row">
+																		<label for="count" class="col-sm-4 col-form-label">Interval:</label>
+																		<div class="col-sm-8">
+																			<!-- <input type="text" class="form-control" id="lead_time" placeholder="Lead Time" value="0"> -->
+
+																			<div class="input-group date lr-interval-time" id="lr_interval_1" data-target-input="nearest">
+																				<div class="input-group" data-target="#lr_interval_1" data-toggle="datetimepicker">
+																					<input type="text" class="form-control datetimepicker-input" data-target="#lr_interval_1" id="lead_time" data-parent="#lead-card-1"/>
+																					<div class="input-group-addon input-group-append"><i class="far fa-clock input-group-text"></i></div>
+																				</div>
+																			</div>
+																		</div>
+																	</div>
+																</div>
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-sm-6">
+										<div class="alert alert-danger d-none campaign-err-msg" id="campaign-err-msg"></div>
+									</div>
+									<div class="col-sm-6">
+										<div class="float-right">
+											<button type="button" class="btn btn-info btn-icon-text mr-sm-2" id="add-lead-btn"><i class="fas fa-plus btn-icon-prepend"></i>Add New</button>
+											<button type="button" class="btn btn-success btn-icon-text mr-sm-2 create-campaign-btn" id="create-campaign-btn"><i class="far fa-check-square btn-icon-prepend"></i>Submit</button>
+										</div>
+									</div>
+								</div>
+							</div>
+							<input type="hidden" name="lead_recycle" id="lead_recycle_dict">
+							<input type="hidden" name="existing_campaign" id="existing_campaign">
+							<input type="hidden" name="wfh_dispo" id="wfh_dispo">
+							<input type="hidden" name="trunk_did_data" id="trunk_did_data">
+							<input type="hidden" id="hopper_level_count_hidden"  value="">
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<input type="hidden" id="get-count" value="1">																
+{% endif %}
+
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'melody/js/settings.js' %}"></script>
+<script src="{% static 'melody/js/dragula.js' %}"></script>
+<script src="{% static 'js/dial_trunk.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/mustache.js' %}"></script>
+<script type="text/x-template" id="single_select_template">
+	<select>
+		<slot></slot>
+	</select>
+</script>
+<script>
+	vb_crm_fields = []
+	add_trunk_vue.camp_page =true
+	add_trunk_vue.trunk_list={{trunk_list|convert_in_json|safe}}
+	add_trunk_vue.did_type = [{"text":"single","id":"single"},{"text":"multiple","id":"multiple"},{"text":"range","id":"range"}]
+	add_trunk_vue.group_trunk_list.push({"trunk_priority":1, "trunk_id":"","did_type":"","did":[],"did_start":"","did_end":"","options":[], 'old_trunk':''})
+	$('#disposition,#relation_tag,#breaks, #api_parameters').select2()
+	var lead_list = []
+	var dateNow = new Date("October 13, 2014 02:00:00");
+	var m = moment('2017-02-17 02:02:01');
+
+	$(document).ready(function(){
+		{% if can_create %}
+		$.validate({
+			validateHiddenInputs:true,
+			form:'#campaign-create-form',
+		});
+		$(".lr-start-time, .lr-end-time, .lr-interval-time,#feedback-timepicker")
+		.datetimepicker({
+			format: 'HH:mm',
+			defaultDate:moment(dateNow).startOf('hour')
+		});
+		$("#progressive-timepicker")
+		.datetimepicker({
+			format: 'mm:ss',
+			defaultDate:m.startOf('minute')
+		});
+		$('[data-element="group"]').popover({trigger : "hover"})
+
+		Mustache.tags = ['[[', ']]'];
+		// on dispostion hove show subb disposition
+		var dispositions = {{disposition|convert_in_json|safe}}
+		$.each(dispositions, function(key, value) { 
+			var dispo_name= value["name"]
+			var sub_dispos = value["dispos"]
+			var content = ""
+			var final_content = ""
+			if (!(jQuery.isEmptyObject(sub_dispos))){
+				$.each(sub_dispos, function(key, sub_dispo) { 
+					content = "<ul>[[#"+key+"]]<li>[[name]]<ul>[[#"+key+".child]]<li>[[name]]<ul>[[#grand_child]]<li>[[ name ]]</li>[[/grand_child]]</ul></li>[[/"+key+".child]]</ul></li>[[/"+key+"]]</ul>"		
+					var subdispo_html = Mustache.to_html(content, sub_dispos);
+					final_content = final_content + subdispo_html
+				})
+				$('[data-name="'+dispo_name+'"]').popover({
+					trigger : 'hover',
+					title : dispo_name,
+					html:true,
+					content:final_content
+				})
+			}
+		})
+
+		var dispositions = {{default_dispo|convert_in_json|safe}}
+		$.each(dispositions, function(key, value) { 
+			var dispo_name= value["name"]
+			var sub_dispos = value["dispos"]
+			var content = ""
+			var final_content = ""
+			if (!(jQuery.isEmptyObject(sub_dispos))){
+				$.each(sub_dispos, function(key, sub_dispo) { 
+					content = "<ul>[[#"+key+"]]<li>[[name]]<ul>[[#"+key+".child]]<li>[[name]]<ul>[[#grand_child]]<li>[[ name ]]</li>[[/grand_child]]</ul></li>[[/"+key+".child]]</ul></li>[[/"+key+"]]</ul>"		
+					var subdispo_html = Mustache.to_html(content, sub_dispos);
+					final_content = final_content + subdispo_html
+				})
+				$('[data-name="'+dispo_name+'"]').popover({
+					trigger : 'hover',
+					title : dispo_name,
+					html:true,
+					content:final_content
+				})
+			}
+		})
+
+
+
+		// change backgroud color of title of popover 
+		$('div[data-title]').on('shown.bs.popover', function(){
+			var color = $(this).data('color')
+			$('.popover').find(".popover-header").css('background',color)
+		})
+		{% else %}
+		PermissionDeny('title-and-text');
+		{% endif %}
+
+	});
+//css enable Campaign query
+$(document).on('click', '#css_checkbox', function(){
+	if($(this).prop("checked")){
+		$('#css_div').removeClass('d-none')
+	}else{
+		$('#css_div').addClass('d-none')
+		$('#select_css').val("")
+	}
+})
+ 
+
+</script>
+<script type="text/javascript">
+	$( document ).ready(function() {
+	if(dial_method['ibc_popup']==true)
+	{
+		$("#camp_outbound option[value='Progressive']").show();
+		$("#camp_outbound option[value='Preview']").show();
+	}
+	else if(dial_method['ibc_popup']==false)
+	{
+		$("#camp_outbound option[value='Progressive']").hide();
+		$("#camp_outbound option[value='Preview']").hide();
+	}
+	$(document).on('click', '#ibc_popup', function(){
+	if($(this).prop("checked")){
+		$("#camp_outbound option[value='Progressive']").show();
+		$("#camp_outbound option[value='Preview']").show();
+	}else{
+		$("#camp_outbound").val('Predictive')
+		$("#camp_outbound option[value='Progressive']").hide();
+		$("#camp_outbound option[value='Preview']").hide();
+	}
+	if ($('#camp_outbound').val() === "Predictive") {
+	  $("#progressive_time_div").addClass('d-none');
+	}
+})
+	$(document).on('click', '#campaign_outbound', function(){
+	if($(this).prop("checked")){
+	   $("#camp_outbound option[value='Progressive']").show();
+	   $("#camp_outbound option[value='Preview']").show();
+	}else{
+	   $("#camp_outbound option[value='Progressive']").hide();
+	   $("#camp_outbound option[value='Preview']").hide();
+	}
+})
+})
+
+</script>
+}
+{% endblock extra-js %}

@@ -1,0 +1,26 @@
+<div id="report_pagination_vue">
+	<div class="custome_pagination_info">
+		Showing ${start_index} to ${end_index} of ${total_records} entries
+		<span id="selected_rows_count" class="ml-3"></span>
+	</div>
+	<div class="custom_paginate">
+		<ul class="pagination">
+			<li :class="[has_prev ? 'page-item':'page-item disabled']">
+				<a class="page-link" @click="changePage(page-1)">Previous</a>
+			</li>
+			<li v-if="page-4 > 1" class="page-item"><a class="page-link" @click="changePage(page-5)">&hellip;</a></li>
+			<template v-for="n in total_pages">
+				<li v-if="n==page" class="page-item active">
+					<a class="page-link">${n}</a>
+				</li>
+				<li v-else-if="n > page-3 && n < page+3" class='page-item'>
+					<a class="page-link" @click="changePage(n)">${n}</a>
+				</li>
+			</template>
+			<li v-if="total_pages > (page+4)" class="page-item"><a class="page-link" @click="changePage(page+5)">&hellip;</a></li>
+			<li :class="[has_next ? 'page-item':'page-item disabled']">
+				<a class="page-link" @click="changePage(page+1)">Next</a>
+			</li>
+		</ul>
+	</div>
+</div>

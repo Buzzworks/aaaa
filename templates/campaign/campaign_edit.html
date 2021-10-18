@@ -1,0 +1,1831 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+
+{% block title %}Edit Campaign{% endblock title %}
+
+{% block extra-stylesheets %}
+
+<link rel="stylesheet" href="{% static 'melody/vendors/summernote/dist/summernote-bs4.css' %}">
+<style>
+	.popover-header {
+		color:#fff !important;
+		background-color:#3a3f51 !important; 
+	}
+	.popover {
+		pointer-events :none;
+}
+</style> 
+
+{% endblock extra-stylesheets %}
+
+{% block header %}Campaign Management<small>Edit Campaign</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'campaigns' %}">Campaign</a></li>
+<li class="breadcrumb-item active" aria-current="page">Modify</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_update %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Edit Campaign : {{ campaign.name }}</legend>
+				{% if not is_edit and campaign.status == 'Active' %}
+				<div class="alert alert-fill-warning mb-2 py-2"> 						
+					<i class="fa fa-exclamation-triangle fa-1x"></i>Status can not be change to inactive as agent is logged in to the campaign 
+				</div>
+				{% endif %}
+				<ul class="nav nav-tabs nav-justified" role="tablist">
+					<li class="nav-item">
+						<a class="nav-link active text-bold" id="campaign-group-tab" data-toggle="tab" href="#campaign" role="tab" aria-controls="campaign" aria-selected="true">Basic Settings</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link text-bold" id="campaign-settings-tab" data-toggle="tab" role="tab"  aria-selected="false">Additional Settings</a>
+					</li>
+					{% if crm_field %}
+					<li class="nav-item">
+						<a class="nav-link text-bold" id="lead-prioritize-tab" data-toggle="tab" role="tab"  aria-selected="false">Lead Prioritize</a>
+					</li>
+					{% endif %}
+					<li class="nav-item">
+						<a class="nav-link text-bold" id="lead-settings-tab" data-toggle="tab" role="tab" aria-controls="lead-recycle-settings" aria-selected="false">Lead Recycle</a>
+					</li>
+				</ul>
+				<form class="forms-sample" id="campaign-edit-form">
+					<input type="hidden" name="dial_method" id="dial_method">
+					<input type="hidden" name="weburl" id="weburl">
+					<div class="tab-content p-2 p-sm-3">
+						<!-- campaign tab and table  -->
+						<div class="tab-pane fade show active" id="campaign" role="tabpanel" aria-labelledby="campaign">
+							<div class="card">
+								<div class="card-body">
+									{% csrf_token %}
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="campaign-name" class="col-sm-4 col-form-label">Name<span class="star">*</span> :</label>
+												<div class="col-sm-8">
+													<input type="text" data-toggle="tooltip" data-original-title="Update Campaign Name" class="form-control" id="campaign-name" placeholder="Name" name="name" value="{{ campaign.name }}" data-validation="length alphanumeric" data-validation-length="max100" data-validation-allowing="_",data-validation-error-msg-container="#camp_name_exist">
+													<span id="camp_name_exist"></span>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="campaign-slug" class="col-sm-4 col-form-label">Slug :</label>
+												<div class="col-sm-8">
+													<input type="text" name="slug" class="form-control" id="campaign-slug" value="{{ campaign.slug}}" readonly>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="extension" class="col-sm-4 col-form-label">Extension<span class="star">*</span> :</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control" id="exampleInputPassword1" placeholder="Extension" data-toggle="tooltip" data-original-title="Update Extension" name="extension" value="{{campaign.extension}}" data-validation="number" data-validation-allowing="range[100;999]" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)" readonly>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											{% comment %}
+											<div class="form-group row">
+												<label for="caller_id" class="col-sm-4 col-form-label">Caller Id:</label>
+												<div class="col-sm-8">
+													<input type="text" data-toggle="tooltip" data-original-title="Update Caller Id" class="form-control" id="caller_id" placeholder="caller_id" name="caller_id" value="{{ campaign.caller_id }}" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)",data-validation-error-msg-container="#camp_callerid_exist">
+													<span id="camp_callerid_exist"></span>
+												</div>
+											</div>
+											{% endcomment %}
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="dial_method" class="col-sm-4 col-md-4 col-form-label">Dial Method<span class="star">*</span> :</label>
+												<div class="col-sm-8 col-md-8 form-inline">
+													<div class="form-check mr-sm-3 mr-md-2">
+														<label class="form-check-label">
+															<input type="checkbox" id="campaign_manual" class="form-check-input" value="False" checked>Manual
+														</label>
+													</div>
+													<div class="form-check mx-sm-3 mx-md-2">
+														<label class="form-check-label">
+															<input type="checkbox" id="campaign_inbound" class="form-check-input" name="">Inbound
+														</label>
+													</div>
+													<div class="form-check ml-sm-3 ml-md-2">
+														<label class="form-check-label">
+															<input type="checkbox" id="camp_outbound_check" class="form-check-input" name="">Outbound
+														</label>
+													</div>
+													<div class="form-check ml-sm-3 ml-md-2 d-none" id=ibc_div>
+														<label class="form-check-label">
+															<input type="checkbox" id="ibc_popup" class="form-check-input" name="">
+															Ibc_popup
+														</label>
+													</div>
+													<div class="form-check ml-sm-3 ml-md-2 d-none" id=no_agent_audio_div>
+														<label class="form-check-label">
+															<input type="checkbox" id="no_agent_audio" class="form-check-input" name="">
+															<i class="input-helper"></i>
+															No Agent Audio
+														</label>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row d-none" id="outbound-div">
+												<label for="" class="col-sm-4 col-md-4 col-form-label">Outbound Method</label>
+												<div class="col-sm-8 col-md-8">
+													<select class="form-control" name="" id="camp_outbound">
+														{% for outbound in outbound_type %}
+														<option value="{{ outbound.0 }}">{{outbound.1 }}</option>
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+										<div class="col-sm-8 col-md-4 ml-auto ml-md-0 mb-sm-3 mb-md-0">
+											<span class="help-block form-error d-none " id="dial_method_msg">This is a required field</span>
+											<div class="alert alert-danger d-none" id="skill-check-err-msg">
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-6 d-none" id="inbound_threshold_div">
+											<div class="form-group row">
+												<label for="inbound_threshold" class="col-sm-4 col-form-label"> Inbound Threshold:</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control" placeholder="inbound_threshold" name="inbound_threshold" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)" value="{{ campaign.inbound_threshold }}"  data-validation="required" data-validation-help="Number should be zero or more ">
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6 d-none" id="sticky_agent_map_div">
+											<div class="form-group row">
+												<label class="col-sm-5 col-form-label"> Sticky Agent Map:</label>
+												<div class="col-sm-7 form-inline">
+													<div class="form-check">
+														<label class="form-check-label">
+															<input type="checkbox" id="sticky_id" class="form-check-input" value=""/>
+														</label>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6 d-none" id="progressive_time_div">
+											<div class="form-group row">
+												<label for="name" class="col-sm-4 col-form-label">Progressive Time :</label>
+												<div class="col-sm-8">
+													<div class="input-group date" id="progressive-timepicker" data-target-input="nearest">
+														<div class="input-group" data-target="#progressive-timepicker" data-toggle="datetimepicker">
+															<input type="text" class="form-control datetimepicker-input" data-target="#progressive-timepicker" name="auto_progressive_time" data-toggle="tooltip" title="Select time for Progressive Time" placeholder="mm:ss" data-validation="required" data-validation="time" id="progressive_time">
+															<div class="input-group-addon input-group-append"><i class="far fa-clock input-group-text" style="padding:9px; height: 38px;"></i>
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</fieldset>
+								<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="" class="col-sm-4 col-form-label">Switch<span class="star">*</span> :</label>
+												<div class="col-sm-8">
+													<select class="form-control" name="switch" id="campaign-server" data-validation="required">
+														<option value="">Select Switch</option>
+														{% for switch in switch_detail %}
+														{% if switch.id == campaign.switch.id %}
+														<option value="{{ switch.id }}" selected>{{switch.name}}</option>
+														{% else %}
+														<option value="{{ switch.id }}">{{switch.name}}</option>
+														{% endif %}
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="trunk_type" class="col-sm-4 col-form-label">Trunk Type :</label>
+												<div class="col-sm-8 form-inline">
+													<div class="form-check mr-sm-3">
+														<label class="form-check-label">
+															<input type="radio" class="form-check-input trunk_type" name="trunk_type" value="single_trunk" {% if not campaign.is_trunk_group %}checked{% endif %}>
+															Single Trunk
+														</label>
+													</div>
+													<div class="form-check mr-sm-3">
+														<label class="form-check-label">
+															<input type="radio" class="form-check-input trunk_type" name="trunk_type" value="trunk_group" {% if campaign.is_trunk_group %}checked{% endif %}>
+															Trunk Group
+														</label>
+													</div>
+												</div>
+												<div class="col-sm-8 form-inline">
+												</div>
+											</div>
+										</div>
+										{% comment %}
+										<div class="col-md-6 {% if campaign.is_trunk_group == True %}d-none{% endif %}" id="carrier-div">
+											<div class="form-group row">
+												<label for="" class="col-sm-4 col-form-label">Dial Trunk :</label>
+												<div class="col-sm-8">
+													<select class="form-control" name="trunk" id="carrier_list" required>
+														<option value="">Select Dial Trunk</option>
+														{% for trunk in dial_trunk %}
+															{% if trunk.id == campaign.trunk.id %}
+																<option value="{{trunk.id}}" selected>{{trunk.name }}</option>
+															{% else %}
+																<option value="{{trunk.id}}">{{trunk.name }}</option>
+															{% endif %}
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+										{% endcomment %}
+										<div class="col-sm-6 {% if campaign.is_trunk_group == False %}d-none{% endif %}" id="trunk_group">
+											<div class="form-group row" >
+												<label class="col-sm-4 col-form-label"> Dial Trunk Group</label>
+												<div class="col-sm-8">
+													<select class="form-control" name="trunk_group" id="trunk_group" data-validation="required">
+														<option value="">Select Trunk Group</option>
+														{% for trunk in trunk_group %}
+															{% if trunk.id == campaign.trunk_group.id %}
+																<option value="{{trunk.id }}" selected>{{ trunk.name }}</option>
+															{% else %}
+																<option value="{{trunk.id }}">{{ trunk.name }}</option>
+															{% endif %}
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div id="carrier-div">
+										<div id="add_trunk_div">
+											{% include "campaign/trunk_group_expansion.html" %} 
+										</div>
+									</div>
+								</fieldset>
+
+										<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+											<div class="form-group row">
+												<label for="extension" class="col-5 mb-0 col-form-label">Avaliable Users Group (drag and drop) :</label>
+												<label for="extension" class="col-2 mb-0 col-form-label">
+												</label>
+												<label for="extension" class="col-5 mb-0 col-form-label">Selected Users Group :</label>
+											</div>
+											<div class="form-group row">
+												<div class="col-5 h-100 mb-3">
+													<div class="dropify-border">
+														<div id="profile-list-left" class="available-departments dropify-list">
+															{% for group in groups %}
+															<div class="badge btn-dark badge-pill" style="background-color: {{ group.color_code }}" data-toggle="popover" data-content="{% for user in group.users %} {{user.username}}, {% endfor %}" data-title="{{ group.name }}" data-id="{{ group.id}}" data-color="{{ group.color_code|default:'#3a3f51' }}"
+															data-element="group">{{group.name}} 
+															</div>
+														{% endfor %}
+													</div>
+												</div>
+											</div>
+											<div class="col-1 h-100 mb-3 justify-content-center align-self-center text-right">
+												<i class="fa fa-arrow-left" aria-hidden="true" onclick="selectUnselectAll('#profile-list-right','#profile-list-left','selected-groups')" style="font-size: 29px;"></i>
+											</div>
+											<div class="col-1 h-100 mb-3 justify-content-center align-self-center text-left">
+												<i class="fa fa-arrow-right" aria-hidden="true" onclick="selectUnselectAll('#profile-list-left', '#profile-list-right','available-departments')" style="font-size: 29px;"></i>
+											</div>
+											<div class="col-5 h-100 mb-3">
+												<div class="dropify-border">
+													<div id="profile-list-right" class="selected-groups dropify-list">
+														{% for group in campaign.group.all %}
+														<div class="badge btn-dark badge-pill {% if is_non_admin and group.id not in user_groups %}d-none{% endif %}" style="background-color:{{group.color_code}}" data-content="{% for user in group.users  %} {{ user.username }},{% endfor %}" data-title="{{ group.name }}" data-color="{{ group.color_code|default:'#3a3f51'}}" data-toggle="popover" data-id="{{group.id}}"
+														data-element="group" >{{ group.name}}</div>
+														{% endfor %}
+													</div>
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-4 col-form-label">Assign Users :</label>
+													<div class="col-sm-8">
+														<select class="form-control camp_users" name="users" id="users" multiple>
+															{% for user in campaign.users.all %}
+															<option value="{{user.id}}" data-username="{{ user.username }}" selected>{{user.username}}</option>
+															{% endfor %}
+															{% for user in users %}
+															<option value="{{ user.id}}" data-username="{{ user.username }}">{{ user.username }}</option>
+															{% endfor %}
+														</select>
+													</div>
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="dial_ratio" class="col-sm-4 col-form-label">Dial Ratio :</label>
+													<div class="col-sm-8">
+														<select class="form-control" name="dial_ratio" id="dial_ratio">
+															{% for ratio in dial_ratio %}
+															{% if ratio.0 == campaign.campaignvariable_set.all.0.dial_ratio %}
+															<option value="{{ ratio.0}}" selected>{{ ratio.1 }}</option>
+															{% else %}
+															<option value="{{ ratio.0}}">{{ ratio.1 }}</option>
+															{% endif %}
+															{% endfor %}
+														</select>
+													</div>
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="extension" class="col-sm-4 col-form-label">Hopper Level:</label>
+													<div class="col-sm-8">
+														<input type="number" class="form-control" data-toggle="popover" data-name='hopper_level' id="hopper_level" placeholder="Hopper Level" name="hopper_level" value="{{ campaign.hopper_level }}" data-color="#3a3f51" onkeypress="return isNumber(event)" min="0" onpaste="pasteNumber(event)">
+													<span class="help help-block d-none" id="portfolio_hopper"> </span>
+													</div>
+												</div>
+											</div>
+										</div>
+									</fieldset>
+									<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+										<div class="row">
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-5 col-form-label">Auto WrapUp :</label>
+													<div class="col-sm-7 form-inline">
+														<div class="form-check">
+															<label class="form-check-label">
+																<input type="checkbox" class="form-check-input" name="auto_feedback" id="feedback-timer-checkbox" {% if campaign.auto_feedback %} checked="checked" {% endif %}>
+															</label>
+														</div>
+													</div>
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="form-group row d-none" id="feedbacktime_div">
+													<label for="name" class="col-sm-4 col-form-label">Auto WrapUp Time :</label>
+													<div class="col-sm-8">
+														<div class="input-group date" id="feedback-timepicker" data-target-input="nearest">
+															<div class="input-group" data-target="#feedback-timepicker" data-toggle="datetimepicker">
+																<input type="text" class="form-control datetimepicker-input" data-target="#feedback-timepicker" data-validation="required" data-toggle="tooltip" id="feedback-time" data-validation="time" name="auto_feedback_time" title="Enter Minutes:Seconds" placeholder="mm:ss">
+																<div class="input-group-addon input-group-append"><i class="far fa-clock input-group-text" style="padding:9px; height: 38px;"></i>
+																</div>
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-5 col-form-label">Transfer :</label>
+													<div class="col-sm-7 form-inline">
+														<div class="form-check">
+															<label class="form-check-label">
+																<input type="checkbox" class="form-check-input" name="transfer" id="transfer_call" {% if campaign.transfer %} checked="checked" {% endif %}>
+															</label>
+														</div>
+													</div>
+												</div>
+											</div>
+											 <div class="col-md-6">
+												 <div class="form-group row">
+													 <label for="" class="col-sm-5 col-form-label">CSS :</label>
+													 <div class="col-sm-7 form-inline">
+														 <div class="form-check">
+															 <label class="form-check-label">
+																 <input type="checkbox" class="form-check-input" name="css" id="css_checkbox"  {% if campaign.css %} checked {% endif %}>
+																 </label>
+															 </div>
+														 </div>
+													 </div>
+												 </div>
+											 </div>
+										<div class="row">
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-5 col-form-label">Conference :</label>
+													<div class="col-7 form-inline">
+														<div class="form-check">
+															<label class="form-check-label">
+																<input type="checkbox" class="form-check-input" name="conference" {% if campaign.conference %} checked="checked" {% endif %}>
+															</label>
+														</div>
+													</div>
+												</div>
+											</div>
+												<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-5 col-form-label">PortFolio :</label>
+													<div class="col-7 form-inline">
+														<div class="form-check">
+															<label class="form-check-label">
+																<input type="checkbox" class="form-check-input" name="portifolio" {% if campaign.portifolio %}checked="checked"{% endif %} id="portifolio">
+															</label>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											
+										
+										</div>
+										<div class="row">
+											
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-4 col-form-label">CallBack Mode :</label>
+													<div class="col-sm-8 form-inline">
+														<div class="form-check mr-sm-3">
+															<label class="form-check-label">
+																<input type="radio" class="form-check-input" name="callback_mode" value="self" data-validation="required" {% if campaign.callback_mode == 'self' %}checked='checked'{% endif %}>
+																Self
+															</label>
+														</div>
+														<div class="form-check mx-sm-3">
+															<label class="form-check-label">
+																<input type="radio" class="form-check-input" name="callback_mode" value="queue" data-validation="required" {% if campaign.callback_mode == 'queue' %}checked='checked'{% endif %}>
+																Queue
+															</label>
+														</div>
+													</div>
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-4 col-form-label">DNC :</label>
+													<div class="col-sm-8 form-inline">
+														<div class="form-check mr-sm-1 mr-lg-3">
+															<label class="form-check-label">
+																<input type="checkbox" class="form-check-input" name="dnc" value="local" {% if campaign.dnc == 'local' %}checked="checked"{%endif %}>
+																Campaign DNC
+															</label>
+														</div>
+														<div class="form-check mr-sm-1 mx-lg-3">
+															<label class="form-check-label">
+																<input type="checkbox" class="form-check-input" name="dnc" value="global"  {% if campaign.dnc == 'global' %}checked="checked"{%endif %}>
+																Global DNC
+															</label>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-5 col-form-label">Auto Queue Call Back Dial:</label>
+													<div class="col-sm-7 form-inline">
+														<div class="form-check mr-sm-3">
+															<label class="form-check-label">
+																<input type="checkbox" class="form-check-input" name="auto_qcb_dial" id="auto_qbc_dial" {% if campaign.auto_qcb_dial %}checked="checked"{% endif %}>
+															</label>
+														</div>
+													</div>
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-5 col-form-label">Auto Abandoned Call Dial:</label>
+													<div class="col-sm-7 form-inline">
+														<div class="form-check mr-sm-3">
+															<label class="form-check-label">
+																<input type="checkbox" class="form-check-input" name="auto_ac_dial" id="auto_abc_dial" {% if campaign.auto_ac_dial %}checked="checked"{% endif %}>
+															</label>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-5 col-form-label">Search Alternate :</label>
+													<div class="col-sm-7 form-inline">
+														<div class="form-check">
+															<label class="form-check-label">
+															<input type="checkbox" class="form-check-input" name="search_alternate" {% if campaign.search_alternate %}checked="checked"{% endif %}  id="search_alternate">
+															</label>
+														</div>
+													</div>
+												</div>
+											</div> 
+
+											<!-- <div class="col-md-6">
+												<div class="form-group row">
+													<label for="prefix" class="col-sm-4 col-form-label">Prefix :</label>
+													<div class="col-sm-8">
+														<input type="text" class="form-control" id="prefix" placeholder="Prefix" name="prefix" value="{{ campaign.prefix }}">
+													</div>
+												</div>
+											</div> -->
+											<div class="col-md-6 d-none">
+												<div class="form-group row">
+													<label for="" class="col-9 col-sm-5 col-form-label">Show Queue Call Count :</label>
+													<div class="col-3 col-sm-7 form-inline">
+														<div class="form-check form-check-flat form-check-primary">
+															<label class="form-check-label">
+																<input type="checkbox" class="form-check-input" name="show_queue_call_count" {% if campaign.show_queue_call_count %}checked="checked"{% endif %}>
+															</label>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="threshold" class="col-sm-4 col-form-label">Callback Threshold :</label>
+													<div class="col-sm-8">
+														<input type="text" class="form-control" id="threshold" placeholder="Number of days" name="callback_threshold"  onkeypress="return isNumber(event)" onpaste="pasteNumber(event)" data-validation="number" data-validation-allowing="range[0;100]" data-validation-help="Number should be zero or more ">
+													</div>
+												</div>
+											</div>
+										</div>
+									</fieldset>
+									<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+
+										<div class="form-group row">
+											<label for="extension" class="col-5 mb-0 col-form-label">Select Disposition (drag and drop)<span class="star">*</span> :</label>
+											<label class="col-2"></label>
+											<div class="col-5 form-inline">
+												<label for="extension" class="mb-0 col-form-label">Selected Disposition</label>
+												<span class="help-block form-error d-none m-0 ml-sm-3"  id="dispo-err-msg">This is a required field</span>
+											</div>
+										</div>
+										<div class="form-group row">
+											<div class="col-5 h-100 mb-3">
+												<div class="dropify-border">
+													<div id="disposition-list-left" class="available-disposition dropify-list">
+														{% for dispo in disposition %}
+														<div class="badge btn-dark badge-pill" style="background-color:{{ dispo.color_code }}"data-name="{{ dispo.name }}" data-color="{{ dispo.color_code|default:'#3a3f51'}}" data-content="{% for disp in dispo.dispos  %} {{ disp.name }}, {% for child in disp.children  %}{% if child|length > 0 %} {{ child.name }}, {% endif %}{% endfor %}{% endfor %}" data-title="{{ dispo.name }}" data-color="{{ dispo.color_code|default:'#3a3f51'}}" data-toggle="popover" data-id="{{dispo.id}}"
+														data-element="">{{ dispo.name }}</div>
+														{% endfor %}
+													</div>
+												</div>
+											</div>
+											<div class="col-1 h-100 mb-3 justify-content-center align-self-center text-right">
+												<i class="fa fa-arrow-left" aria-hidden="true" onclick="selectUnselectAll('#disposition-list-right','#disposition-list-left','selected-disposition')" style="font-size: 29px;"></i>
+											</div>
+											<div class="col-1 h-100 mb-3 justify-content-center align-self-center text-left">
+												<i class="fa fa-arrow-right" aria-hidden="true" onclick="selectUnselectAll('#disposition-list-left', '#disposition-list-right','available-disposition')" style="font-size: 29px;"></i>
+											</div>
+											<div class="col-5 h-100 mb-3">
+												<div class="dropify-border">
+													<div id="disposition-list-right" class="selected-disposition dropify-list">
+														{% for dispo in campaign.disposition.all %}
+														<div class="badge btn-dark badge-pill" style="background-color:{{ dispo.color_code }}"data-name="{{ dispo.name }}" data-color="{{ dispo.color_code|default:'#3a3f51'}}" data-content="{% for disp in dispo.dispos  %} {{ disp.name }},{% endfor %}" data-title="{{ dispo.name }}"data-toggle="popover" data-id="{{dispo.id}}"
+														data-element="">{{ dispo.name }}</div>
+														{% endfor %}
+													</div>
+												</div>
+											</div>
+										</div>
+									</fieldset>
+									<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+										<div class="form-group row">
+											<label for="extension" class="col-6 mb-0 col-form-label">Select Relationship Tags (drag and drop):</label>
+											<div class="col-6 form-inline">
+												<label for="extension" class="mb-0 col-form-label">Selected Relationship Tags</label>
+												<span class="help-block form-error d-none m-0 ml-sm-3"  id="relation-err-msg">This is a required field</span>
+											</div>
+										</div>
+										<div class="form-group row">
+											<div class="col-5 h-100 mb-3">
+												<div class="dropify-border">
+													<div id="relationtag-list-left" class="available-relationtag dropify-list">
+														{% for relation in relationtag %}
+														<div class="badge btn-dark badge-pill" style="background-color:{{ relation.color_code }}"data-name="{{ relation.name }}" data-color="{{ relation.color_code|default:'#3a3f51'}}" data-content="{% for rel in relation.relation_fields  %} {{ rel.name }}, {% for child in rel.children  %}{% if child|length > 0 %} {{ child.name }}, {% endif %}{% endfor %}{% endfor %}" data-title="{{ relation.name }}" data-color="{{ relation.color_code|default:'#3a3f51'}}" data-toggle="popover" data-id="{{relation.id}}"
+														data-element="group">{{ relation.name }}</div>
+														{% endfor %}
+													</div>
+												</div>
+											</div>
+											<div class="col-1 h-100 mb-3 justify-content-center align-self-center text-right">
+												<i class="fa fa-arrow-left" aria-hidden="true" onclick="selectUnselectAll('#relationtag-list-right','#relationtag-list-left','selected-relationtag')" style="font-size: 29px;"></i>
+											</div>
+											<div class="col-1 h-100 mb-3 justify-content-center align-self-center text-left">
+												<i class="fa fa-arrow-right" aria-hidden="true" onclick="selectUnselectAll('#relationtag-list-left', '#relationtag-list-right','available-relationtag')" style="font-size: 29px;"></i>
+											</div>
+											<div class="col-5 h-100 mb-3">
+												<div class="dropify-border">
+													<div id="relationtag-list-right" class="selected-relationtag dropify-list">
+														{% for relation in campaign.relation_tag.all %}
+														<div class="badge btn-dark badge-pill" style="background-color:{{ relation.color_code }}"data-name="{{ relation.name }}" data-color="{{ relation.color_code|default:'#3a3f51'}}" data-content="{% for rel in relation.relation_fields  %} {{ rel.name }}, {% for child in rel.children  %}{% if child|length > 0 %} {{ child.name }}, {% endif %}{% endfor %}{% endfor %}" data-title="{{ relation.name }}" data-color="{{ relation.color_code|default:'#3a3f51'}}" data-toggle="popover" data-id="{{relation.id}}"
+														data-element="group">{{ relation.name }}</div>
+														{% endfor %}
+													</div>
+												</div>
+											</div>
+
+										</div>
+									</fieldset>
+									
+									<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+
+										<div class="row">
+											<!-- <div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-4 col-form-label">Select Disposition<span class="star">*</span>:</label>
+													<div class="col-sm-8 mb-3">
+														<select class="form-control selected-disposition" name="disposition" id="disposition" multiple data-validation="required">
+														{% for dispo in campaign.disposition.all %}
+															<option style="background-color:{{ dispo.color_code }}" value="{{ dispo.id}}" data-username="{{ dispo.name }}" selected >{{ dispo.name }}</option>
+														{% endfor %}
+														{% for dispo in disposition %}
+															<option value="{{ dispo.id}}" data-username="{{ dispo.name }}"  >{{ dispo.name }}</option>
+														{% endfor %}
+														</select>
+													</div>
+												</div>
+												<p class="js-error alert alert-danger d-none"></p>
+											</div> -->
+											<!-- <div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-4 col-form-label">Select Relation Tag:</label>
+													<div class="col-sm-8 mb-3">
+														<select class="form-control selected-relation" name="relation_tag" id="relation_tag" multiple>
+														{% for relation in relationtag %}
+															<option value="{{ relation.id}}" style="background-color: {{ relation.color_code }}" data-toggle="popover"  data-color="{{ relation.color_code|default:'#3a3f51'}}" data-name="{{ relation.name }}" data-id="{{ relation.id }}" data-title={{relation.name}} title="{{relation.name}}" >{{ relation.name }}</option>
+														{% endfor %}
+														{% for relation in campaign.relation_tag.all %}
+															<option value="{{ relation.id}}" style="background-color: {{ relation.color_code }}" data-toggle="popover"  data-color="{{ relation.color_code|default:'#3a3f51'}}" data-name="{{ relation.name }}" data-id="{{ relation.id }}" data-title={{relation.name}} title="{{relation.name}}"selected >{{ relation.name }}</option>
+														{% endfor %}
+														</select>
+													</div>
+												</div>
+											</div> -->
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-4 col-form-label">Select Breaks:</label>
+													<div class="col-sm-8 mb-3">
+														<select class="form-control selected-relation" name="breaks" id="breaks" multiple>
+														{% for agent_status in campaign.breaks.all %}
+															<option value="{{ agent_status.id}}" style="background-color: {{ agent_status.break_color_code }}" data-id="{{ agent_status.id}}" selected>{{agent_status.name}}</option>
+														{% endfor %}
+														{% for agent_status in agent_status_list %}
+															<option value="{{ agent_status.id}}" style="background-color: {{ agent_status.break_color_code }}" data-id="{{ agent_status.id}}">{{agent_status.name}}</option>
+														{% endfor %}
+														</select>
+													</div>
+												</div>
+											</div>
+										</div>
+									</fieldset>
+									<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+										<div class="form-group row">
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-4 col-form-label">Shift Time :</label>
+													<div class="col-sm-8">
+														<select class="form-control" name="schedule">
+															<option value="">Select Shift</option>
+															{% for schedule in camp_schedule %}
+															{% if schedule.id == campaign.schedule.id %}
+															<option value="{{ schedule.id }}" selected>{{ schedule.name }}</option>
+															{% else %}
+															<option value="{{ schedule.id }}">{{ schedule.name }}</option>
+															{% endif %}
+															{% endfor %}
+														</select>
+													</div>
+												</div>
+											</div>
+											
+										</div>
+									</fieldset>
+									
+									<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+										<div class="row">
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-4 col-form-label">SMS Gateway List:</label>
+													<div class="col-sm-8">
+														<select class="form-control" name="sms_gateway" id="sms_gateway">
+															<option value="">Select Gateway</option>
+															{% for gateway in gateway_list %}
+																{% if gateway.id == campaign.sms_gateway.id %}
+																	<option value="{{ gateway.id }}" selected>{{ gateway.name }}</option>
+																{% else %}
+																	<option value="{{ gateway.id }}">{{ gateway.name }}</option>
+																{% endif %}
+															{% endfor %}
+														</select>
+													</div>
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-4 col-form-label">Email Gateway List:</label>
+													<div class="col-sm-8">
+														<select class="form-control" name="email_gateway" id="email_gateway">
+															<option value="">Select Email Gateway</option>
+															{% for gateway in emailgateway_list %}
+																{% if gateway.id == campaign.email_gateway.id %}
+																	<option value="{{ gateway.id }}" selected>{{ gateway.name }}</option>
+																{% else %}
+																	<option value="{{ gateway.id }}">{{ gateway.name }}</option>
+																{% endif %}
+															{% endfor %}
+														</select>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="description" class="col-sm-4 col-form-label">Description :</label>
+													<div class="col-sm-8 mb-3">
+														<textarea class="form-control " placeholder="Description" name="description" id="description" rows=4>{{campaign.description}}</textarea> 
+													</div>
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-4 col-form-label">Status :</label>
+													<div class="col-sm-8">
+														{% if is_edit %}
+															<select class="form-control" name="status">
+																{% for status in campaign_status %}
+																{% if status.0 == campaign.status %}
+																<option value="{{ status.0 }}" selected>{{ status.1 }}</option>
+																{% else %}
+																<option value="{{ status.0 }}">{{ status.1 }}</option>
+																{% endif %}
+																{% endfor %}
+															</select>
+														{% else %}
+															<select class="form-control" name="status" readonly style="pointer-events:none;">
+																{% for status in campaign_status %}
+																{% if status.0 == campaign.status %}
+																<option value="{{ status.0 }}" selected>{{ status.1 }}</option>
+																{% else %}
+																<option value="{{ status.0 }}">{{ status.1 }}</option>
+																{% endif %}
+																{% endfor %}
+															</select>
+														{% endif %}
+													</div>
+												</div>
+											</div>
+										</div>
+									</fieldset>
+									{% if enable_wfh %}
+									<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+										<div class="row">
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-5 col-form-label">Work From Home :</label>
+													<div class="col-sm-7 form-inline">
+														<div class="form-check">
+															<label class="form-check-label">
+																<input type="checkbox" class="form-check-input" name="wfh" id="wfh" {% if campaign.wfh %} checked {% endif %}>
+															</label>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+											<div class="row d-none" id="wfh_vue">
+												<div class="col-md-6">
+													<div class="form-group row">
+														<label for="wfh_caller_id" class="col-sm-4 col-form-label">WHF Caller Id:</label>
+														<div class="col-sm-8">
+															<input type="text" data-toggle="tooltip" data-original-title="Update Caller Id" class="form-control" id="wfh_caller_id" placeholder="WHF Caller Id" name="wfh_caller_id" value="{{ campaign.campaignvariable_set.all.0.wfh_caller_id }}" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)" data-validation-error-msg-container="#camp_callerid_exist" onchange="return isNumber(event)">
+															<span id="camp_callerid_exist"></span>
+														</div>
+													</div>
+												</div>
+												<div class="col-md-6">
+												</div>
+												<div class="col-md-6" v-for="(val,index) in wfh_list" v-bind:key="index">
+													<div class="form-group row">
+															<label for="" class="col-form-label" >${index+1} </label>
+													 <div class="col-sm-9">
+														<input  type="text" class="form-control" v-model="wfh_list[index]"  name="wfh_dispo" :readonly="index in [0,1] ? true :false">
+														<span v-if="index >= 2" @click="RemoveSkill(index)" class="d-inline fa fa-times-circle text-danger remove-section" style="float:right;font-size: 20px; position: relative;top: -30px;right: -30px"></span>
+														<span v-if="index+1 === wfh_list.length && index < 8"  @click="AddSkill" class="d-inline fa fa-plus-circle text-success ml-1 add-section" style="float:right; font-size: 20px; position: relative;top: -30px;right: -75px"></span>
+													</div>
+												</div>
+											</div>
+										</div>
+									</fieldset>
+										{% endif %}
+									<div class="row">
+										<div class="col-md-6">
+											<div class="alert alert-danger lead-err-msg d-none" id="campaign-err-msg">
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="float-right">
+												<button type="button" class="btn btn-success mr-sm-2 edit-campaign-btn" id="edit-campaign-btn">Update</button>
+												<button type="button" class="btn btn-light" onclick="showSwal('warning-message-and-cancel','OK', '/CampaignManagement/Campaigns/')">Cancel</button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="tab-pane fade" id="campaign-additional-settings" role="tabpanel" aria-labelledby="campaign-additional-settings">
+							<div class="card">
+								<div class="card-body">
+									<fieldset>
+										<div class="row">
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-4 col-form-label">Strategy :</label>
+													<div class="col-sm-8">
+														<select class="form-control" name="strategy">
+															{% for campaign_strategy in strategy %}
+															{% if campaign_strategy.0 == "ring-all" %}
+																<option value="{{ campaign_strategy.0 }}" disabled>{{ campaign_strategy.1 }}</option>
+															{% elif campaign_strategy.0 == campaign.campaignvariable_set.all.0.strategy%}
+															<option value="{{ campaign_strategy.0 }}" selected>{{ campaign_strategy.1 }}</option>
+															{% else %}
+															<option value="{{ campaign_strategy.0 }}">{{ campaign_strategy.1 }}</option>
+															{% endif %}
+															{% endfor %}
+														</select>
+													</div>
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="variables" class="col-sm-4 col-form-label">Variables :</label>
+													<div class="col-sm-8">
+														<input type="text" class="form-control" id="variables" data-toggle="tooltip"
+														title="Use to set channel variables, separate them with comma and do not use any space" placeholder="Variables" name="variables" value="{{ campaign.campaignvariable_set.all.0.variables }}" data-validation="required" {% if not user.is_superuser %}readonly{% endif %}>
+													</div>
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-4 col-form-label">Moh Sound :</label>
+													<div class="col-sm-8">
+														<select class="form-control" name="moh_sound">
+															<option value="">Select Moh Sound</option>
+															{% for audio in audio_files %}
+															{% if audio.id == campaign.campaignvariable_set.all.0.moh_sound.id %}
+															<option value="{{ audio.id }}" selected>{{ audio.name }}</option>
+															{% else %}
+															<option value="{{ audio.id }}">{{ audio.name }}</option>
+															{% endif %}
+															{% endfor %}
+														</select>
+													</div>
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="" class="col-sm-4 col-form-label">Hold Music :</label>
+													<div class="col-sm-8">
+														<select class="form-control" name="hold_music">
+															<option value="">Select Hold Music</option>
+															{% for audio in audio_files %}
+															{% if audio.id == campaign.campaignvariable_set.all.0.hold_music.id %}
+															<option value="{{ audio.id }}" selected>{{ audio.name }}</option>
+															{% else %}
+															<option value="{{ audio.id }}">{{ audio.name }}</option>
+															{% endif %}
+															{% endfor %}
+														</select>
+													</div>
+												</div>
+											</div>										
+										</div>
+										<!-- <div class="row">
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="time_base_score" class="col-sm-4 col-form-label">Time Base Score :</label>
+													<div class="col-sm-8">
+														<input type="text" class="form-control" id="time_base_score" placeholder="Max wait time" name="time_base_score" data-toggle="tooltip" title="This can be either queue or system (system is the default)." value="{{ campaign.campaignvariable_set.all.0.time_base_score}}" data-validation="required" onkeypress="return isNumber(event)">
+													</div>
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="max_wait_time_with_no_agent" class="col-sm-4 pt-sm-1 col-form-label">Max Wait Time With No Agent :</label>
+													<div class="col-sm-8">
+														<input type="text" class="form-control" id="max_wait_time_with_no_agent" placeholder="Max wait time with no agent" name="max_wait_time_with_no_agent" value="{{ campaign.campaignvariable_set.all.0.max_wait_time_with_no_agent}}" data-validation="required" onkeypress="return isNumber(event)">
+													</div>
+												</div>
+											</div>
+										</div> -->
+										<!-- <div class="row">
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="max_wait_time_with_no_agent_time_reached" class="col-sm-4 pt-sm-1 col-form-label">Max Wait Time With No Agent Reached :</label>
+													<div class="col-sm-8">
+														<input type="text" class="form-control" id="max_wait_time_with_no_agent_time_reached" placeholder="" name="max_wait_time_with_no_agent_time_reached" value="{{ campaign.campaignvariable_set.all.0.max_wait_time_with_no_agent_time_reached}}" data-validation="required" onkeypress="return isNumber(event)">
+													</div>
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="time_base_score" class="col-sm-4 col-form-label">Dial Time Out :</label>
+													<div class="col-sm-8">
+														<input type="text" class="form-control" id="time_base_score" placeholder="Dial Time Out" name="dialtimeout" value="{{campaign.campaignvariable_set.all.0.dialtimeout}}" data-validation="required" onkeypress="return isNumber(event)">
+													</div>
+												</div>
+											</div>
+										</div> -->
+										<div class=row>
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="time_base_score" class="col-sm-4 col-form-label">Queued Busy Callback :</label>
+													<div class="col-sm-8">
+														<select class="form-control" name='queued_busy_callback' id='queued_busy_callback'>
+															<option value=""> Select Digit</option>
+															{% for dial in dial_number %}
+																{% if dial|str_convert == campaign.queued_busy_callback %}
+																<option value="{{dial}}" selected>{{dial}}</option>
+																{%else%}
+																	<option value="{{dial}}">{{dial}}</option>
+																{% endif %}
+															{% endfor %}
+														</select>
+													</div>
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="time_base_score" class="col-sm-4 col-form-label">Max Wait Time :</label>
+													<div class="col-sm-8">
+														<input type="text" class="form-control" id="max_wait_time" placeholder="Max wait Time" name="max_wait_time" value="{{ campaign.campaignvariable_set.all.0.max_wait_time}}" data-toggle="tooltip" title="Default to 0 to be disabled. Any value are in seconds,and will define the delay before we quit the callcenter application IF the member have not been answered by an agent" onkeypress="return isNumber(event)">
+													</div>
+												</div>
+											</div>
+										</div>
+										<!-- <div class="row">
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="time_base_score" class="col-sm-4 col-form-label">Queued Busy Callback :</label>
+													<div class="col-sm-8">
+														<select class="form-control" name='queued_busy_callback' id='queued_busy_callback'>
+															<option value=""> Select Digit</option>
+															{% for dial in dial_number %}
+																{% if dial|str_convert == campaign.queued_busy_callback %}
+																<option value="{{dial}}" selected>{{dial}}</option>
+																{%else%}
+																	<option value="{{dial}}">{{dial}}</option>
+																{% endif %}
+															{% endfor %}
+														</select>
+													</div>
+												</div>
+											</div>
+										</div> -->
+										<div class="row">
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="ndnc_scrub" class="col-7 col-sm-5 col-form-label">Ndnc scrub :</label>
+													<div class=" col-5 col-sm-7 form-inline">
+														<div class="form-check">
+															<label class="form-check-label">
+																{% if campaign.campaignvariable_set.all.0.ndnc_scrub %}
+																<input type="checkbox" id="ndnc_scrub" class="form-check-input" name="ndnc_scrub" checked>
+																{% else %}
+																<input type="checkbox" id="ndnc_scrub" class="form-check-input" name="ndnc_scrub" onclick="confirmBeforeChk('Are You sure you want to start ndnc scrub process to this campaign', '#ndnc_scrub')">
+																{% endif %}
+															</label>
+														</div>
+													</div>
+												</div>
+											</div>
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="dial_time_out" class="col-sm-4 col-form-label">Dial Time Out :</label>
+													<div class="col-sm-8">
+														<input type="text" class="form-control" id="dial_time_out" placeholder="Dial Time Out" name="dialtimeout" value="{{campaign.campaignvariable_set.all.0.dialtimeout}}" data-validation="required" onkeypress="return isNumber(event)">
+													</div>
+												</div>
+											</div>
+										</div>
+									</fieldset>
+									
+									<div class="row">
+										<div class="col-sm-6">
+											<div class="alert alert-danger d-none" id="campaign-err-msg">
+											</div>
+										</div>
+										<div class="col-sm-6">
+											<div class="float-right">
+												<button type="button" class="btn btn-success mr-sm-2" id="edit-campaign-settings-btn">Update</button>
+												<button type="button" class="btn btn-light" id="refresh-page">Cancel</button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="tab-pane fade" id="lead-prioritize-settings" role="tabpanel" aria-labelledby="lead-prioritize-settings">
+							<div class="card">
+								<div class="card-body">
+									<div class="row">
+										<div class="col-md-3">
+											<div class="form-group row">
+												<label for="" class="col-sm-4 col-form-label"> Status </label>
+												<div class="col-sm-8 form-inline">
+													<div class="form-check mr-sm-3 mr-md-2">
+														<label class="form-check-label">
+															<input type="checkbox" id="lead-priority-status" class="form-check-input" value="false">
+														</label>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-3">
+											<div class="form-group row">
+												<div class="col-sm-8">
+													<select class="form-control" id="prioritize-status">
+														<option value="" selected>Select Field</option>
+														{% for crm in crm_field %}
+															<option value="{{ crm }}">{{ crm }}</option>
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-3" id="after-class">
+											<div class="form-group row">
+												<div class="col-sm-8 form-inline">
+													<div class="form-check mr-sm-3">
+														<label class="form-check-label">
+															<input type="radio" class="form-check-input" name="prioritize" value="tac" checked>
+															Truncate After Call
+														</label>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-3" id="after-priotitize">
+											<div class="form-group row">
+												<div class="col-sm-8 form-inline">
+													<div class="form-check mr-sm-3">
+														<label class="form-check-label">
+															<input type="radio" class="form-check-input" name="prioritize" value="tap">
+															Truncate After Prioritize
+														</label>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-3" id="after-period">
+											<div class="form-group row">
+												<div class="col-sm-8 form-inline">
+													<div class="form-check mx-sm-3">
+														<label class="form-check-label">
+															<input type="radio" class="form-check-input" name="prioritize" value="tapd">
+															Truncate After Period
+														</label>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-3" id="prioritize-period-select">
+											<div class="form-group row">
+												<label for="" class="col-sm-4 col-form-label">Select Periood</label>
+												<div class="col-sm-8">
+													<select class="form-control" id="prioritize-period">
+														<option value="daily">Daily</option>
+														<option value="weekly">Weekly</option>
+														<option value="monthly">Monthly</option>
+													</select>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="tab-pane fade" id="lead-recycle-settings" role="tabpanel" aria-labelledby="lead-recycle-settings">
+							<div class="row">
+								<div class="col-12">
+									<div class="accordion" id="accordion" role="tablist">
+										{% if campaign.leadrecycle_set.all %}
+										{% for lead in campaign.leadrecycle_set.all %}
+										<div class="card" id="lead-card-{{ forloop.counter }}">
+											<input type="hidden" class="existing_lead_id" value="{{lead.id}}">
+											<div class="card-header" role="tab" id="lead-heading-{{ forloop.counter }}">
+												<div class="row">
+													<div class="col-11 pr-0 pr-2">
+														<h6 class="mb-0">
+															<a data-toggle="collapse" href="#lead-collaps-{{ forloop.counter}}" aria-expanded="false" aria-controls="collapse-1" class="lead-heading collapsed">
+																{{ lead.name|upper }}
+															</a>
+														</h6>
+													</div>
+													<div class="col-1 pl-0 pl-2">
+														<i class="fa fa-times-circle text-danger fa-5x remove-lead" id="remove-lead-{{ forloop.counter }}" data-lead_id="{{ lead.id }}"></i>
+													</div>
+												</div>
+											</div>
+											<div id="lead-collaps-{{ forloop.counter}}" class="collapse collapse-div" role="tabpanel" aria-labelledby="lead-heading-{{ forloop.counter}}" data-parent="#accordion">
+												<div class="card-body">
+													<div class="row">
+														<div class="col-md-4">
+															<div class="form-group row">
+																<label for="lead_name" class="col-sm-4 col-form-label">Name</label>
+																<div class="col-sm-8">
+																	<select class="form-control lead_name" name="" id="lead_name-{{ forloop.counter}}" data-parent="{{ forloop.counter}}">
+																		<option value="Select Disposition">Select Disposition</option>
+																	</select>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-4">
+															<div class="form-group row">
+																<label for="count" class="col-sm-4 col-form-label">Count</label>
+																<div class="col-sm-8">
+																	<input type="text" class="form-control" id="count" placeholder="Lead Count" name="count" value="{{ lead.count }}" data-validation="number" data-parent="#lead-card-{{ forloop.counter}}">
+																</div>
+															</div>
+														</div>
+														<div class="col-md-4">
+															<div class="form-group row">
+																<label for="" class="col-sm-4 col-form-label">Status</label>
+																<div class="col-sm-8">
+																	<select class="form-control" id="lead-status">
+																		{% for status in lead_status %}
+																		{% if status.0 == lead.status %}
+																		<option value="{{ status.0 }}" selected>{{ status.1 }}</option>
+																		{% else %}
+																		<option value="{{ status.0 }}">{{ status.1 }}</option>
+																		{% endif %}
+																		{% endfor %}
+																	</select>
+																</div>
+															</div>
+														</div>
+													</div>
+													<div class="row">
+														<div class="col-md-4">
+															<div class="form-group row">
+																<label for="" class="col-sm-4 col-form-label">Schedule Type</label>
+																<div class="col-sm-8">
+																	<select class="form-control schedule_type" name="" id="schedule_type" data-parent="{{ forloop.counter}}">
+																		<option>Select Time</option>
+																		<option value="schedule_time">
+																		Schedule Time</option>
+																		<option value="recycle_time" >Recycle Time</option>
+																	</select>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-4 d-none" id="lead-start-time">
+															<div class="form-group row">
+																<label for="count" class="col-sm-4 col-form-label">Start Time</label>
+																<div class="col-sm-8">
+																	<div class="input-group date lr-start-time" id="start_timepicker_{{ forloop.counter}}" data-target-input="nearest">
+																		<div class="input-group" data-target="#start_timepicker_{{ forloop.counter}}" data-toggle="datetimepicker">
+																			<input type="text" class="form-control datetimepicker-input" data-target="#start_timepicker_{{ forloop.counter}}" id="lr_start_time" data-parent="#lead-card-{{ forloop.counter}}" autocomplete="off" />
+																			<div class="input-group-addon input-group-append"><i class="far fa-clock input-group-text"></i></div>
+																		</div>
+																	</div>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-4 d-none" id="lead-end-time">
+															<div class="form-group row">
+																<label for="count" class="col-sm-4 col-form-label">End Time</label>
+																<div class="col-sm-8">
+																	<div class="input-group date lr-end-time" id="end_timepicker_{{ forloop.counter}}" data-target-input="nearest">
+																		<div class="input-group" data-target="#end_timepicker_{{ forloop.counter}}" data-toggle="datetimepicker">
+																			<input type="text" class="form-control datetimepicker-input" id="lr_end_time" data-target="#end_timepicker_{{ forloop.counter}}" data-parent="#lead-card-{{ forloop.counter}}" autocomplete="off"/>
+																			<div class="input-group-addon input-group-append"><i class="far fa-clock input-group-text"></i></div>
+																		</div>
+																	</div>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-4" id="lead-time-div">
+															<div class="form-group row">
+																<label for="count" class="col-sm-4 col-form-label">Interval</label>
+																<div class="col-sm-8">
+																	<!-- <input type="text" class="form-control" id="lead_time" placeholder="Lead Time" value="{{ lead.recycle_time }}"> -->
+
+
+																	<div class="input-group date lr-interval-time" id="lr_interval_{{ forloop.counter}}" data-target-input="nearest">
+																		<div class="input-group" data-target="#lr_interval_{{ forloop.counter}}" data-toggle="datetimepicker">
+																			<input type="text" class="form-control datetimepicker-input" data-target="#lr_interval_{{ forloop.counter}}" id="lead_time" data-parent="#lead-card-{{ forloop.counter}}"/>
+																			<div class="input-group-addon input-group-append"><i class="far fa-clock input-group-text"></i></div>
+																		</div>
+																	</div>
+																</div>
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+										{% endfor %}
+										{% else %}
+										<div class="card clone_this_lead_div" id="lead-card-1">
+											<div class="card-header" role="tab" id="lead-heading-1">
+												<div class="row">
+													<div class="col-11 pr-0 pr-2">
+														<h6 class="mb-0">
+															<a data-toggle="collapse" href="#lead-collaps-1" aria-expanded="false" aria-controls="collapse-1" class="lead-heading collapsed">
+																Lead Recycle 
+															</a>
+														</h6>
+													</div>
+													<div class="col-1 pl-0 pl-2">
+														<i class="fa fa-times-circle text-danger fa-5x remove-lead d-none"></i>
+													</div>
+												</div>
+											</div>
+											<div id="lead-collaps-1" class="collapse show collapse-div" role="tabpanel" aria-labelledby="lead-heading-1" data-parent="#accordion">
+												<div class="card-body">
+													<div class="row">
+														<div class="col-md-4">
+															<div class="form-group row">
+																<label for="lead_name" class="col-sm-4 col-form-label">Name:</label>
+																<div class="col-sm-8">
+																	<select class="form-control lead_name" name="" id="lead_name-1" data-parent="{{ forloop.counter}}">
+																		<option value="Select Disposition">Select Disposition</option>
+																	</select>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-4">
+															<div class="form-group row">
+																<label for="count" class="col-sm-4 col-form-label">Count:</label>
+																<div class="col-sm-8">
+																	<input type="text" class="form-control" id="count" placeholder="Lead Count" name="count" value="0" data-validation="number" data-parent="#lead-card-1">
+																</div>
+															</div>
+														</div>
+														<div class="col-md-4">
+															<div class="form-group row">
+																<label for="" class="col-sm-4 col-form-label">Status:</label>
+																<div class="col-sm-8">
+																	<select class="form-control" id="lead-status">
+																		{% for status in lead_status %}
+																		<option value="{{ status.0 }}">{{ status.1 }}</option>
+																		{% endfor %}
+																	</select>
+																</div>
+															</div>
+														</div>
+													</div>
+													<div class="row">
+														<div class="col-md-4">
+															<div class="form-group row">
+																<label for="" class="col-sm-4 col-form-label pt-sm-1">Schedule Type:</label>
+																<div class="col-sm-8">
+																	<select class="form-control schedule_type" name="" id="schedule_type" data-parent="1">
+																		<option>Select Time</option>
+																		<option value="schedule_time">Schedule Time</option>
+																		<option value="recycle_time">Recycle Time</option>
+																	</select>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-4 d-none" id="lead-start-time">
+															<div class="form-group row">
+																<label for="count" class="col-sm-4 col-form-label">Start Time:</label>
+																<div class="col-sm-8">
+																	<div class="input-group date lr-start-time" id="start_timepicker_1" data-target-input="nearest">
+																		<div class="input-group" data-target="#start_timepicker_1" data-toggle="datetimepicker">
+																			<input type="text" class="form-control datetimepicker-input" data-target="#start_timepicker_1" id="lr_start_time" data-parent="#lead-card-1"/>
+																			<div class="input-group-addon input-group-append"><i class="far fa-clock input-group-text"></i></div>
+																		</div>
+																	</div>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-4 d-none" id="lead-end-time">
+															<div class="form-group row">
+																<label for="count" class="col-sm-4 col-form-label">End Date:</label>
+																<div class="col-sm-8">
+																	<div class="input-group date lr-end-time" id="end_timepicker_1" data-target-input="nearest">
+																		<div class="input-group" data-target="#end_timepicker_1" data-toggle="datetimepicker">
+																			<input type="text" class="form-control datetimepicker-input" id="lr_end_time" data-target="#end_timepicker_1" data-parent="#lead-card-1"/>
+																			<div class="input-group-addon input-group-append"><i class="far fa-clock input-group-text"></i></div>
+																		</div>
+																	</div>
+																</div>
+															</div>
+														</div>
+														<div class="col-md-4 d-none" id="lead-time-div">
+															<div class="form-group row">
+																<label for="count" class="col-sm-4 col-form-label">Interval:</label>
+																<div class="col-sm-8">
+																	<!-- <input type="text" class="form-control" id="lead_time" placeholder="Lead Time" value="0" data-parent="#lead-card-1"> -->
+
+																	<div class="input-group date lr-interval-time" id="lr_interval_1" data-target-input="nearest">
+																		<div class="input-group" data-target="#lr_interval_1" data-toggle="datetimepicker">
+																			<input type="text" class="form-control datetimepicker-input" data-target="#lr_interval_1" id="lead_time" data-parent="#lead-card-1"/>
+																			<div class="input-group-addon input-group-append"><i class="far fa-clock input-group-text"></i></div>
+																		</div>
+																	</div>
+																</div>
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+										{% endif %}
+									</div>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6">
+									<div class="alert alert-danger lead-err-msg d-none" id="lead-err-msg"></div>
+								</div>
+								<div class="col-sm-6">
+									<div class="float-right">
+										<button type="button" class="btn btn-success mr-sm-2" id="add-lead-btn">Add New</button>
+										<button type="button" class="btn btn-success mr-sm-2 edit-campaign-btn">Update</button>
+									</div>
+								</div>
+							</div>
+							<input type="hidden" name="lead_recycle" id="lead_recycle_dict">
+							{% if not campaign.leadrecycle_set.all %}
+							<input type="hidden" id="get-count" value="1">
+							{% else %}
+							<input type="hidden" id="get-count" value="{{campaign.leadrecycle_set.all.count}}">
+							{% endif %}
+							<input type="hidden" name="wfh_dispo" id="wfh_dispo">
+							<input type="hidden" name="trunk_did_data" id="trunk_did_data">
+							<input type="hidden" id="hopper_level_count_hidden"  value="">
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script type="text/x-template" id="single_select_template">
+	<select>
+		<slot></slot>
+	</select>
+</script>
+<script type="text/javascript">
+	var campaign_id = '{{campaign.id}}'
+	vb_crm_fields = []
+</script>
+<script src="{% static 'melody/js/settings.js' %}"></script>
+<script src="{% static 'melody/js/dragula.js' %}"></script>
+<script src="{% static 'melody/vendors/summernote/dist/summernote-bs4.min.js' %}"></script>
+<script src="{% static 'melody/vendors/tinymce/tinymce.min.js' %}"></script>
+<script src="{% static 'js/script_editor.js' %}"></script>
+<script src="{% static 'js/dial_trunk.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/mustache.js' %}"></script>
+
+<script type="text/javascript">
+	{% if campaign.lead_priotize %}
+
+		var prioritize_status = '{{campaign.lead_priotize}}'.replace(/&#39;/g, '"').replace(/True/g, 'true')
+		var priority_data = JSON.parse(''+prioritize_status+'')
+		var keys = Object.keys(priority_data)
+		var key = ''
+		keys.forEach(function(element){
+		  if(element!='status'){
+		  	key = element
+		  	return
+		  }
+		})
+		if(key!=''){
+			if('period' in priority_data[key]){
+				$("#prioritize-period").val(priority_data[key]['period']);
+			}
+			if('tac' in priority_data[key]){
+				$('input[name="prioritize"][value="tac"]').attr('checked',true);
+			}
+			if('tap' in priority_data[key]){
+				$('input[name="prioritize"][value="tap"]').attr('checked',true);
+			}
+			if('tapd' in priority_data[key]){
+				$('input[name="prioritize"][value="tapd"]').attr('checked',true);
+			}
+			if('status' in priority_data[key]){
+				if(priority_data[key]['status']==true || priority_data[key]['status']=='true'){
+					$('#lead-priority-status').prop('checked', priority_data[key]['status'])
+				}else{
+					$('#lead-priority-status').prop('checked', false)
+				}
+				
+				$("#lead-priority-status").val(priority_data[key]['status']);
+			}
+			$("#prioritize-status").val(key);
+		}
+		
+	{% endif %}
+
+$('#disposition,#relation_tag,#breaks, #api_parameters').select2()
+ //    function formatState (state) {
+	//   if (!state.id) {
+	//     return state.text;
+	//   }
+
+	//   var baseUrl = "/user/pages/images/flags";
+	//   var $state = $(
+	//     '<span><span></span></span>'
+	//   );
+
+	//   // Use .text() instead of HTML string concatenation to avoid script injection issues
+	//   $state.find("span").text(state.text);
+	//   // $state.find("img").attr("src", baseUrl + "/" + state.element.value.toLowerCase() + ".png");
+	//   $state.attr('style','background-color: red');
+
+
+	//   return $state;
+	// };
+
+	// $("#disposition").select2({
+	// 	// templateSelection: formatState
+
+	//    tags: true,
+	//    allowClear: true, //
+	//    closeOnSelect: false,
+	//    tokenSeparators: [',', ' '],
+	//    templateSelection: function(selection) {
+	//    	      // $(container).css("background-color", 'red');
+ // console.log('selection',"kkkk")
+	//         if(selection.selected) {
+	//             return $.parseHTML('<span class="customclass">' + selection.text + '</span>');
+	//         }
+	//         else {
+	//             return $.parseHTML('<span class="customclass">' + selection.text + '</span>');
+	//         }
+	//     }
+
+	// });
+
+	// $("#disposition").on("select2:select", function(e) { 
+	// 	// alert('hh')
+	// 	// $("li[aria-selected='true']").addClass("customclass");
+	// 	// $("li[aria-selected='false']").removeClass("customclass");
+	// 	// $('.select2-search-choice:not(.my-custom-css)', this).addClass('my-custom-css');
+
+	// 	// $("li[aria-selected='true']").css("background-color", 'red');
+	// 	$('.select2-selection__rendered').find('.select2-selection__choice').css("background-color", 'red'); 
+	// 	$('.select2-selection__rendered').find('.select2-selection__choice').css("background-color", 'none');
+	// 	$('.select2-search-choice:not(.my-custom-css)', this).addClass('my-custom-css');
+	// });
+
+	// $("#disposition").on("select2:unselect", function(e) { 
+	// // $("li[aria-selected='false']").removeClass("customclass");4
+	// $('.select2-selection__rendered').find('.select2-selection__choice').css("background-color", 'none');
+	// });
+
+
+     //method 2
+   //   var checkList = [1, 3];
+	  // $("#disposition").select2({
+	  // 	width: "100%",
+	  //   templateSelection: function (data, container) {
+	  //     var selection = $('#disposition').select2('data');
+	  //     var idx = selection.indexOf(data);
+	  //     console.log(">>Selection",data.text, data.idx, idx);
+	  //     data.idx = idx;
+	      
+	  //     $(container).css("background-color", colors[data.idx]);
+	  //     return data.text;
+	  //   },
+	  // })
+
+	  
+	  // $("#disposition").on("select2:select", function (evt) {
+	  //   var element = evt.params.data.element;
+	  //   var $element = $(element);
+
+	  //   $element.detach();
+	  //   $(this).append($element);
+	  //   $(this).trigger("change");
+	  // });
+
+  // end here
+
+	{% if can_update %}
+
+		add_trunk_vue.camp_page =true
+		add_trunk_vue.trunk_list={{trunk_list|convert_in_json|safe}}
+		add_trunk_vue.did_type = [{"text":"single","id":"single"},{"text":"multiple","id":"multiple"},{"text":"range","id":"range"}]
+	{% if not campaign.is_trunk_group %}
+		add_trunk_vue.hide_single_trunk = false
+		var is_trunk = false;
+		did_type = "{{campaign.trunk_did.type_of_did|slugify}}"
+		did_start = {{campaign.trunk_did.did_start|slugify}}
+		did_end = {{campaign.trunk_did.did_end|slugify}}
+		did = {{campaign.trunk_did.did|safe}}
+		trunk_id = {{campaign.trunk.id|safe}}
+		range_array = []
+		$.each(add_trunk_vue.trunk_list, function(index,trunk_val){
+	        if( trunk_val["id"] === trunk_id && trunk_val["did_range"] !=null){
+	        	is_trunk = true
+	            var temp_range = trunk_val["did_range"].split(",")
+	            var start_end = temp_range[0]
+	            if (temp_range[1] == undefined) {
+	                end_node = start_end
+	            }
+	            else {
+	                end_node = temp_range[1]
+	            }
+	            let is_leading_zero = false
+	            let start_end_length = start_end.length
+	            if (start_end.match(/^0+/)) {
+	            	is_leading_zero = true
+	            }
+	            for (i = start_end; i <= end_node; i++) {
+	            	let did_value = (is_leading_zero) ? i.toString().padStart(start_end_length,"0") : i.toString()
+	                range_array.push(did_value)
+	            }
+	        }
+	    })
+		// $('[value="single_trunk"]').attr("checked",true).trigger("change")
+		if(is_trunk==true){
+			dummy_data = {"trunk_priority":1, "trunk_id":trunk_id,"did_type":did_type,"did_start":did_start,"did_end":did_end,"did":did,"options":range_array, "old_trunk":trunk_id}
+			if (did_type=="single") {
+				dummy_data["did"] = did[0]
+			}
+		}else{
+			dummy_data = {"trunk_priority":1, "trunk_id":"","did_type":"","did":[],"options":[], "old_trunk":""}
+		}
+		add_trunk_vue.group_trunk_list.push(dummy_data)
+
+	{% else %}
+		add_trunk_vue.hide_single_trunk = true
+		// $('[value="trunk_group"]').attr("checked",true).trigger("change")
+	{% endif %}
+
+
+	$.validate({
+		form:'#campaign-edit-form',
+	});
+	
+	{% if campaign.auto_feedback %}
+	$("#feedbacktime_div").removeClass('d-none')
+	$("#feedback-timepicker").find('input').val('{{campaign.auto_feedback_time}}')
+	{% endif %}
+	var dial_method = {{campaign.dial_method|convert_in_json|safe}}
+	$("#campaign_manual").prop("checked", dial_method["manual"])
+
+	if (dial_method["outbound"] != false) {
+		$("#camp_outbound_check").prop("checked", true)
+		$("#outbound-div").removeClass("d-none")
+		$("#camp_outbound").val(dial_method["outbound"])
+		if (dial_method["outbound"] == "Progressive") {
+			$("#progressive_time_div").removeClass("d-none")
+			$('#progressive_time').val('{{campaign.auto_progressive_time }}')
+		}
+		if (dial_method["outbound"] == "Predictive") {
+			$("#portifolio").css("pointer-events", "none").attr("disabled",true)
+		}
+	}else if(dial_method["outbound"] != true){
+		$("#camp_outbound option[value='Progressive']").hide();
+    	$("#camp_outbound option[value='Preview']").hide();
+	}
+
+	 $("#campaign_inbound").prop("checked", dial_method["inbound"])
+	if(dial_method["inbound"]==true){
+		$('#ibc_div, #inbound_threshold_div,#sticky_agent_map_div,#no_agent_audio_div').removeClass('d-none')
+		if (dial_method["sticky_agent_map"] == true){
+			$("#sticky_id").prop("checked", true)
+		}
+		if (dial_method["no_agent_audio"] == true){
+			$("#no_agent_audio").prop("checked", true)
+		}
+		if (dial_method["ibc_popup"] == true ){
+			$("#ibc_popup").prop("checked", true)
+			$("#camp_outbound option[value='Progressive']").hide();
+			$("#camp_outbound option[value='Preview']").hide();
+		}
+	}
+	$(".lr-start-time, .lr-end-time, .lr-interval-time")
+	.datetimepicker({
+		format: 'HH:mm'
+	});
+	$("#progressive-timepicker, #feedback-timepicker")
+	.datetimepicker({
+		format: 'mm:ss'
+	});
+	{% else %}
+		PermissionDeny('title-and-text');
+	{% endif %}
+	var lead_list = []
+	{% for lead_data in campaign.leadrecycle_set.all %}
+		var lead_dict = {}
+		lead_dict[{{forloop.counter}}] = "{{lead_data.name}}"
+		lead_list.push(lead_dict)
+
+		var collapse_div_id = 'lead-collaps-{{ forloop.counter }}'
+		
+		var schedule_type = "{{lead_data.schedule_type}}"
+		if (schedule_type != "recycle_time") {
+			$("#"+collapse_div_id).find("#schedule_type").val("schedule_time")
+			$("#"+collapse_div_id).find("#lead-start-time, #lead-end-time").removeClass("d-none")
+			{% if lead_data.schedule_period%}
+				var schedule_period = {{lead_data.schedule_period|safe}}			
+				$("#"+collapse_div_id).find("#lr_start_time").val(schedule_period.start_time)
+				$("#"+collapse_div_id).find("#lr_end_time").val(schedule_period.end_time)
+			{% endif %}
+		}
+		$("#"+collapse_div_id).find("#lead-time-div").removeClass("d-none")
+		var interval = {{lead_data.recycle_time}}
+		var formatted_interval = moment.utc(interval*1000).format('HH:mm');
+		$("#"+collapse_div_id).find("#lead_time").val(formatted_interval).attr("data-interval", interval)
+		// $("#"+collapse_div_id).find("#lead_time").val({{lead_data.recycle_time}})
+		$("#"+collapse_div_id).find("#schedule_type").val("{{lead_data.schedule_type}}")
+	{% endfor %}
+		
+	</script>
+	<script type="text/javascript">
+	$('[data-element="group"]').popover({trigger : "hover"})	//to show agent in group popover
+	// change background color of title for popover
+	$('div[data-title]').on('shown.bs.popover', function(){
+		var color = $(this).data('color')
+		$('.popover').find(".popover-header").css('background',color)
+	})
+	{% comment %}
+	{% if users_count %}
+	camp_user_count =  {{users_count}}
+	var max_range = camp_user_count * 1.0
+	var default_range = "range[1;"+max_range+"]"
+	$("#hopper_level").attr({"data-validation-allowing":default_range, "title": "It should be between 1-"+max_range})
+	$('[data-toggle="tooltip"]').tooltip();   
+	{% endif %}
+	{% endcomment %}
+
+	Mustache.tags = ['[[', ']]'];	//mustache js tags
+	$( document ).ready(function() {
+		// function to create popover for diposition
+	function createDispoPopover(dispo_name, sub_dispos){
+		var content = ""
+		var final_content = ""
+		if (!(jQuery.isEmptyObject(sub_dispos))){
+			$.each(sub_dispos, function(key, sub_dispo) {
+				content = "<ul>[[#"+key+"]]<li>[[name]]<ul>[[#"+key+".child]]<li>[[name]]<ul>[[#grand_child]]<li>[[ name ]]</li>[[/grand_child]]</ul></li>[[/"+key+".child]]</ul></li>[[/"+key+"]]</ul>"		
+				var subdispo_html = Mustache.to_html(content, sub_dispos);
+				final_content = final_content + subdispo_html
+			})
+			$('[data-name="'+dispo_name+'"]').popover({
+				trigger : 'hover',
+				title : dispo_name,
+				html:true,
+				content:final_content
+			})
+		}
+	}
+
+	{#% for dispo in disposition %#}
+		// createDispoPopover('{{dispo.name}}',{{dispo.dispos|convert_in_json|safe}})// select dispo popover
+	{#% endfor %#}
+	{#% for dispo in campaign.disposition.all %#}
+		// createDispoPopover('{{dispo.name}}', {{dispo.dispos|convert_in_json|safe}})	//selected dispo popover
+	{#% endfor %#}
+	})
+
+if({{campaign.css|lower}} == true){
+	  $('#css_div').removeClass('d-none')
+}
+{% if enable_wfh %}
+var wf_obj_list = Object.values({{campaign.wfh_dispo | safe}})
+	if (wf_obj_list == ""){
+		wfh_vue.wfh_list = wfh_vue.wfh_list
+	}else{
+		wfh_vue.wfh_list = wf_obj_list
+	}
+{% endif %}
+</script>
+<script type="text/javascript">
+	$('#threshold').val({{campaign.callback_threshold}})
+	$( document ).ready(function() {
+	{% if enable_wfh %}
+	if({{campaign.wfh|lower}} == true){
+	  $('#wfh_vue,.wfh_request_div').removeClass('d-none')
+	}
+	{% endif %}
+	if(dial_method['inbound'] == true && dial_method['ibc_popup']==false)
+	{
+		$("#camp_outbound option[value='Progressive']").hide();
+		$("#camp_outbound option[value='Preview']").hide();
+	}
+	else{
+		$("#camp_outbound option[value='Progressive']").show();
+		$("#camp_outbound option[value='Preview']").show();
+	}
+
+	$(document).on('click', '#campaign_inbound', function(){
+    if($(this).prop("checked")){
+        $('#ibc_div').removeClass('d-none')
+        $("#camp_outbound option[value='Progressive']").hide();
+    	$("#camp_outbound option[value='Preview']").hide();
+    	$("#camp_outbound option[value='Predictive']").prop('selected', true)
+    	$("#progressive_time_div").addClass('d-none')
+    }else{ 
+    	$("#camp_outbound option[value='Progressive']").show();
+    	$("#camp_outbound option[value='Preview']").show();
+        $('#ibc_div').addClass('d-none')
+        $("#ibc_popup, #sticky_id").prop("checked", false);
+    }
+})
+	$(document).on('click', '#ibc_popup', function(){
+    if($(this).prop("checked")){
+    	$("#camp_outbound option[value='Progressive']").show();
+    	$("#camp_outbound option[value='Preview']").show();
+    }else{
+    	$("#camp_outbound").val('Predictive')
+    	$("#camp_outbound option[value='Progressive']").hide();
+    	$("#camp_outbound option[value='Preview']").hide();
+    }
+    if ($('#camp_outbound').val() === "Predictive") {
+      $("#progressive_time_div").addClass('d-none');
+    }
+})
+	$(document).on('click', '#campaign_outbound', function(){
+    if($(this).prop("checked")){
+       $("#camp_outbound option[value='Progressive']").show();
+       $("#camp_outbound option[value='Preview']").show();
+    }else{
+       $("#camp_outbound option[value='Progressive']").hide();
+       $("#camp_outbound option[value='Preview']").hide();
+    }
+})
+	})
+</script>
+<script type="text/javascript">
+	//get the unique values from the list 
+function unique(array) {
+    return $.grep(array, function(el, index) {
+        return index == $.inArray(el, array);
+    });
+}
+// 	var colors = document.getElementById('disposition');
+// 	var bg = dispo.color_code;
+// colors.onchange=function(){
+// 	// alert('heell')
+//    $('.select2-selection__rendered').find('.select2-selection__choice').css("background-color", 'red');    
+//   };
+//checking the dispo with the leadrecycle before removing in the campaign
+$('#disposition').on('select2:unselect', function (e) {
+    var data =  e.params.data.text.toLowerCase();
+    var lead_name = $('.lead-heading')
+    $.each(lead_name,function(k,v){
+    	if(data == $.trim($(this).text().toLowerCase())){
+    		$('.js-error').text($(this).text()+" is Used in Lead Recycle ").removeClass('d-none')
+			setTimeout(function(){ $('.js-error').addClass("d-none") }, 5000);
+			e.params.data.element.remove();	
+			$(".selected-disposition").append('<option value="' + e.params.data.id + '" selected>' + e.params.data.text + '</option>');
+    	}
+    })
+});
+campaign_user = []
+group_user =[]
+var previous_hopper= {{ campaign.hopper_level }}
+{% for group in campaign.group.all %}
+	{% for users in group.users %}
+	group_user.push({{users.id}})
+	{% endfor %}
+{% endfor %}
+{% for user in campaign.users.all%}
+	campaign_user.push({{user.id}})
+{% endfor %}
+var hopper_users = unique($.merge(campaign_user,group_user))
+$("#hopper_level_count_hidden").val("Total Users("+hopper_users.length+")* Dial Ratio ("+{{campaign.campaignvariable_set.all.0.dial_ratio}}+") = "+Math.ceil(hopper_users.length * {{campaign.campaignvariable_set.all.0.dial_ratio}}))
+    portfolio_hopper_calculation({{ campaign.hopper_level }},hopper_users.length)
+
+if({{campaign.portifolio|lower}} == true){
+	  $('#portfolio_hopper').removeClass('d-none')
+}else{
+	$('#portfolio_hopper').addClass('d-none')	
+}
+$(document).on('change','#portifolio',function(){
+	if (this.checked == true) {
+		 $('#portfolio_hopper').removeClass('d-none')
+		 portfolio_hopper_calculation({{ campaign.hopper_level }},hopper_users.length)
+	}else{
+		$('#portfolio_hopper').addClass('d-none')
+	}
+})
+var itemsToKeep = {{non_user|safe}}
+$('#users').on('select2:unselecting', function(event) {
+	if (itemsToKeep.indexOf(event.params.args.data.text) > -1) {
+		event.preventDefault();
+		showDangerToast(`Opration can't perform`,`${event.params.args.data.text} user does not belong in your scope`,'top-right')
+	}
+})
+</script>
+
+{% endblock extra-js %}

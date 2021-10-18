@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}users{% endblock title %}
+
+{% block extra-stylesheets %}
+<style type="text/css">
+.pass-colorbar {
+	  background-image: url({% static "images/passwordstrength.jpg" %});
+	}
+</style>
+<link rel="stylesheet" href="{% static '/css/password-strength.css' %}">
+{% endblock extra-stylesheets %}
+
+{% block header %}User Management<small>Users</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Users</li>
+{% endblock breadcrumb %}
+{% block content %}
+{% if can_read %}
+<script src="{% static 'js/socket.io.js' %}"></script>
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Users</legend>
+				<div class="row append_table" id="user" role="tabpanel" aria-labelledby="user">
+					<div class="col-12">
+						{% include "search.html" %}    
+						<div class="">
+							<table id="user-list-table" class="table display table-striped nowrap avatar-table" style="width:100%">
+								<thead>
+									<tr>
+										<th class="avatar"> </th>
+										<th data-data="username" class="name">Username</th>
+										<th data-data="extension">Extension</th>
+										<th data-data="role_name">Role</th>
+										<th data-data="groups">Group</th>
+										<th data-data="created_by_user">Created By</th>
+										<th data-data="status">Status</th>
+										<th data-data="created" class="list_date">created</th>
+										<th data-data="updated" class="list_date">updated</th>
+										{% if can_update or can_delete %}
+										<th data-data="checkbox_col" class="checkbox_col">
+											<div class="btn-group select-all-div">
+												<div class="form-check">
+													<label class="form-check-label ml-3">
+														<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+														<i class="input-helper"></i>
+													</label>
+												</div>
+												<div class="dropdown">
+													<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+														<span class="caret"></span></button>
+													<ul class="dropdown-menu">
+														{% if can_update %}
+														<li class="dropdown-item text-center" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make Active')">Active Selected</li>
+														<li class="dropdown-item text-center" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make InActive')">Inactive Selected</li>
+														{% endif %}
+														{% if can_delete %}
+														<li class="dropdown-item text-center" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">Delete Selected</li>
+														{% endif %}
+													</ul>
+												</div>
+											</div>
+										</th>
+										<th data-data="action" class="action">Action</th>
+									{% endif %}
+									</tr>
+								</thead>
+							</table>
+							{% include "vue_pagination.html" %}  
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+
+{% if can_create %}
+<!-- action buttons -->
+<div class="bottom-menu">
+	<div class="action-button-circle">
+		<a><div class="circle-button skin-black"><i class="fa fa-plus"></i></div></a>
+	</div>
+	<div class="fab-div-area" id="fab-div-area" style=" height: 175px; padding-top: 0px; margin-top: 0px; padding-bottom: 0px; margin-bottom: 0px;">
+		<ul class="fab-ul" style="height: 170px;">
+			<li class="li-style"><a class="fa fa-user-plus fab-div-item" title="Add User" href="{% url 'create-users' %}"></a></li><br>
+			<li class="li-style"><a class="fas fa-cloud-upload-alt fab-div-item" data-toggle="modal" data-target="#fileupload-wizard-modal" title="Upload User"></a></li><br>
+		</ul>
+	</div>
+</div>
+<!-- model forms  -->
+<div class="modal fade" id="fileupload-wizard-modal" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to create users."></i>
+					<b>User Wizard » Bulk Upload</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body pt-3">
+				<form id="user-upload-form" class="wizard-validation-form" action="{% url 'users-bulk-upload' %}" method="POST">
+					{% csrf_token %}
+					<div>
+						<button type="button" class="btn btn-dark btn-fw file-upload-label" id="">File Upload</button>
+						<section>
+							<div class="row">
+								<div class="col-6">
+									<input type="file" class="dropify" id="uploaded-file" name="uploaded_file"/>
+								</div>
+								<div class="col-6 dropify-wrapper">
+									<div class="dropify-message d-flex justify-content-center">
+										<a download class="mr-5 download-sample-file" file_name="user" file_type="csv">
+											<span class="csv-download"></span>
+											<span class="sample-csv-text">Sample Csv</span>
+										</a>
+										<a download class="download-sample-file" file_name="user" file_type="xls">
+											<span class="csv-download"></span>
+											<span class="sample-csv-text">Sample xls</span>
+										</a>
+									</div>
+								</div>
+							</div>
+							<div class="row">
+								<a id="proper-data" class="d-none upload-css text-info" download>
+									<span class="fa fa-download download-file-css"></span>
+									<span class="msg"></span>
+								</a>
+							</div>
+							<div class="row">
+								<a id="improper-data" class="d-none upload-css text-danger" download>
+									<span class="fa fa-download download-file-css"></span>
+									<span class="msg"></span>
+								</a>
+							</div>
+							<div class="row pull-right">
+								<div class="upload-css">
+									<button type="button" class="btn btn-dark btn-fw d-none validate-uploaded-file" id="validate-uploaded-file">Validate File</button>
+									<button type="button" class="btn btn-success btn-fw d-none confirm-user-upload" id="confirm-upload-file">Continue</button>
+									<button type="button" class="btn btn-light btn-fw d-none cancel-uploaded-file" id="cancel-uploaded-file">Cancel</button>
+
+								</div>
+							</div>
+							<div class="dot-opacity-loader user-valid-loader" style="display: none;top: -57px;right: 34px;height: 0px !important;">
+	                          <span></span>
+	                          <span></span>
+	                          <span></span>
+	                        </div>
+							<div class="form-group">
+								<p id="upload-file-error" class="text-danger"></p>
+								<p id="empty-data" class="text-danger"></p>
+							</div>
+						</section>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="callcenter">
+	<input type="hidden" id="model_name" value="User">
+</div>
+<div class="modal fade" id="reste_user_password_modal" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to create users."></i>
+					<b>Reset Password</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body pt-3">
+				<form id="reset_user_password_form" class="wizard-validation-form"action="#">
+					{% csrf_token %}
+					<div>
+						<h3>Reset Password<br><small>Reset password for agent</small></h3>
+						<section>
+							<div class="form-group row">
+								<label for="new_password" class="col-3 col-form-label pt-1">New Password<span class="star">*</span>:</label>
+								<div class="col-sm-9">
+									<input type="password" class="form-control pr-password" id="psw" placeholder="Enter New Password" name="new_password" data-validation="length" data-validation-length="min8" data-validation-error-msg-container="#new-password-msg"data-placement="right" autocomplete="off" >
+									<!-- <div  id="message">
+										<div class="popover bs-popover-bottom bs-popover-bottom-demo" >
+			       							<p id="letter">One <b>lowercase</b> letter</p>
+											<p id="capital">One <b>Capital</b> letter</p>
+											<p id="number">One <b>number</b></p>
+											<p id="length">Minimum <b>8 characters</b></p>
+				                        </div>
+				                    </div> -->
+									<span id="new-password-msg"></span>
+								</div> 
+							</div>
+							<div class="form-group row">
+								<label for="confirm_password" class="col-3 col-form-label pt-1">Confirm Password<span class="star">*</span>:</label>
+								<div class="col-sm-9">
+									<input type="password" class="form-control" id="confirm_password" placeholder="Confirm Password" name="confirm_password" validate_confirmation ="new_password" data-validation="confirmation" data-validation-error-msg-container="#confirm-password-msg" data-validation-confirm="new_password" autocomplete="off">
+									<span id="confirm-password-msg"></span>
+								</div>
+							</div>
+						</section>
+					</div>
+					<input type="hidden" id="rp_agentId" name="agentId">
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- -->
+<div class="modal fade" id="reset_wfh_password_modal" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to create users."></i>
+					<b>Reset WFH Password</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body pt-3">
+				<form id="reset_wfh_password_form" class="wizard-validation-form" action="#">
+					{% csrf_token %}
+					<div>
+						<h3>Reset WFH Password<br><small>Reset WFH password for agent</small></h3>
+						<section>
+							<div class="form-group row">
+									<label for="confirm_password" class="col-3 col-form-label pt-1">WFH New Password:</label>
+										<div class="col-sm-9">
+											<input type="password" class="form-control" id="wfh_psw" placeholder="Work From Home Password" name="wfh_newpassword" data-validation = 'length' data-validation-optional="true" onkeypress="return isNumber(event)"  maxlength="9"  data-validation-length="min4" onpaste="return false;" data-toggle="tooltip" data-original-title="Must Conatin  numbers and atleast 4 or more characters"  data-placement="right" data-validation-error-msg="Password should be numeric, it should be minimum 4 digits and max 8 digits ." autocomplete="off" required /> 
+										</div>
+									<span id="new-password-msg"></span>
+							</div>
+							<div class="form-group row">
+								<label for="confirm_password" class="col-3 col-form-label pt-1">Confirm WFH Password:</label>
+								<div class="col-sm-9">
+										<input type="password" class="form-control" id="wfh_confirm_password" placeholder="Work form Home Confirm password" validate_confirmation = "wfh_newpassword"  minlength="4"
+										data-validation="confirmation" onpaste="return false;" data-toggle="tooltip" data-original-title="Confirm Your Password" maxlength="9" data-validation-error-msg="Confirm password and password value should be same" data-validation-confirm="wfh_newpassword" autocomplete="off">
+										<span id="wfh_confirm-password-msg"></span>
+								</div>
+							</div>
+						</section>
+					</div>
+					<input type="hidden" id="wfh_rp_agentId" name="agentId">
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/form-validator.min.js' %}"></script>
+<script src="{% static 'js/jquery.validate.min.js' %}" ></script>
+<script src="{% static 'js/encrypt.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/password.js' %}"></script>
+<script src="{% static 'js/paginate.js' %}"></script>
+<script src="{% static 'js/dropify.js' %}"></script>
+<script type="text/javascript">
+	server_ip = `{{server_ip}}`
+	$(document).ready(function() {
+		 $(".pr-password").passwordRequirements({});
+		{% if can_read %}
+		var user_table = $('#user-list-table')
+		selective_datatable(user_table);  //datatbale jquery
+		{% if id_list %} query_set_list = {{id_list|safe}} {% endif %}
+		$.validate({
+			form:'#reset_user_password_form',
+			modules : 'security',
+			errorMessage: 'Password Not Match with New Password',
+		});
+		$("#reset_user_password_form .wizard li a[href='#previous']").addClass("d-none");
+		$("#reset_user_password_form .wizard li a[href='#finish']").text('Submit');
+
+		$("#reset_wfh_password_form .wizard li a[href='#previous']").addClass("d-none");
+		$("#reset_wfh_password_form .wizard li a[href='#finish']").text('Submit');
+		
+		edit_url = "{% url 'edit-users' 123 %}"
+		get_pagination_data(1, true)
+		//node event emit for emergency logout
+		var nodejs_port = '3232';
+		var server_ip = '{{server_ip}}'
+		socket = io(server_ip  + ':' + nodejs_port, {
+			'reconnection': true,
+			'reconnectionDelay': 1000,
+			'reconnectionDelayMax': 5000,
+			'reconnectionAttempts': 5
+		});
+		socket.on("emergency_logout_status_admin",function(data){
+			if(data["username"] == user_name){ 
+				showSwal('success-message', 'Force logout for '+data["extension"]+' operation is successful')
+			}
+		})
+		{% else %}
+		PermissionDeny();
+		{% endif %}
+	});
+	// $('#psw').password({
+	// 	animate: true,
+	// });
+</script>
+{% endblock extra-js %}

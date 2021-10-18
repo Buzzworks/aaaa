@@ -1,0 +1,45 @@
+.preloader {
+    position: fixed;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+     /*background: url(img/customCompanyLogo.png) 50% 50% no-repeat rgba(0, 0, 0, .91); */
+    background: rgba(0, 0, 0, .3);
+}
+.close-preloader {
+    color: white;
+    padding: 20px;
+}
+.preloader > center {
+    padding-top: 15%;
+}
+.preloader img{
+	max-width: 50%;
+    height: auto;
+    width: 550px;
+    margin-left: 120px;
+}
+
+.dot-opacity-loader span {
+	margin:-25px 5px;
+}
+
+.phonebook-valid-loader{
+    margin: -10px 0 0 -122px !important;
+    height:0px !important;
+}
+@media (max-width: 576px) {
+	.preloader img{
+		margin-left: 30px;
+	}
+	.dot-opacity-loader span {
+		margin:-10px 2px;
+		width: 10px;
+		height:10px;
+	}
+	.preloader > center {
+    padding-top: 20%;
+	}
+}

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+{% load set_var %}
+<document type="freeswitch/xml">
+	<section name="directory">
+		{% set domain = "" %}
+		{% set end_domain = 0 %}
+		{% for i in profile %}
+			{% if i.domain__ip_address != domain %}
+				{% set domain = i.domain__ip_address %}
+				{% if end_domain == 1 %}
+			 	    </users>
+					</group>
+		  			</groups>
+					</domain>
+					{% endif %}
+				{% set end_domain = 1 %}
+				<domain name="{{domain}}" cacheable="true">
+				<params>
+					<param name="dial-string" value="{presence_id=${dialed_user}@{{domain}}}${sofia_contact(${dialed_user}@{{domain}})}"/>
+				</params>
+				<groups>
+					<group name="default">
+						<users>
+			{% endif %}
+							<user id="{{i.extension}}">
+								<params>
+										<param name="dial-string" value="{presence_id=${dialed_user}@{{domain}}}${sofia_contact(${dialed_user}@{{domain}})}"/>
+										<param name="password" value="{{i.device_pass}}"/>
+										<param name="vm-password" value="{{i.extension}}"/>
+										<!--<param name="auth-acl" value="0.0.0.0/0"/>-->
+								</params>
+								<variables>
+									<variable name="toll_allow" value="domestic,international,local"/>
+									<variable name="accountcode" value="{{i.extension}}"/>
+									<variable name="user_context" value="default"/>
+									<variable name="effective_caller_id_name" value="Extension {{i.extension}}"/>
+									<variable name="effective_caller_id_number" value="{{i.extension}}"/>
+									<variable name="cc_uname" value="{{i.extension}}"/>
+									<variable name="flexylite_username" value="{{i.extension}}"/>
+									<variable name="flexylite_password" value="{{i.device_pass}}"/>
+									<variable name="user_caller_id" value="{{i.user__caller_id}}"/>
+									<variable name="outbound_caller_id_name" value="{{i.user__caller_id}}"/>
+									<variable name="outbound_caller_id_number" value="{{i.user__caller_id}}"/>
+									<variable name="call_protocal" value="{{i.user__call_type}}"/>
+								</variables>
+							</user>
+		{% endfor %}
+						</users>
+					</group>
+				</groups>
+		</domain>
+	</section>
+</document>

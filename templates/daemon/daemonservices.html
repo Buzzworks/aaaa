@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Daemon{% endblock title %}
+
+{% block extra-stylesheets %}
+{% endblock extra-stylesheets %}
+
+{% block header %}Daemon Management<small>Users</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Daemon</li>
+{% endblock breadcrumb %}
+{% block content %}
+{% if can_read %}
+<div class="row">
+    <div class="col-md-12 grid-margin stretch-card">
+        <div class="card">
+            <div class="card-body">
+                <legend>Daemon Services <button class='btn btn-link btn-sm p-2 text-primary' onclick="daemon_action('daemon','pagerefresh')" title="Refresh"><i class="fas fa-sync-alt"></i></button></legend>
+                {% csrf_token %}
+                <form id="filter_form" method="GET">
+                    {% csrf_token %}
+                    <div class="row dataTables_wrapper dt-bootstrap4">
+                        <div class="col-md-6">
+                            <div class="dataTables_length d-none">
+                                <label>Show
+                                    <select class="custom-select custom-select-sm form-control form-control-sm" name="paginate_by" id="paginate_by">
+                                        {% for page in paginate_by_list %}
+                                            {% if paginate_by == page.0 %}
+                                                <option value="{{page.0}}" selected>{{ page.1 }}</option>
+                                            {% else %}
+                                                <option value="{{ page.0 }}">{{ page.1 }}</option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                    entries
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <!-- <button class='btn btn-primary btn-icon-text btn-sm' onclick="daemon_action('daemon','pagerefresh')" style="float: right;">Refresh</button> -->
+                            
+                        </div>
+                    </div>
+                    <input type="hidden" name="page" id="page" value="1">
+                </form>
+                <div id='daemon_table'>
+                    <div class="row tab-pane fade show active" id="daemon" role="tabpanel" aria-labelledby="user">
+                        <div class="col-12">
+                            <div class="">
+                                <table id="daemon-list-table" class="table display table-striped nowrap" style="width:100%">
+                                    <thead>
+                                        <tr>
+                                            <th data-data="status" class="state_col"></th>
+                                            <th data-data="service_name">Service</th>
+                                            <th data-data="status">Status</th>
+                                            <th data-data="since">Since</th>
+                                            <th data-data="uptime">Uptime</th>
+                                            {% if user.is_superuser %}
+                                            <th data-data="service_name" class="demon_service_action">Action</th>
+                                            {% endif %}
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if can_create %}
+<!-- action buttons -->
+<!--<div class="bottom-menu">
+    <div class="action-button-circle">
+        <a>
+            <div class="circle-button skin-black"><i class="fa fa-plus"></i></div>
+        </a>
+    </div>
+    <div class="fab-div-area py-0 my-0" id="fab-div-area" style="height: 175px;">
+        <ul class="fab-ul" style="height: 170px;">
+            <li class="li-style">
+                <a class="fas fa-phone-slash fa-rotate-90 fab-div-item" data-toggle="modal"
+                    data-target="#create-edit-daemon-modal" title="Add Daemon Service"></a>
+            </li>
+        </ul>
+    </div>
+</div>
+-->
+<!-- model forms  -->
+<div class="modal fade" id="create-edit-daemon-modal" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ModalLabel">
+                    <i class="fa fa-info-circle" title="Edit Daemon Service"></i>
+                    <b>DNC Wizard » Edit</b>
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body pt-3">
+                <form id="create_edit_daemon_form" class="wizard-validation-form" method="POST">
+                    {% csrf_token %}
+                    <div>
+                        <h3>Create or Edit Daemon Service <br><small>Change or create details for Daemon Service</small>
+                        </h3>
+                        <section>
+                            <input type="text" name="pk" class="form-control d-none" id="daemon_service_pk">
+                            <div class="form-group row">
+                                <label for="service_name" class="col-sm-4 col-form-label">Daemon Service Name<span
+                                        class="star">*</span> :</label>
+                                <div class="col-sm-8">
+                                    <input type="text" name="service_name" data-toggle="tooltip"
+                                        data-original-title="service_name" class="form-control" id="service_name"
+                                        placeholder="Daemon Service Name">
+                                    <span id="service_name-msg"></span>
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="daemon_status" class="col-sm-4 col-form-label">Daemon Status:</label>
+                                <div class="col-sm-8 form-inline">
+                                    <div class="form-check">
+                                        <label class="form-check-label">
+                                            <input type="checkbox" class="form-check-input" name="status"
+                                                id="daemon_status">
+                                            <!-- <span>Checked: Active UnChecked: Inactive</span> -->
+                                            <i class="input-helper"></i>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+    var daemon_table = $('#daemon-list-table')
+    selective_datatable(daemon_table);
+    get_pagination_data(1, true)
+</script>
+
+{% endblock extra-js %}

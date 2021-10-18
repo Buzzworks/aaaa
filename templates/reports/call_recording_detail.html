@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}CallRecording Detail{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/responsive.bootstrap4.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+<style type="text/css">
+	audio.middle:focus {
+    outline: none;
+}
+#audio_recording {
+	outline: none !important;
+}
+#audio_recording:hover {
+	outline: none;
+}
+</style>
+{% endblock extra-stylesheets %}
+
+{% block header %}Report<small>Call Recording</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'report-call_recordings' %}">CallRecording</a></li>
+<li class="breadcrumb-item active" aria-current="page">Detail</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+<div class="card">
+	<div class="card-body">
+		<legend>Call Recording Detail</legend>
+		<form class="forms-sample" id="">
+			{% csrf_token %}
+			<div class="row">
+				<span style="color: Tomato;" class="col-12 text-center">
+					<i class="fas fa-music fa-3x "></i>
+				</span>
+			</div>
+			<div class="row">
+				<div class="col-12 text-center">
+					<strong>Number : </strong>
+					<span id="rp_cust_number">{{dialler_event_data.customer_cid}}</span>
+				</div>
+				<div class="col-12 text-center">
+					<strong>Agent : </strong>
+					<span id="rp_agent">{{dialler_event_data.user__username }}</span>
+				</div>
+				<div class="col-12 text-center">
+					<strong>Campaign : </strong>
+					<span id="rp_campaign">{{ dialler_event_data.campaign_name }}</span>
+				</div>
+				<div class="col-12 text-center">
+					<audio controls style="box-sizing: unset;" id="audio_recording">
+						<source src="{% static 'audio_files/callback_final.mp3' %}" type="audio/mpeg">
+					  <source src="horse.ogg" type="audio/ogg">
+					  Your browser does not support the audio tag.
+					</audio>
+				</div>
+			</div>
+			<div class="row mt-5">
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="username" class="col-sm-4 col-form-label">Agent Name :</label>
+						<div class="col-sm-8">
+							<label for="username" class="col-sm-4 col-form-label">{{dialler_event_data.user__username }}</label>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="username" class="col-sm-4 col-form-label">Disposition:</label>
+						<div class="col-sm-8">
+							<label for="username" class="col-sm-4 col-form-label">{{ dialler_event_data.primary_dispo }}</label>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="supervisor_name" class="col-sm-4 col-form-label">Supervisor Name :</label>
+						<div class="col-sm-8">
+							<label class="col-sm-4 col-form-label">{{ dialler_event_data.supervisor }}</label>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="sub_disposition" class="col-sm-4 col-form-label">Sub-Disposition :</label>
+						<div class="col-sm-8">
+							<label class="col-sm-4 col-form-label">Dummy data</label>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="supervisor_name" class="col-sm-4 col-form-label">Customer Name :</label>
+						<div class="col-sm-8">
+							<label class="col-sm-4 col-form-label">Admin</label>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="sub_disposition" class="col-sm-4 col-form-label">Remarks:</label>
+						<div class="col-sm-8">
+							<label class="col-sm-4 col-form-label">{{ dialler_event_data.comment }}</label>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="supervisor_name" class="col-sm-4 col-form-label">Cli :</label>
+						<div class="col-sm-8">
+							<label class="col-sm-4 col-form-label">{{ dialler_event_data.customer_cid }}</label>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="sub_disposition" class="col-sm-4 col-form-label">Call Duration:</label>
+						<div class="col-sm-8">
+							<label class="col-sm-4 col-form-label">{{ dialler_event_data.call_duration|time:'H:i' }}</label>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="supervisor_name" class="col-sm-4 col-form-label">Quality Feedback:</label>
+					</div>
+				</div>
+				
+			</div>
+			<div class="row">
+				<div class="col-md-12">
+					<div class="form-group row">
+						<textarea class="form-control" name="description" rows="4" ></textarea>
+					</div>
+				</div>
+				
+			</div>
+
+			
+		</form>
+	</div>
+</div>
+{% endblock content %}
+{% block extra-js %}
+<script type="text/javascript">
+</script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	$(document).on('keydown',function(e) {
+	if (e.keyCode == 82) { 
+	    console.log('r key = rewind');
+	    rewindAudio();
+	}
+	else if(e.keyCode == 70){
+	    console.log('f key = forward');
+	    forwardAudio();
+	}
+	});
+
+	function rewindAudio() {            
+	    console.log('rewindAudio');
+	    oAudio = $('audio')[0];
+	    oAudio.currentTime -= 1.0;   
+	}
+	function forwardAudio() {            
+	    console.log('forwardAudio');
+	    oAudio = $('audio')[0];
+	    oAudio.currentTime += 1.0;   
+	}
+</script>
+{% endblock extra-js %}

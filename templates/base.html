@@ -1,0 +1,440 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Flexydial | {% block title %}{% endblock title %}</title>    
+	<link rel="shortcut icon" href="/static/images/flexydial-logo.png" />   
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<!-- All css files will come here -->
+	{% block stylesheets %}
+	<link rel="stylesheet" href="{% static '/css/bootstrap.min.css' %}">
+	<link rel="stylesheet" href="{% static '/melody/vendors/iconfonts/font-awesome/css/all.min.css' %}">
+	<!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.0.1/css/tempusdominus-bootstrap-4.min.css" /> -->
+	<link rel="stylesheet" href="{% static '/melody/vendors/css/vendor.bundle.base.css' %}">
+	<link rel= "stylesheet" href="{% static '/melody/vendors/css/vendor.bundle.addons.css' %}">
+	<link rel="stylesheet" href="{% static '/melody/css/style.css' %}">
+	<link rel="stylesheet" href="{% static '/css/font-awesome.min.css'%}">
+	<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+	<link rel="stylesheet" href="{% static 'css/tempusdominus-bootstrap-4.min.css' %}" />
+	<link rel="stylesheet" href="{% static '/css/jquery.toast.min.css' %}" />
+	<link rel="stylesheet" href="{% static 'css/jquery.dataTables.min.css' %}">
+	<link rel="stylesheet" href="{% static 'css/dataTables.bootstrap4.min.css' %}">
+	<link rel="stylesheet" href="{% static 'css/responsive.bootstrap4.min.css' %}">
+	<link rel="stylesheet" href="{% static 'css/select.dataTables.min.css' %}">
+	<link rel="stylesheet" href="{% static '/css/common.css' %}">
+	<link rel="stylesheet" href="{% static '/css/custom.css' %}">
+	<link rel="stylesheet" href="{% static '/css/preloader.css' %}">
+	{% endblock stylesheets %} 
+	{% block extra-stylesheets %}
+	{% endblock extra-stylesheets %} 
+</head>
+
+<body class="sidebar-dark sidebar-fixed">
+
+	<!-- Body content will come here -->
+	<!-- Navbar Data -->
+	
+	<div class="container-scroller">
+		<div class="preloader" style="">
+			<!-- <div class="float-right close-preloader" style="">
+				<a type="button" class="close-preloader-button" aria-label="Close" style="color:white;"><i class="fas fa-window-close"></i></a>
+			</div> -->
+			<center>
+				<span class="dot-opacity-loader">
+					  <span style="background-color: #0860ad;"></span>
+					  <span style="background-image: linear-gradient(to right,#0860ad, #45c5f3);"></span>
+					  <span style="background-color: #45c5f3;"></span>
+				</span>
+				<br><br>
+				<div class="reload-page" style="color: white;"></div>
+			</center>
+		</div>
+		<nav class="navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row default-layout-navbar navbar-dark">
+			<div class="text-center navbar-brand-wrapper d-flex align-items-center justify-content-center">
+				<a class="navbar-brand brand-logo" href="{% url 'dashboard' %}"><img src="{% static '/images/flexydial-logo.png' %}" alt="logo"/></a>
+				<a class="navbar-brand brand-logo-mini" href="{% url 'dashboard' %}"><img src="{% static '/images/flexydial-logo.png' %}" alt="logo"/></a>
+			</div>
+			<div class="navbar-menu-wrapper d-flex align-items-stretch">
+				<button class="navbar-toggler navbar-toggler align-self-center" type="button" data-toggle="minimize">
+				  <span class="fas fa-bars"></span>
+				</button>
+				<ul class="navbar-nav navbar-nav-right ml-auto">
+					<li class="nav-item dropdown" id="call_notification">
+						<a class="nav-link count-indicator dropdown-toggle " id="admin_call_notificationDropdown" href="#" data-toggle="dropdown">
+						  <i class="fas fa-bell mx-0"></i>
+						  <span class="count" id="dashboard-noti-count">{% if noti_count %}{{noti_count}}{% else %}0{% endif %}</span>
+						</a>
+						<div class="dropdown-menu dropdown-menu-right navbar-dropdown preview-list" aria-labelledby="call_notificationDropdown">
+							<div class="dropdown-item py-2">
+								<p class="mb-0 font-weight-normal float-left">You have ${notification_data.length} notifications
+								</p>
+								<span v-if="notification_data.length > 0" class="badge badge-pill badge-warning ml-auto">View all</span>
+							</div>
+							<div style="overflow-y: scroll; max-height: 350px">
+								<template v-for="item,key in notification_data">
+									<div class="dropdown-divider"></div>
+									<a class="dropdown-item preview-item" @click="showNotification(key)">
+										<div v-if="item.title == 'callback'" class="preview-thumbnail">
+											<div class="preview-icon bg-info">
+												<i class="fas fa-phone fa-rotate-90 mx-0"></i>
+											</div>
+										</div>
+										<div v-else-if="item.title == 'Abandonedcall'" class="preview-thumbnail">
+											<div class="preview-icon bg-danger">
+												<i class="fas fa-phone-slash fa-rotate-90 mx-0"></i>
+											</div>
+										</div>
+										<div class="preview-item-content">
+
+											<h6 class="preview-subject font-weight-medium" v-if="item.title == 'Abandonedcall' && item.user !== null">${item.user} has missed call from ${item.numeric} on ${item.campaign}</h6>
+											<h6 class="preview-subject font-weight-medium" v-else-if="item.title == 'Abandonedcall'">${item.campaign} campaign has missed call from ${item.numeric}</h6>
+											<h6 class="preview-subject font-weight-medium" v-else="item.title == 'Abandonedcall'">${item.user} has callback call to ${item.numeric} on ${item.campaign}</h6>
+
+											<span class="badge badge-danger" style="
+											    float: right;
+											" v-if="item.count!== 0">${item.count}</span>
+											<p class="font-weight-light small-text">
+												${item.created_date|format_date}
+											</p>
+										</div>
+									</a>
+								</template>
+							</div>
+						</div>
+					</li>
+					<li class="nav-item dropdown">
+						<a class="nav-link count-indicator dropdown-toggle" href="{% url 'download' %}">
+						  <i class="fas fa-download mx-0"></i>
+						  <span class="count" id="dashboard-download-count">{% if down_count %}{{down_count}}{% else %}0{% endif %}</span>
+						</a>
+					</li>
+					<li class="nav-item dropdown">
+						<a class="nav-link count-indicator dropdown-toggle" id="messageDropdown" href="#" data-toggle="dropdown" aria-expanded="false">
+						  <i class="fas fa-envelope mx-0"></i>
+						  <span class="count">1</span>
+						</a>
+						<div class="dropdown-menu dropdown-menu-right navbar-dropdown preview-list" aria-labelledby="messageDropdown"  >
+							<div class="dropdown-item" data-toggle="modal" data-target="#myModal">
+				                <p class="mb-0 font-weight-normal"><strong>Send Broadcast Message</strong>
+				                </p>
+				              </div>
+							<!-- <button type="button" class="btn btn-info btn-lg" data-toggle="modal" data-target="#myModal"></button> -->
+						</div>
+					</li>
+					<li class="nav-item nav-profile dropdown mr-0 mr-md-2" style="border-right: none;">
+						<a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown" id="profileDropdown">
+						  <img src="{% static '/images/buzzworks-logo.jpeg' %}" alt="profile"/>
+						  <span class="ml-1 d-none d-md-inline">{{user}}<i class="caret"></i></span>
+					  </a>
+					  <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="profileDropdown">
+						<a class="dropdown-item" href="{% url 'change_password' %}">
+							<i class="fas fa-key text-primary"></i>
+							Change Password
+						</a>
+						{% if can_switch and request.user.call_type != '3' %}
+						<div class="dropdown-divider"></div>
+						<a id="admin_to_agent_switchscreen" class="dropdown-item" >
+							<i class="fas fa-random text-primary"></i>
+							Switch to Agent
+						</a>
+						{% endif %}
+						{% if can_boot %}
+						<div class="dropdown-divider"></div>
+						<a id="shutdown_server" class="dropdown-item" onclick="SystemBootAction()">
+							<i class="fas fa-power-off text-primary"></i>
+							Reboot/Shutdown
+						</a>
+						{% endif %}
+						<div class="dropdown-divider"></div>
+						<a id="administration_logout" class="dropdown-item" href="#">
+							<i class="fas fa-sign-out-alt text-primary"></i>
+							Logout
+						</a>
+					</div>
+					</li>
+				</ul>
+				<button class="navbar-toggler navbar-toggler-right d-lg-none align-self-center" type="button" data-toggle="offcanvas">
+				  <span class="fas fa-bars"></span>
+				</button>
+			</div>
+		</nav>
+		<!-- Navbar data ends -->
+		<!-- sidebar data strats -->
+		<div class="container-fluid page-body-wrapper">
+			<nav class="sidebar sidebar-offcanvas" id="sidebar">
+				<ul class="nav">
+					<li class="nav-item nav-profile">
+						<div class="nav-link" style="background: #182142; font-weight:600">
+						  Menu
+						</div>
+					</li> 
+					<!-- <li class="nav-item">
+						<a class="nav-link" href="{% url 'dashboard' %}">
+						  <i class="fa fa-home menu-icon"></i>
+						  <span class="menu-title">Dashboard</span>
+					  </a>
+					</li> -->
+					{% include "sidebar_menu.html" %}
+				</ul>
+			</nav>
+			<div class="main-panel">
+				<div class="content-wrapper">
+				<!-- page titile -->
+				<div class="page-header">
+					<h3 class="page-title">{% block header %}{% endblock header %}</h3>
+					<nav aria-label="breadcrumb">
+						<ol class="breadcrumb">{% block breadcrumb %}{% endblock breadcrumb %}</ol>
+					</nav>
+				</div>
+				{% block content %}
+				{% endblock content %}
+				</div>
+			</div>
+		</div>
+		<!-- sidebar data ends -->
+		<div class="modal fade" id="notification_modal" tabindex="-1" role="dialog" aria-labelledby="cnModalLabel" style="display: none; padding-right: 17px;" aria-hidden="true">
+			<div class="modal-dialog" role="document">
+				<div class="modal-content">
+					<div class="modal-header border-0">
+						<h4 v-bind:class="[selected_noti_type == 'Abandonedcall' ? 'text-danger' : 'text-info', 'modal-title']">${selected_noti_type} Information</h4>
+						<button type="button" class="close" data-dismiss="modal">
+							<span aria-hidden="true">×</span>
+						</button>
+					</div>
+					<div class="modal-body pt-2">
+						<div v-if="call_error" class="alert alert-danger p-2" role="alert">
+							${call_error}
+						</div>
+						<div v-if="selected_noti_type != 'Abandonedcall'" class="pl-3">
+							<div class="row">
+								<label class="col-4 crm-form-label">Numeric <span class="float-right">:</span></label>
+								<div class="col-8"><span>${selected_noti_data.numeric}</span></div>
+							</div>
+							<div class="row">
+								<label class="col-4">Campaign <span class="float-right">:</span></label>
+								<div class="col-8"><span>${selected_noti_data.campaign}</span></div>
+							</div>
+							<div class="row">
+								<label class="col-4">Agent <span class="float-right">:</span></label>
+								<div class="col-8"><span>${selected_noti_data.user}</span></div>
+							</div>
+							<div class="row">
+								<label class="col-4">Schedule Time <span class="float-right">:</span></label>
+								<div class="col-8"><span>${selected_noti_data.schedule_time}</span></div>
+							</div>
+							<div v-if="selected_noti_type == 'callback'" class="row">
+								<label class="col-4">Type <span class="float-right">:</span></label>
+								<div class="col-8"><span>${selected_noti_data.callback_type}</span></div>
+							</div>
+							<div class="row">
+								<label class="col-4">Dial Count<span class="float-right">:</span></label>
+								<div class="col-8"><span>${selected_noti_data.dialcount}</span></div>
+							</div>
+							<div class="row">
+								<label class="col-4">Comment<span class="float-right">:</span></label>
+								<div class="col-8"><span>${selected_noti_data.comment}</span></div>
+							</div>
+							<div v-if="snooze_show" class="row">
+								<label class="col-4">Snooze Time<span class="float-right">:</span></label>
+								<div class="col-8"><datetimepicker id="snooze_time" name="snooze_time" target="#snooze_time" value=""></datetimepicker></div>
+							</div>
+						</div>
+						<div v-if="selected_noti_type == 'Abandonedcall'" class="pl-3">
+							<div class="row">
+								<label class="col-4 crm-form-label">Caller ID <span class="float-right">:</span></label>
+								<div class="col-8"><span>${selected_noti_data.caller_id}</span></div>
+							</div>
+							<div class="row">
+								<label class="col-4">Numeric <span class="float-right">:</span></label>
+								<div class="col-8"><span>${selected_noti_data.numeric}</span></div>
+							</div>
+							<div class="row">
+								<label class="col-4">Campaign <span class="float-right">:</span></label>
+								<div class="col-8"><span>${selected_noti_data.campaign}</span></div>
+							</div>
+							<div class="row">
+								<label class="col-4">Agent <span class="float-right">:</span></label>
+								<div class="col-8"><span>${selected_noti_data.user}</span></div>
+							</div>
+							<div class="row">
+								<label class="col-4">Time <span class="float-right">:</span></label>
+								<div class="col-8"><span>${selected_noti_data.created_date}</span></div>
+							</div>
+							<div class="row">
+								<label class="col-4">Status <span class="float-right">:</span></label>
+								<div class="col-8"><span>${selected_noti_data.status}</span></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+<div class="modal fade" id="myModal" role="dialog" >
+	<div class="modal-dialog" role="document">
+	  <form class="forms-sample" id="broadcast-form">
+		  <div class="modal-content">
+		    <div class="modal-header">
+		      <h5 class="modal-title" id="ModalLabel">BroadCast Message Across Users</h5>
+		      <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+		        <span aria-hidden="true">×</span>
+		      </button>
+		    </div>
+		    <div class="modal-body">
+		        <div class="form-group">
+		          <label for="message-text" class="col-form-label">Message:<span class="star">*</span></label>
+		          <textarea class="form-control" maxlength="200" name="message" id="broadcast_message" placeholder="Enter Your broadcast message max length 200 characters " data-validation='required' rows="4"></textarea>
+		        </div>
+		        <div class="form-group ">
+		         <label for="message-text" class="col-form-label">Message Type:</label>
+		         <div class="row">
+	                  <div class="col-sm-3">
+	                    <div class="form-check form-check-info">
+	                      <label class="form-check-label ">
+	                        <input type="radio" class="form-check-input" name="message_type" id="info" value="0" checked="">
+	                        Info Message
+	                      <i class="input-helper"></i></label>
+	                    </div>
+	                  </div>
+	                  <div class="col-sm-4">
+	                    <div class="form-check form-check-warning">
+	                      <label class="form-check-label">
+	                        <input type="radio" class="form-check-input" name="message_type" id="warning" value="1">
+	                        Warning Message
+	                      <i class="input-helper"></i></label>
+	                    </div>
+	                  </div>
+	                   <div class="col-sm-4">
+	                    <div class="form-check form-check-danger">
+	                      <label class="form-check-label">
+	                        <input type="radio" class="form-check-input" name="message_type" id="danger" value="2">
+	                        Danger Message
+	                      <i class="input-helper"></i></label>
+	                    </div>
+	                  </div>
+	                </div>
+	            </div>
+	            <div class=form-group>
+	            	<label for="message-text" class="col-form-label">Message Display Message in Sec:</label>
+	            	<div class="input-group date" id="broadcast-timepicker" data-target-input="nearest">
+						<div class="input-group" data-target="#broadcast-timepicker" data-toggle="datetimepicker">
+							<input type="text" class="form-control datetimepicker-input" data-target="#broadcast-timepicker" name="broadcast_time" data-toggle="tooltip" title="Select time for broadcast Time" placeholder="ss" data-validation="required" data-validation="time" id="broadcast_time">
+							<div class="input-group-addon input-group-append"><i class="far fa-clock input-group-text" style="padding:9px; height: 38px;"></i>
+							</div>
+						</div>
+					</div>
+	            </div>
+		    </div>
+		    <div class="modal-footer">
+		      <button type="button" class="btn btn-success btn-sm btn-icon-text" id="broadcast_send"><i class="fab fa-telegram-plane btn-icon-prepend"></i>Send</button>
+		      <button type="button" class="btn btn-light" data-dismiss="modal">Close</button>
+		    </div>
+		  </div>
+	  </form>
+	</div>
+</div>
+
+{% block footer %}{% endblock footer %}
+<!-- All js files will come here -->
+{% block js %}
+<script type="text/javascript">
+	var extension           = "{{ user.extension }}"
+	var user_pass           = "{{ user.uservariable.device_pass }}"
+	var user_name           = "{{ user.username }}"
+	var call_type           = ""
+	{% if not user.is_superuser %}
+		var user_role           = "{{ user.user_role.access_level }}"
+	{% else %}
+		var user_role="superuser"
+	{% endif %}
+	var domain_ip           = "{{ user.uservariable.domain.ip_address }}";
+	var host                = domain_ip
+	var outbound_proxy_url  = '';
+	var session_details     = {};
+	var server_ip           = "{{ server_ip }}"
+	var socket              = '';
+	var non_agent_user      = false
+</script>
+<script src="{% static 'js/vendor.bundle.base.js' %}"></script>
+<script src="{% static 'js/tags-input.js' %}"></script>
+<script src="{% static 'js/barrating.js' %}"></script>
+<script src="{% static 'js/hoverable-collapse.js' %}"></script>
+<script src="{% static 'js/misc.js' %}"></script>
+<script src="{% static 'melody/js/off-canvas.js'%}"></script>
+<script src="{% static 'js/datatablejs/dataTables.buttons.min.js' %}"></script>
+<script src="{% static 'js/datatablejs/buttons.bootstrap4.min.js' %}"></script>
+<script src="{% static 'js/datatablejs/buttons.colVis.min.js' %}"></script>
+<script src="{% static 'js/datatablejs/jszip.min.js' %}"></script>
+<script src="{% static 'js/datatablejs/buttons.html5.min.js' %}"></script>
+<script src="{% static 'js/datatablejs/processing().js' %}"></script>
+<script src="{% static 'js/jquery.toast.min.js' %}" ></script>
+<script src="{% static 'js/toast_msg.js' %}"></script>
+<script src="{% static 'js/socket.io.js' %}"></script>
+<script src="{% static 'js/dialer/node_socket.js' %}"></script>
+<script id="web_socket_client" src="{% static 'js/web_socket_client.js'%}" data-name="{{web_socket_host}}" data-username="{{ request.user.extension }}"></script>
+<script type="text/javascript">
+	var m = moment('2021-03-17 02:00:05');
+	$("#broadcast-timepicker")
+		.datetimepicker({
+			orientation: "auto",
+			format: 'ss',
+			defaultDate:m.startOf('seconds')
+		});
+	$.validate({
+	  modules: 'security'
+	});
+	total_records = {{total_records}}
+	total_pages = {{total_pages}}
+	page = {{page}}
+	has_next={{has_next}}
+	has_prev = {{has_prev}}
+	can_update = {{can_update|lower}}
+	can_delete = {{can_delete|lower}}
+	query_set_list = []
+	query_set_list = {{id_list|safe}}
+	$(window).ready(function() {
+	$('.preloader').fadeOut("slow");
+	if(call_type != "webrtc"){
+	}
+	});
+	$(document).ready(function(){
+		getAdminLiveCount()
+		// if($(window).width()<575.98){
+		// 	$('form button').addClass('btn-block')
+		// }
+		// setInterval(getAdminLiveCount, 15000);
+		$.validate({
+		  modules: 'security'
+		});
+		var nodejs_port = '3232';
+		socket = io(server_ip  + ':' + nodejs_port, {
+			'reconnection': true,
+			'reconnectionDelay': 1000,
+			'reconnectionDelayMax': 5000,
+			'reconnectionAttempts': 5
+		});	
+		socketevents()
+	})
+
+   var flexyAvatar = new Vue({
+		 el: '.avatar-table',
+		 components: {
+			 avatar:VueAvatar.Avatar
+		 },
+		});
+	function getAdminLiveCount (){
+		$.ajax({
+			type:'GET',
+			url: '/api/adminlivecount/',
+			cache:false,
+			timeout: 5000,
+			success: function(data){}
+		})
+	}
+
+</script>
+{% endblock js%}
+<!-- All extra-js files will come here -->
+{% block extra-js %}{% endblock extra-js%}
+</body>
+</html>

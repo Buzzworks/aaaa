@@ -1,0 +1,915 @@
+{% load static %}
+{% load humanize %}
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Flexydial</title>  
+	<link rel="shortcut icon" href="/static/images/flexydial-logo.png" /> 
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<!-- All css files will come here -->
+	{% block agent-stylesheets %}
+	<link rel="stylesheet" href="{% static '/css/bootstrap.min.css' %}">
+	<link rel="stylesheet" href="{% static '/melody/vendors/iconfonts/font-awesome/css/all.min.css' %}">
+	<link rel="stylesheet" href="{% static 'melody/vendors/iconfonts/simple-line-icon/css/simple-line-icons.css' %}">
+	<link rel="stylesheet" href="{% static '/melody/vendors/css/vendor.bundle.base.css' %}">
+
+	<!-- <link rel= "stylesheet" href="{% static '/melody/vendors/css/vendor.bundle.addons.css' %}"> -->
+	<link rel="stylesheet" href="{% static '/css/select2.css' %}"/>
+	<link rel="stylesheet" href="{% static '/css/jquery.toast.min.css' %}" />
+	<link rel="stylesheet" href="{% static '/melody/css/style.css' %}">
+	<link rel="stylesheet" href="{% static '/css/font-awesome.min.css' %}">
+	<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+	<link rel="stylesheet" href="{% static 'css/jquery.dataTables.min.css' %}">
+	<link rel="stylesheet" href="{% static 'css/dataTables.bootstrap4.min.css' %}">
+	<link rel="stylesheet" href="{% static 'css/responsive.bootstrap4.min.css' %}">
+	<link rel="stylesheet" href="{% static 'css/select.dataTables.min.css' %}">
+	<link rel="stylesheet" href="{% static 'css/tempusdominus-bootstrap-4.min.css' %}" />
+	<link rel="stylesheet" href="{% static '/css/common.css' %}">
+	<link rel="stylesheet" href="{% static '/css/agent.css' %}">
+	<link rel="stylesheet" href="{% static '/css/preloader.css' %}">
+	<link rel="stylesheet" href="{% static '/css/incomingCall_loader.css' %}">
+	<link rel="stylesheet" href="{% static 'css/audioplayer.css'%}">
+	<link rel="stylesheet" type="text/css" href="{% static 'css/Chart.min.css'%}">
+	<!-- <link rel="stylesheet" href="{% static '/css/counttimer.css' %}"> -->
+	{% endblock agent-stylesheets %} 
+	{% block agent-extra-stylesheets %}
+	{% endblock agent-extra-stylesheets %} 
+	<style>
+	.modal-dialog-trans{
+		max-width: 650px;
+	}
+	.buttons-align{
+		justify-content: unset;
+		border-top: unset;
+		padding:34px 3px 0 0 !important;
+		margin-left:-15px;
+	}
+	
+	.tran-marg{
+	margin: 34px 0 0 -18px;
+	}
+	.trans-rows-setup{
+		margin-left: -30px;
+	}
+	 .pass-colorbar {
+	 background-image: url({% static "images/passwordstrength.jpg" %}); 
+	}
+	.mode_count{
+		padding: 0px 6px 2px 6px;
+    	width: 20px
+	}
+	#agent_info_vue_mode{
+		color: white;
+	}
+	#active_mode{
+		font-size: 14px;
+	}
+	.datepicker.datepicker-dropdown .datepicker-days{
+		padding: 0px;
+	}
+	.datepicker.datepicker-dropdown, .datepicker.datepicker-inline {
+		padding: 0 10px;
+		max-width: 260px;
+	}
+	.datepicker.datepicker-dropdown .datepicker-days table.table-condensed thead tr th.prev, .datepicker.datepicker-inline .datepicker-days table.table-condensed thead tr th.prev {
+		padding-bottom: .5rem;
+		padding-top: .5rem;
+	}
+	.datepicker.datepicker-dropdown .datepicker-days table.table-condensed thead tr th.datepicker-switch, .datepicker.datepicker-inline .datepicker-days table.table-condensed thead tr th.datepicker-switch {
+		padding-bottom: .5rem;
+		padding-top: .5rem;
+	}
+	.datepicker.datepicker-dropdown .datepicker-days table.table-condensed thead tr th.next, .datepicker.datepicker-inline .datepicker-days table.table-condensed thead tr th.next {
+		padding-bottom: .5rem;
+		padding-top: .5rem;
+	}
+	.datepicker.datepicker-dropdown .datepicker-days table.table-condensed tbody td.day.active:before, .datepicker.datepicker-inline .datepicker-days table.table-condensed tbody td.day.active:before{
+		width: 33px;
+		height: 33px;
+	}
+	</style>
+</head>
+
+<body class="agent-sidebar-hidden">
+	<!-- Body content will come here -->
+	<!-- Navbar Data -->
+	<audio id="audio_remote" autoplay="autoplay"></audio>
+	<div class="container-scroller">
+		<div class="preloader" style="">
+			<center>
+				<!-- <img src="{% static 'images/flexydial-logo.png' %}" style="max-width:50%;"> -->
+					<span class="dot-opacity-loader">
+							<span style="background-color: #0860ad;"></span>
+							<span style="background-image: linear-gradient(to right,#0860ad, #45c5f3);"></span>
+							<span style="background-color: #45c5f3;"></span>
+					</span>
+				<br><br>
+				<div class="reload-page" style="color: white;"></div>
+			</center>
+		</div>
+		<nav class="navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row default-layout-navbar navbar-dark">
+			<div class="text-center navbar-brand-wrapper d-flex align-items-center justify-content-center">
+				<a class="navbar-brand brand-logo" ><img src="{% static '/images/flexydial-logo.png' %}" alt="logo"/></a>
+				<div class="mb-nav d-flex justify-content-between w-100 px-3">
+					<div id="mb-profile-toggle">
+						<a class="align-self-center d-sm-none" href="#" data-toggle="offcanvas" style="background: url({% static '/images/menu.png' %}); padding: 10px; background-repeat: no-repeat;"></a>
+					</div>
+					<a class="navbar-brand brand-logo-mini" style="line-height: inherit;"><img src="{% static '/images/flexydial-logo.png' %}" alt="logo" /></a>
+					<div class="mb-logout-btn-div"></div>
+				</div>
+			</div>
+			<div class="navbar-menu-wrapper d-none d-sm-flex align-items-stretch">
+				<ul class="navbar-nav navbar-nav-right ml-auto">
+					<li v-cloak id="agent_info_vue">
+						<div v-show="show_camp" class="nav-item badge mx-0">
+							<span class="text-white">Campaign :</span>
+							<strong class="text-info">${camp_name}</strong>
+						</div>
+						<div class="nav-item dropdown badge mx-0">
+							<div class="nav-link" style="font-size:0.8125rem;">
+								<span class="dropdown-toggle" id="state_dropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" v-bind:style="[state == 'Idle' || state=='' ? {'cursor':'pointer'} : {'pointer-events':'none'} ]">
+									<span class="text-white">Status :</span>
+									<strong :class="[show_camp ? 'text-success':'text-danger']">${selected_status}</strong>
+									<div class="dropdown-menu navbar-dropdown" aria-labelledby="state_dropdown">
+										<a v-if="show_camp" class="dropdown-item">Ready</a>
+										<a v-else class="dropdown-item">NotReady</a>
+										<div class="dropdown-divider"></div>
+										<a v-for="value,key in agent_breaks" class="dropdown-item" v-on:click.stop="selectBreak(value.name,value.break_time,value.inactive_on_exceed)">${value.name}</a>
+									</div>
+								</span>
+							</div>
+						</div>
+						<div class="nav-item dropdown badge mx-0">
+							<div class="nav-link" style="font-size:0.8125rem;">
+								<span class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+									<span class="text-white">Break Wise Timing</span>
+									<div class="dropdown-menu navbar-dropdown" aria-labelledby="state_dropdown">
+
+										<div class="dropdown-divider"></div>
+										<a v-for="value,key in break_timing" class="dropdown-item"><strong>${key}:</strong> ${value}</a>
+									</div>
+								</span>
+							</div>
+						</div>
+						<div v-show="show_camp" class="nav-item badge mx-0">
+							<span class="text-white">State :</span>
+							<strong class="text-warning">${state}</strong>
+						</div>
+						<div v-show="!show_camp && on_break " class="nav-item badge mx-0">
+							<span class="text-white">State :</span>
+							<strong class="text-warning">${state}</strong>
+						</div>
+					</li>
+					<li id="call_notification" class="nav-item dropdown">
+						<a class="nav-link count-indicator dropdown-toggle" id="call_notificationDropdown" href="#" data-toggle="dropdown">
+							<i class="fa fa-phone-square fa-rotate-90 mx-0"></i>
+							<span class="count">0</span>
+						</a>
+						<div class="dropdown-menu dropdown-menu-right navbar-dropdown preview-list" aria-labelledby="call_notificationDropdown">
+							<div class="dropdown-item py-2">
+								<p class="mb-0 font-weight-normal float-left">You have ${notification_data.length} notifications
+								</p>
+								<span v-if="notification_data.length > 0" class="badge badge-pill badge-warning ml-auto">View all</span>
+							</div>
+							<div style="overflow-y: scroll; max-height: 350px">
+								<template v-for="item,key in notification_data">
+									<div class="dropdown-divider"></div>
+									<a class="dropdown-item preview-item" @click="showNotification(key)">
+										<div v-if="item.title == 'callback'" class="preview-thumbnail">
+											<div class="preview-icon bg-info">
+												<i class="fas fa-phone fa-rotate-90 mx-0"></i>
+											</div>
+										</div>
+										<div v-else-if="item.title == 'Abandonedcall'" class="preview-thumbnail">
+											<div class="preview-icon bg-danger">
+												<i class="fas fa-phone-slash fa-rotate-90 mx-0"></i>
+											</div>
+										</div>
+										<div class="preview-item-content">
+											<h6 class="preview-subject font-weight-medium">${item.message}</h6>
+											<span class="badge badge-danger" style="
+											    float: right;
+											" v-if="item.count!== 0">${item.count}</span>
+											<p class="font-weight-light small-text">
+												${item.created_date|format_date}
+											</p>
+										</div>
+									</a>
+								</template>
+							</div>
+						</div>	
+					</li>
+					<li id="broadcast_messages" class="nav-item dropdown">
+						<a class="nav-link count-indicator dropdown-toggle" id="messageDropdown" href="#" data-toggle="dropdown" aria-expanded="false">
+							<i class="fas fa-envelope mx-0"></i>
+							<span class="count">${broadcast_messages.length}</span>
+						</a>
+						<div class="dropdown-menu dropdown-menu-right navbar-dropdown preview-list" aria-labelledby="messageDropdown">
+							<div class="dropdown-item">
+								<p class="mb-0 font-weight-normal float-left">You have ${broadcast_messages.length} messages
+								</p>
+							</div>
+							<div style="overflow-y: scroll; max-height: 350px">
+								<template v-for="item,index in broadcast_messages">
+									<div class="dropdown-divider"></div>
+									<a class="dropdown-item preview-item" @click=ReadBroadcast(index)>
+						                <div class="preview-item-content flex-grow">
+						                  <h6 class="preview-subject ellipsis font-weight-medium">${item.sent_by}
+						                    <span class="float-right font-weight-light small-text">${item.created|format_date}</span>
+						                  </h6>
+						                  <p class="font-weight-light small-text">
+						                    ${item.message|read_more}
+						                  </p>
+						                </div>
+						              </a>
+								</template>
+							</div>
+						</div>
+					</li>
+					<li class="nav-item nav-profile dropdown mr-0 ml-0">
+						<a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown" id="profileDropdown">
+							<img  src="{% static '/images/buzzworks-logo.jpeg' %}" alt="profile"/>
+							<span class="d-none d-md-inline ml-sm-1">{{request.user}}</span>
+						</a>
+						<div class="dropdown-menu dropdown-menu-right navbar-dropdown profile-dropdown" aria-labelledby="profileDropdown">
+							<a class="dropdown-item" href="" id="c_password_link" data-toggle="modal" data-target="#c_password_modal">
+								<i class="fas fa-key text-primary menu-icon"></i>
+								Change Password
+							</a>
+							{% if request.user.is_superuser or can_switch %}
+							<div class="dropdown-divider"></div>
+							<a id="agent_to_admin_switchscreen" class="btn dropdown-item">
+								<i class="fas fa-random text-primary menu-icon"></i>
+								Swith To Admin
+							</a>
+							{% endif %}
+							<div class="dropdown-divider d-none d-sm-block"></div>
+							<a id="crm-agent-logout" class="btn dropdown-item" onclick="confirmLogout()">
+								<i class="fas fa-power-off text-primary d-none d-sm-block"></i>
+								<i class="fa fa-sign-out-alt d-sm-none"></i>
+								<span class="d-none d-sm-block">Logout</span>
+							</a>
+						</div>
+					</li>
+					<button class="navbar-toggler align-self-center d-block" type="button" data-toggle="" id="right-sidebar-button">
+						<span class="fas fa-bars"></span>
+					</button>
+				</ul>
+			</div>
+		</nav>
+	
+		<!-- Navbar data ends -->
+		<!-- main container strats -->
+		<div class="container-fluid page-body-wrapper">
+			<nav class="sidebar sidebar-offcanvas" id="left_sidebar">
+				<ul class="nav">
+					<li>
+						<div class="center-block">
+							<a href="#">
+								<p style="color:#000000;font-size: 16px;line-height: 22px;color: rgba(0, 0, 0, 0.8);font-weight: 600;margin-top: 20px;">{{request.user}}</p>
+								<p>
+									<div style="width: 100%; text-align: center;">
+										<div id="avatar" style="">  </div>
+									</div>
+								</p>
+								<p style="color:#000000;">Extension:
+									<span class="" style="font-weight: bold;"> {{user.extension}}</span>
+									<br>
+								</p>
+								<p class="d-none" id="camp_name_div">Campaign:
+									<span style="font-weight: 700" id="campain_name_disp"></span>
+								</p>
+							</a>
+						</div>
+					</li>
+				</ul>
+			</nav>
+			<!-- agent sidebar start -->
+			{% include "agent/agent_sidebar.html" %}
+			<!-- agent sidebar end -->
+			
+			<!-- main panel start -->
+			<div class="main-panel">
+				<div class="content-wrapper pt-0 px-0 px-sm-3">
+					<!-- page header start -->
+					<div class="mb-page-header d-none">
+						<div class="page-header my-0 my-sm-1" style="overflow-x: auto; white-space: nowrap;">
+							<!-- page title -->
+							<!-- <h3 class="page-title" style="text-transform: capitalize;">{% block agent-header %}{% endblock agent-header %}</h3> -->
+							<!-- breadcrumbs -->
+							<nav aria-label="breadcrumb" class="d-none d-sm-block">
+								<ol class="breadcrumb py-0">{% block agent-breadcrumb %}{% endblock agent-breadcrumb %}</ol>
+							</nav>
+							<div class="mb-flexy-btn-div d-sm-none"></div>
+							<div class="mb-manual-dial-div d-sm-none"></div>
+							<div class="all_timer d-flex">
+								<h5 class="badge badge-warning badge-pill pt-none mb-0 mr-sm-2 px-2 py-1 d-sm-none">
+									<strong id="mb-call-flow" class="d-none"></strong>
+									<span id="mb-call-number"></span>
+								</h5>
+								<h5 id="rbreak" class="badge badge-warning badge-pill pt-none agent-break-status mb-0 mr-sm-2 px-2 py-1 d-none">
+									<strong>Break Time:</strong>
+									<span id="reverse-break-time"></span>
+								</h5>
+								<h5 id="call_duration_timer" class="badge badge-success badge-pill mb-0 mr-sm-2 px-2 py-1 d-none">
+									<strong>Talk Time:</strong>
+									<span id="SecondsDISP">00:00:00</span>
+								</h5>
+								<h5 id="call_hold_timer" class="badge badge-warning badge-pill mb-0 mr-sm-2 px-2 py-1 d-none">
+									<strong>Hold Time:</strong>
+									<span id="display_hold_timer">00:00:00</span>
+								</h5>
+								<h5 id="fb_timer_div" class="badge badge-info badge-pill mb-0 pt-none mr-sm-2 px-2 py-1 d-none" >
+									<p class="mb-0">
+										<strong style="">WrapUp Time :</strong>
+										<span id="dummy-fb-time">
+											<span id="fb_timer" class="pl-1">00:00</span>
+										</span>
+									</p>
+								</h5>
+								<h5 id="predictive_timer_div" class="badge badge-primary badge-pill mb-0 pt-none mr-sm-2 px-2 py-1 d-none" >
+									<p class="mb-0">
+										<strong style="">Predictive Time :</strong>
+										<span id="dummy-predictive-time">
+											<span id="predictive_timer_display" class="pl-1">00:00</span>
+										</span>
+									</p>
+								</h5>
+								<h5 id="inbound_timer_div" class="badge badge-primary badge-pill mb-0 pt-none mr-sm-2 px-2 py-1 d-none" >
+									<p class="mb-0">
+										<strong style="">Inbound Time :</strong>
+										<span id="dummy-inbound-time">
+											<span id="inbound_timer_display" class="pl-1">00:00</span>
+										</span>
+									</p>
+								</h5>
+								<h5 id="blended_timer_div" class="badge badge-primary badge-pill mb-0 mr-sm-2 pt-none px-2 py-1 d-none" >
+									<p class="mb-0">
+										<strong style="">Blended Time :</strong>
+										<span id="dummy-blended-time">
+											<span id="blended_timer_display" class="pl-1">00:00</span>
+										</span>
+									</p>
+								</h5>							
+								<div class="skip_btn_div mr-2 d-none" id="pause_pro_div">
+									<button type="button" class="btn btn-inverse-warning btn-sm py-1 px-2" id="pause_pro_btn" data-toggle="tooltip" title="Pause Progressive Timer" data-placement="bottom" >
+										<i class="fa fa-pause"></i>
+									</button>
+								</div>
+								<div class="skip_btn_div mr-2 d-none" id="stop_pro_div">
+									<button type="button" class="btn btn-inverse-success btn-sm py-1 px-2" id="stop_pro_btn" data-toggle="tooltip" data-placement="bottom"  title="Restart Progressive Timer">
+										<i class="fa fa-play"></i>
+									</button>
+								</div>
+								<div class="skip_btn_div mr-2 d-none" id="skip_btn_div">
+									<button class="btn btn-inverse-danger btn-sm py-1 px-2" id="skip_btn" data-toggle="tooltip" data-placement="bottom" title="Stop Progressive Dialing">
+										<i class="fa fa-stop"></i>
+									</button>
+								</div>
+								<div class="progressive_pause_div d-none">
+									<button class="d-none" id="timer_pause_progressive" ></button>
+								</div>
+							</div>
+							<div class="d-none d-sm-block"></div>
+						</div>
+					</div>
+					<!-- page header ends -->
+					<div class="card border-0 d-sm-none" id="mb_landing_page" style="height: calc(100vh - 55px);">
+						<div class="card-body">
+							<div class="row mb-4">
+								<div class="col-sm-6 border-bottom">
+									<h6 class="card-title font-weight-bold">My Activities</h6>
+									<div class="row">
+										<div class="col-6" id="mb-show-agent-totalcall-today">
+											<canvas id="daily_data" width="600" height="600"></canvas>
+										</div>
+										<div class="col-6" id="mb-show-agent-totalcall-month">
+											<canvas id="monthly_data" width="600" height="600"></canvas>
+										</div>
+									</div>
+								</div>
+								<div class="col-sm-6 pt-3">
+									<h6 class="card-title font-weight-bold">My Bucket</h6>
+									<div class="row justify-content-center">
+										<!-- <div class="col-3 text-center pb-3">
+											<a id="mb-show-callbacks-active">
+												<div class="badge badge-outline-info mb-bucket-icon">
+													<i class="icon-people fa-3x"></i>
+													<span class="d-none">0</span>
+												</div>
+												<div class="mb-bucket-text">Active Callbacks</div>
+											</a>
+										</div> -->
+										<div class="col-3 text-center pb-3 mb-callback">
+											<a id="callbacks">
+												<div class="badge badge-outline-info mb-bucket-icon">
+													<i class="icon-call-out fa-3x"></i>
+													<span class="d-none">0</span>
+												</div>
+												<div class="mb-bucket-text">Callbacks</div>
+											</a>
+										</div>
+										<div class="col-3 text-center pb-3 mb-abandoned">
+											<a id="abandonedcalls">
+												<div class="badge badge-outline-info mb-bucket-icon misscalled-icon">
+													<span class="d-none">0</span>
+												</div>
+												<div class="mb-bucket-text">Abandoned Calls</div>
+											</a>
+										</div>
+										<div class="col-3 text-center pb-3">
+											<a class="show-assigned-calls" style="cursor: pointer;" id="show-camp-assigned-notdialed-calls">
+												<div class="badge badge-outline-info mb-bucket-icon">
+													<i class="icon-user-unfollow fa-3x"></i>
+													<span class="d-none">0</span>
+												</div>
+												<div class="mb-bucket-text">NotDialed Assign Bucket</div>
+											</a>
+										</div>
+										<div class="col-3 text-center pb-3">
+											<a id="show-camp-assigned-dialed-calls" class="show-assigned-calls">
+												<span class="badge badge-outline-info mb-bucket-icon">
+													<i class="icon-user-following fa-3x"></i>
+													<span class="d-none">0</span>
+												</span>
+												<div class="mb-bucket-text">Dialed Assign Bucket</div>
+											</a>
+										</div>
+										<div class="col-3 text-center pb-3">
+											<a class="show-lead-bucket" id="show-campaign-lead-bucket">
+												<div class="badge badge-outline-info mb-bucket-icon">
+													<i class="icon-people fa-3x"></i>
+													<span class="d-none">0</span>
+												</div>
+												<div class="mb-bucket-text">Lead Bucket</div>
+											</a>
+										</div>
+										<div class="col-3 text-center pb-3">
+											<a class="show-lead-bucket" id="show-camp-requeue-lead-bucket">
+												<div class="badge badge-outline-info mb-bucket-icon">
+													<i class="icon-people fa-3x"></i>
+													<span class="d-none">0</span>
+												</div>
+												<div class="mb-bucket-text">Requeue Lead Bucket</div>
+											</a>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					{% block agent-content %}
+					{% endblock agent-content %}
+					<div class="modal fade" id="notification_modal" tabindex="-1" role="dialog" aria-labelledby="cnModalLabel" style="display: none; padding-right: 17px;" aria-hidden="true">
+						<div class="modal-dialog" role="document">
+							<div class="modal-content">
+								<div class="modal-header border-0">
+
+									<h4 v-bind:class="[selected_noti_type == 'Abandonedcall' ? 'text-danger' : 'text-info', 'modal-title']">${selected_noti_type} Information</h4>
+									<button type="button" class="close" data-dismiss="modal">
+										<span aria-hidden="true">×</span>
+									</button>
+								</div>
+								<div class="modal-body pt-2">
+									<div v-if="call_error" class="alert alert-danger p-2" role="alert">
+										${call_error}
+									</div>
+									<div v-if="selected_noti_type != 'Abandonedcall'" class="pl-3">
+										<div class="row">
+											<label class="col-4 crm-form-label">Numeric <span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.numeric}</span></div>
+										</div>
+										<div class="row">
+											<label class="col-4">Campaign <span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.campaign}</span></div>
+										</div>
+										<div class="row">
+											<label class="col-4">Agent <span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.user}</span></div>
+										</div>
+										<div class="row">
+											<label class="col-4">Schedule Time <span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.schedule_time}</span></div>
+										</div>
+										<div v-if="selected_noti_type == 'callback'" class="row">
+											<label class="col-4">Type <span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.callback_type}</span></div>
+										</div>
+										<div class="row">
+											<label class="col-4">Dial Count<span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.dialcount}</span></div>
+										</div>
+										<div class="row">
+											<label class="col-4">Comment<span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.comment}</span></div>
+										</div>
+										<div v-if="snooze_show" class="row">
+											<label class="col-4">Snooze Time<span class="float-right">:</span></label>
+											<div class="col-8"><datetimepicker id="snooze_time" name="snooze_time" target="#snooze_time" value=""></datetimepicker></div>
+										</div>
+									</div>
+									<div v-if="selected_noti_type == 'Abandonedcall'" class="pl-3">
+										<div class="row">
+											<label class="col-4 crm-form-label">Caller ID <span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.caller_id}</span></div>
+										</div>
+										<div class="row">
+											<label class="col-4">Numeric <span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.numeric}</span></div>
+										</div>
+										<div class="row">
+											<label class="col-4">Campaign <span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.campaign}</span></div>
+										</div>
+										<div class="row">
+											<label class="col-4">Agent <span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.user}</span></div>
+										</div>
+										<div class="row">
+											<label class="col-4">Time <span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.created_date}</span></div>
+										</div>
+										<div class="row">
+											<label class="col-4">Status <span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.status}</span></div>
+										</div>
+									</div>
+								</div>
+								<div class="modal-footer d-inline border-0">
+									<div v-bind:class="[snooze_show ? 'd-none' : 'd-flex' ,'flex-row']">
+									<button v-if="selected_noti_type != 'Abandonedcall'" type="button" class="btn btn-inverse-info btn-sm mr-auto btn-icon-text" @click="snooze_show = true">Snooze
+									<i class="fas fa-bell btn-icon-append"></i></button>
+									
+									<button type="button" class="btn btn-inverse-success btn-sm btn-icon-text" @click="makeCbcall()">Make Call
+										<i class="fa fa-phone fa-rotate-90 btn-icon-append"></i></button>
+									</div>
+									<div v-if="selected_noti_type != 'Abandonedcall'" v-bind:class="[snooze_show ?' d-flex' : 'd-none' ,'flex-row']">
+										<button type="button" class="btn btn-inverse-danger btn-sm mr-auto btn-icon-text mr-3" @click="snooze_show = false">
+											Back<i class="fas fa-arrow-left btn-icon-append"></i>
+										</button>
+										<button type="button" class="btn btn-inverse-primary btn-sm btn-icon-text ml-3" @click="snooze_submit()">Submit
+										<i class="far fa-check-square btn-icon-append"></i></button>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="modal fade" id="Abandonedcall_noti_model" tabindex="-1" role="dialog" aria-labelledby="mcnModalLabel" style="display: none; padding-right: 17px;" aria-hidden="true">
+						<div class="modal-dialog" role="document">
+							<div class="modal-content">
+								<div class="modal-header border-0">
+									<h4 class="modal-title" style="color: rgba(0,0,0,.65);">Abandonedcall Information</h4>
+									<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+										<span aria-hidden="true" >×</span>
+									</button>
+								</div>
+								<div class="modal-body pt-2">
+									<div v-if="call_error" class="alert alert-danger p-2" role="alert">
+										${call_error}
+									</div>
+									<div class="pl-3">
+										<div class="row">
+											<label class="col-4 crm-form-label">Caller ID <span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.caller_id}</span></div>
+										</div>
+										<div class="row">
+											<label class="col-4">Campaign <span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.campaign}</span></div>
+										</div>
+										<div class="row">
+											<label class="col-4">Agent <span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.user}</span></div>
+										</div>
+										<div class="row">
+											<label class="col-4">Schedule Time <span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.schedule_time}</span></div>
+										</div>
+										<div class="row">
+											<label class="col-4">Type <span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.callback_type}</span></div>
+										</div>
+										<div class="row">
+											<label class="col-4">Dial Count<span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.dialcount}</span></div>
+										</div>
+										<div class="row">
+											<label class="col-4">Comment<span class="float-right">:</span></label>
+											<div class="col-8"><span>${selected_noti_data.comment}</span></div>
+										</div>
+										<div v-if="snooze_show" class="row">
+											<label class="col-4">Snooze Time<span class="float-right">:</span></label>
+											<div class="col-8"><datetimepicker id="snooze_time" name="snooze_time" target="#snooze_time" value=""></datetimepicker></div>
+										</div>
+									</div>
+								</div>
+								<div class="modal-footer d-inline border-0">
+									<div v-bind:class="[snooze_show ? 'd-none' : 'd-flex' ,'flex-row']">
+									<button type="button" class="btn btn-inverse-info btn-sm mr-auto btn-icon-text" @click="snooze_show = true">Snooze
+									<i class="fas fa-bell btn-icon-append"></i></button>
+									
+									<button type="button" class="btn btn-inverse-success btn-sm btn-icon-text" @click="makeCbcall()">Make Call
+										<i class="fa fa-phone fa-rotate-90 btn-icon-append"></i></button>
+									</div>
+									<div v-bind:class="[snooze_show ?' d-flex' : 'd-none' ,'flex-row']">
+										<button type="button" class="btn btn-inverse-danger btn-sm mr-auto btn-icon-text mr-3" @click="snooze_show = false">
+											Back<i class="fas fa-arrow-left btn-icon-append"></i>
+										</button>
+										<button type="button" class="btn btn-inverse-primary btn-sm btn-icon-text ml-3" @click="snooze_submit()">Submit
+										<i class="far fa-check-square btn-icon-append"></i></button>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div v-cloak id="incoming_call_vue">
+						<div v-for="(value,key) in incomingCall_data" v-bind:class="[incomingCall ? 'card' : 'card d-none']">
+							<!-- <div class="card-header">
+								<div >
+									<span class="ic_loader"></span>
+									<div class="ic_logo_item m-3">
+										<avatar :username="incomingCall_data.destination_number" :size="50"></avatar>
+									</div>
+								</div>
+							</div> -->
+							<div class="card-body text-center">
+								<p class="">Incoming Call</p>
+								<h5>${value.destination_number}</h5>
+							</div>
+							<div id="incoming_button" class="card-footer text-center border-0">
+								<button id="incoming_reject" class="btn btn-inverse-danger btn-rounded btn-icon mr-3" @click="ic_activity('reject',key)">
+									<i class="fa fa-phone fa-rotate-90"></i>
+								</button>
+								<button id="incoming_accept" class="btn btn-inverse-success btn-rounded btn-icon ml-3" @click="ic_activity('accept',key)">
+									<i class="fa fa-phone fa-rotate-90"></i>
+								</button>
+							</div>
+						</div>
+					</div>
+					<div v-cloak id="transfer_call_vue">
+						<div v-for="(value,key) in transfercall_data" v-bind:class="[transfercall ? 'card' : 'card d-none']">
+							<!-- <div class="card-header">
+								<div >
+									<span class="ic_loader"></span>
+									<div class="ic_logo_item m-3">
+										<avatar :username="transfercall_data.transfer_number" :size="50"></avatar>
+									</div>
+								</div>
+							</div> -->
+							<div class="card-body text-center">
+								<p class="">Transfer Call</p>
+								<h5>${value.transfer_number}</h5>
+							</div>
+							<div id="transfer_reject_button" class="card-footer text-center border-0">
+								<button id="transfer_reject" class="btn btn-inverse-danger btn-rounded btn-icon mr-3" @click="ic_activity('reject',key)">
+									<i class="fa fa-phone fa-rotate-90"></i>
+								</button>
+								<button id="transfer_accept" class="btn btn-inverse-success btn-rounded btn-icon ml-3" @click="ic_activity('accept',key)">
+									<i class="fa fa-phone fa-rotate-90"></i>
+								</button>
+							</div>
+						</div>
+					</div>	
+					<div class="modal fade" id="broadcast_model" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel-3" style="display: none, padding-right: 17px;" aria-hidden="true">
+                    <div class="modal-dialog modal-sm" role="document">
+                      <div class="modal-content">
+                        <div class="modal-header">
+                          <h5 class="modal-title" id="broadcast_sender"></h5>
+                          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">×</span>
+                          </button>
+                        </div>
+                        <div class="modal-body">
+                          <p id="broadcast_message_content" style="word-break: break-all;"></p>
+                        </div>
+                        <div class="modal-footer">
+                          <button type="button" class="btn btn-light" data-dismiss="modal">Close</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+				</div>
+			</div>
+			<!-- main panel end -->
+		</div>
+		<!-- main container ends -->
+		<input type="hidden" id="wait_timer">
+		<input type="hidden" id="idle_timer">
+		<input type="hidden" id="app_timer">
+		<input type="hidden" id="dialer_timer">
+		<input type="hidden" id="ring_timer">
+		<input type="hidden" id="speak_timer">
+		<input type="hidden" id="feedback_timer">
+		<input type="hidden" id="preview_timer">
+		<input type="hidden" id="progressive_timer">
+		<input type="hidden" id="predictive_timer">
+		<input type="hidden" id="break_timer">
+		<input type="hidden" id="hold_timer">
+		<input type="hidden" id="transfer_timer">
+		<input type="hidden" id="pause_progressive_timer">
+		<input type="hidden" id="inbound_timer">
+		<input type="hidden" id="blended_timer">
+	</div>
+	{% block agent-footer %}{% endblock agent-footer %}
+	<!-- All js files will come here -->
+	{% block agent-js %}
+	<script type="text/javascript">
+		var host = '0.0.0.0';
+		var port = '3232';
+		var selected_camp;
+	</script>
+	<script src="{% static '/js/vendor.bundle.base.js' %}"></script>
+	<script src="{% static 'js/form-validator.min.js' %}"></script>
+	<script src="{% static 'melody/js/toastDemo.js' %}"></script>
+	<script src="{% static 'melody/js/modal-demo.js' %}"></script>
+	<script src="{% static 'js/jquery.toast.min.js' %}" ></script>
+	<script src="{% static '/js/editible.js' %}"></script>
+	<script src="{% static 'js/password.js' %}"></script>
+	<script src="{% static 'js/countdowntimer.min.js' %}" type="text/javascript"></script>
+	<script src="{% static 'js/draggable.js' %}"></script>
+	<script src="{% static 'js/clear-cache.js' %}"></script>
+	<script src="{% static 'js/Chart.min.js' %}"></script>
+	<!-- <script src="{% static 'webrtc/sip_session.js' %}"></script> -->
+	<script type="text/javascript">
+		$(window).ready(function() {
+			// start/reset app timer on page login
+				agent_timer_data = agent_time_format('0:0:0')
+				initiate_agent_timer("#wait_timer", agent_timer_data)
+				initiate_agent_timer("#idle_timer", agent_timer_data)
+				initiate_agent_timer("#app_timer", agent_timer_data)
+				initiate_agent_timer("#dialer_timer", agent_timer_data)
+				initiate_agent_timer("#ring_timer", agent_timer_data)
+				initiate_agent_timer("#speak_timer", agent_timer_data)
+				initiate_agent_timer("#feedback_timer", agent_timer_data)
+				initiate_agent_timer("#preview_timer", agent_timer_data)
+				initiate_agent_timer("#progressive_timer", agent_timer_data)
+				initiate_agent_timer("#pause_progressive_timer", agent_timer_data)
+				initiate_agent_timer("#predictive_timer", agent_timer_data)
+				initiate_agent_timer("#break_timer", agent_timer_data)
+				initiate_agent_timer("#hold_timer", agent_timer_data)
+				initiate_agent_timer("#transfer_timer", agent_timer_data)
+				initiate_agent_timer("#inbound_timer", agent_timer_data)
+				initiate_agent_timer("#blended_timer", agent_timer_data)			
+			if (window.IsDuplicate() == false) {
+				$("#idle_timer").countimer('start');
+				$("#app_timer").countimer('start');
+			}
+			$('.preloader').fadeOut("slow");
+			$('#show-agent-totalcall-today small span').text(sessionStorage.getItem("todays_call",""))
+			$('#show-agent-totalcall-month small span').text(sessionStorage.getItem("monthly_call",""))
+			$('#show-agent-assigned-calls small span').text(sessionStorage.getItem("assigned_calls",""))
+		});
+		$.validate({
+			form:'#change_password_form',
+			modules : 'security',
+		});
+		$('#c_password_modal').on('hidden.bs.modal', function (e) {
+			$('#change_password_form')[0].reset()
+		})
+	</script>
+	<script type="text/javascript">
+		$(document).ready(function(){
+			
+			agent_info_vue.agent_breaks = {{breaks|safe}}
+			// $('#new_password').password({
+			// 	animate: true,
+			// });
+			$(".pr-password").passwordRequirements({
+            });
+			sessionStorage.setItem("todays_call",`{{total_agentcalls_today|safe}}`)
+			sessionStorage.setItem("monthly_call", `{{ total_agentcalls_month|safe }}`)
+			sessionStorage.setItem("assigned_calls",`{{ total_agent_assigned_calls|safe}}`)
+			$('#show-agent-totalcall-today small span').text(sessionStorage.getItem("todays_call",""))
+			$('#show-agent-totalcall-month small span').text(sessionStorage.getItem("monthly_call",""))
+			if(sessionStorage.getItem("assigned_calls",0) > 0){
+				$('#show-agent-assigned-calls small span').text(sessionStorage.getItem("assigned_calls",""))
+				$('#show-agent-assigned-calls').removeClass('d-none')
+			}else{
+				$('#show-agent-assigned-calls').addClass('d-none')
+			}
+		});	
+	</script>
+	<script type="text/javascript">
+		$(window).on('beforeunload', function(){
+			if(app_logout == false && window.IsDuplicate() == false){
+				page_reload = true
+				alert("Do you really want to refresh page? Current data will loss")
+
+				common_function_before_page_unload("Window Reload")
+				
+			}
+		});
+		$(document).ready(function () {
+		  if (window.IsDuplicate()) {
+		  	function duplicate_window_funct(){
+			  var agent_activity_data = create_agent_activity_data()
+		    agent_activity_data["event"] = "Duplicate window"
+		    $.ajax({
+				type:'post',
+				headers: {"X-CSRFToken":csrf_token},
+				url: '/api/window_reload/',
+				data: agent_activity_data,
+			});
+			}
+		  	setTimeout(duplicate_window_funct,2000);
+		    swal({
+		        title: 'This is duplicate window',
+		        text: 'You will not able to access it',
+		        button: {
+		          text: "OK",
+		          value: true,
+		          visible: true,
+		          className: "btn btn-primary"
+		        }
+		      }).then((close) =>{
+		      	if(close){
+		      		window.close()
+		      	}
+		      })
+		    $('.preloader').fadeIn('fast');
+		  }
+		});
+	</script>
+	<script type="text/javascript">
+	$(document).ready(function() {
+		$("#scSubmit").click(function(){
+			agent_timer_data = agent_time_format('0:0:0')
+			initiate_agent_timer("#dialer_login", agent_timer_data)
+			$("#dialer_login").countimer('start');
+		});
+		if(agent_info_vue.isMobile()){
+			var daily_data = $('#daily_data');
+			var monthly_data = $('#monthly_data');
+			data = {
+			    datasets: [{
+			        data: [48,120],
+					backgroundColor: [
+						'rgba(24, 93, 198, 1)',
+						'rgba(43, 176, 226, 1)'
+					],
+					pointStyle: 'circle',
+			    }],
+			    labels: [
+			        'Target',
+			        'Achived'
+			    ]
+			};
+			var myDoughnutChart = new Chart(daily_data, {
+			    type: 'doughnut',
+				data: data,
+				options: {
+					legend: {
+						display: true,
+						position:'bottom',
+						fullWidth:false,
+						labels:{
+							usePointStyle:true,
+							boxWidth:6,
+						}
+					},
+					title:{
+						display:true,
+						text:'Daily',
+						fontSize:14,
+					},
+					cutoutPercentage:70
+				}
+			});
+			var myDoughnutChart = new Chart(monthly_data, {
+			    type: 'doughnut',
+				data: data,
+				options: {
+					legend: {
+						display: true,
+						position:'bottom',
+						fullWidth:false,
+						labels:{
+							usePointStyle:true,
+							boxWidth:6,
+						}
+					},
+					title:{
+						display:true,
+						text:'Monthly'
+					},
+					cutoutPercentage:70,
+				}
+			});
+		}
+	});
+	var windowWidth = $(window).width();
+	$( window ).resize(function() {
+		if(windowWidth > $(window).width() && $(window).width()< 576 && !(windowWidth <576) ){
+			location.reload();
+		}
+		else if (windowWidth < $(window).width() && $(window).width() > 576 && !(windowWidth >576) ){
+			location.reload();
+		}
+	})
+	</script>
+	{% endblock agent-js%}
+	<!-- All extra-js files will come here -->
+	{% block agent-extra-js %}
+	{% endblock agent-extra-js%}
+</body>
+</html>

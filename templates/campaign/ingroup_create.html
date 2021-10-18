@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+
+{% block title %}{% if ingroup_campaign %}Edit{% else %}Create{% endif %} Ingroup Campaign{% endblock title %}
+
+{% block header %}Campaign Management<small>{% if ingroup_campaign %}Edit{% else %}Create{% endif %} Ingroup Campaign</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'ingroup_campaign' %}">InGroup</a></li>
+<li class="breadcrumb-item active" aria-current="page">{% if ingroup_campaign %}Edit{% else %}Create{% endif %}</li>
+{% endblock breadcrumb %}
+{% block extra-stylesheets %}
+	<style type="text/css">
+	.pass-colorbar {
+	   background-image: url({% static "images/passwordstrength.jpg" %});
+}
+</style>
+{% endblock extra-stylesheets %}
+{% block content %}
+{% if can_create or can_edit %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body" id="">
+				<legend>{% if ingroup_campaign %}Edit {% else%}Create {% endif %}Ingroup Campaign</legend>
+				<form class="forms-sample" id="ingroup_form">
+					{% csrf_token %}
+					<!-- If user select all fields starts-->
+					<div class="tab-content p-0 p-sm-3" id="default_div">
+						<div class="tab-pane fade show active" id="user" role="tabpanel" aria-labelledby="user">
+							<div class="card">
+								<div class="card-body">
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="username" class="col-sm-4 col-form-label">Name<span class="star">*</span> :</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control blockfirstspace" id="name" placeholder="Name" name="name" data-toggle="tooltip" data-original-title="Enter Unique Name " data-validation="length alphanumeric" data-validation-length="min4" data-validation-allowing="_" data-validation-error-msg-container="#name-error" value="{{ingroup_campaign.name }}">
+													<span id="name-error"></span>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="" class="col-sm-4 col-form-label">Status :</label>
+												<div class="col-sm-8">
+													<select class="form-control" name="status" id="status">
+														{% for status in ingroup_status %}
+															{% if status.0 == ingroup_campaign.status %}
+																<option value="{{ status.0 }}" selected>{{ status.1 }}</option>
+															{% else %}
+																<option value="{{ status.0 }}">{{ status.1 }}</option>
+															{% endif %}
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="" class="col-sm-4 col-form-label">Strategy :</label>
+												<div class="col-sm-8">
+													<select class="form-control" name="strategy">
+														{% for strategy in ingroup_strategy %}
+															{% if strategy.0 == ingroup_campaign.strategy %}
+																<option value="{{ strategy.0 }}" selected>{{ strategy.1 }}</option>
+															{% else %}
+																<option value="{{ strategy.0 }}">{{ strategy.1 }}</option>
+															{% endif %}
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div id="add_trunk_div">
+									{% include "campaign/trunk_group_expansion.html" %} 
+								</div>
+								<div id="add_ingroup_campaign_div">
+									<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
+										<div class="row">
+											<div class="col-md-12">
+												<div class="form-group row">
+													<label for="" class="col-sm-5 col-form-label">Manage Ingroup Campaign:</label>
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-12 order-last" v-for="(val,index) in ingroup_camp_list">
+												<div class="form-group row">
+													<label class="col-1 col-form-label" v-model=val['priority']>${index+1}.</label>
+													<div class="col-3">
+														<single-select class="form-control col-5"  name="campaign" data-validation="required" :id="index+'-camp_id'" v-model="val['campaign_id']" :options="campaign_list" v-on:where-change="checkCampaign(index, val['campaign_id'])" :disabled="non_user_campaigns.includes(val['campaign_id'])">
+														<option value="">Select Campaign</option>
+														</single-select>
+														<span class="has-error d-none" :id="index+'-exist_group'"><span class="help-block form-error">This campaign alredy selected in other group, select differnt campaign</span></span>
+														<span class="has-error d-none" :id="index+'-exist_current_group'"><span class="help-block form-error">This campaign alredy selected, select differnt campaign</span></span>
+													</div>
+													<div class="col-1">
+														<span v-if="ingroup_camp_list.length > 1 & !non_user_campaigns.includes(val['campaign_id'])" class="fa fa-times-circle ml-1 ml-sm-2 text-danger" style="font-size: 20px; cursor: pointer;" @click="remove_campaign(index)"></span>
+													</div>
+													<div class="col-1">
+														<span v-if="index+1 === ingroup_camp_list.length" @click="add_campaign(index)" class="fa fa-plus-circle text-success ml-1 ml-sm-2" style="font-size: 20px; cursor: pointer;"></span>
+													</div>
+												</div>
+											</div>
+										</div>
+									</fieldset>
+									<div  class="row">
+										<div class="col-sm-12">
+											<div class="float-right">
+												<button type="button" class="btn btn-success mr-sm-2" @click='saveInGroup'>Submit</button>
+											</div>
+										</div>
+									</div>
+								</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<input type="hidden" id="in_group_id" value="{{ingroup_campaign.id}}">
+					<input type="hidden" name="caller_id" id="caller_id">
+					<input type="hidden" name="campaign_data" id="campaign_data">
+					<!-- all fields div ends -->
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script type="text/x-template" id="single_select_template">
+	<select>
+		<slot></slot>
+	</select>
+</script>
+<script src="{% static 'melody/js/settings.js' %}"></script>
+<script src="{% static 'melody/js/dragula.js' %}"></script>
+<script src="{% static 'js/dial_trunk.js' %}"></script>
+<script src="{% static 'js/ingroup_campaign.js' %}"></script>
+<script type="text/javascript">
+
+{% if can_create or can_edit %}
+$.validate({
+form:'#ingroup_form',
+});
+add_trunk_vue.trunk_list={{trunk_list|convert_in_json|safe}}
+ingroup_campaign_vue.campaign_list = {{campaign_list|safe}}
+ingroup_campaign_vue.non_user_campaigns = {{non_user_campaign|safe}}
+add_trunk_vue.did_type = [{"text":"single","id":"single"},{"text":"multiple","id":"multiple"},{"text":"select all","id":"select_all"}]
+var is_trunk = false;
+add_trunk_vue.skill_ingroup = true
+add_trunk_vue.used_did = {{used_did|safe}}
+console.log({{ingroup_campaign.caller_id|safe}})
+{% if ingroup_campaign %}
+	var trunk_detail = {{ingroup_campaign.caller_id|safe}}
+	range_array = []
+	$.each(add_trunk_vue.trunk_list, function(index,trunk_val){
+		console.log(parseInt(trunk_val["id"]), '------', parseInt(trunk_detail["trunk_id"]))
+		if(parseInt(trunk_val["id"]) === parseInt(trunk_detail["trunk_id"])){
+			is_trunk = true
+			var temp_range = trunk_val["did_range"].split(",")
+            var start_end = temp_range[0]
+            if (temp_range[1] == undefined) {
+                end_node = start_end
+            }
+            else {
+                end_node = temp_range[1]
+            }
+            let is_leading_zero = false
+            let start_end_length = start_end.length
+            if (start_end.match(/^0+/)) {
+                is_leading_zero = true
+            }
+            for (i = start_end; i <= end_node; i++) {
+            	let did_value = (is_leading_zero) ? i.toString().padStart(start_end_length,"0") : i.toString()
+                if(add_trunk_vue.used_did.indexOf(did_value.toString()) === -1){
+                	select_options = {
+                		"id":i,
+                		"text":did_value,
+                		"disabled":false,
+                	}
+                }else{
+                	select_options = {
+                		"id":i,
+                		"text":did_value,
+                		"disabled":true,
+                	}
+                } 
+                 range_array.push(select_options)
+            }
+            dummy_data = {"trunk_priority":1, "trunk_id":trunk_detail['trunk_id'],"did_type":trunk_detail['did_type'],"did":trunk_detail["did"],"options":range_array, "old_trunk":trunk_detail["trunk_id"]}
+            if(trunk_detail['did_type'] == "single"){
+            	dummy_data["did"] = trunk_detail["did"][0]
+            }
+			add_trunk_vue.group_trunk_list.push(dummy_data)
+		}
+	})
+	{% for camp in ingroup_campaign.ingroup_campaign.all %}
+
+		ingroup_campaign_vue.ingroup_camp_list.push({
+			"campaign_id":{{camp.campaign.id}},
+			"priority":{{camp.priority}}
+		})
+	{% endfor %}
+	{% if not is_campaign %}
+		ingroup_campaign_vue.ingroup_camp_list.push({"campaign_id":"","priority":"1"})
+	{% endif %}
+	if(is_trunk==false){
+		add_trunk_vue.group_trunk_list.push({"trunk_priority":1, "trunk_id":"","did_type":"","did":[],"options":[], "old_trunk":""})
+	}
+{% else %}
+add_trunk_vue.group_trunk_list.push({"trunk_priority":1, "trunk_id":"","did_type":"","did":[],"options":[], "old_trunk":""})
+ingroup_campaign_vue.ingroup_camp_list.push({"campaign_id":"","priority":"1"})
+{% endif %}
+add_trunk_vue.camp_page = true
+{% endif %}
+</script>
+
+{% endblock extra-js %}+

@@ -1,0 +1,544 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Edit User{% endblock title %}
+
+{% block header %}User Management<small>Edit User</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'users' %}">Users</a></li>
+<li class="breadcrumb-item active" aria-current="page">Modify</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_update %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Edit User</legend>
+				<ul class="nav nav-tabs nav-justified" role="tablist">
+					<li class="nav-item">
+						<a class="nav-link active text-bold" id="user-tab" data-toggle="tab" href="#user" role="tab" aria-controls="user" aria-selected="true">User</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link text-bold" id="user-settings-tab" data-toggle="tab" href="#user-additional-settings" role="tab" aria-controls="user-additional-settings" aria-selected="false">Additional Settings</a>
+					</li>
+				</ul>
+				<form class="forms-sample" id="user-edit-form">
+					{% csrf_token %}
+					<div class="tab-content p-0 p-sm-3">
+						<!-- campaign tab and table  -->
+						<div class="tab-pane fade show active" id="user" role="tabpanel" aria-labelledby="user">
+							<div class="card">
+								<div class="card-body">
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="username" class="col-sm-4 col-form-label">User Id<span class="star">*</span>:</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control noSpace" id="username" placeholder="Name" name="username" value="{{ user_detail.username }}" data-toggle="tooltip" data-original-title="Enter Unique Username" data-validation="length alphanumeric" data-validation-length="min4" data-validation-allowing="_@." data-validation-error-msg-container="#user-name-error">
+													<span id="user-name-error"></span>
+												</div>
+											</div>
+											
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="extension" class="col-sm-4 col-form-label">Extension<span class="star">*</span> :</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control" id="extension" placeholder="extension" name="extension" value="{{ user_detail.extension }}" data-validation="number" data-validation-allowing="range[1000;9999]" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)"
+													{% if user_detail.is_superuser %}readonly{% endif %} data-validation-error-msg-container="#extension-error" >
+													<span id="extension-error"></span>
+												</div>
+											</div>
+											
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="first_name" class="col-sm-4 col-form-label">First Name :</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control" id="first_name" data-toggle="tooltip" data-original-title="Enter Your First Name" placeholder="First Name" name="first_name" value="{{ user_detail.first_name }}">
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="last_name" class="col-sm-4 col-form-label">Last Name :</label>
+												<div class="col-sm-8"> 
+													<input type="text" data-toggle="tooltip" data-original-title="Enter Your Last Name" class="form-control" id="last_name" placeholder="Last Name" name="last_name" value="{{ user_detail.last_name }}">
+												</div>
+											</div>
+											
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="employee_id" class="col-sm-4 col-form-label">Employee Id:</label>
+												<div class="col-sm-8">
+													{% if user_detail.employee_id %}
+														<input type="text" class="form-control noSpace" id="employee_id" placeholder="Employee ID" name="employee_id" value="{{ user_detail.employee_id }}" data-toggle="tooltip" data-original-title="Enter Unique Employee Id" data-validation-error-msg-container="#employee_id-error">
+													{% else %}
+														<input type="text" class="form-control noSpace" id="employee_id" placeholder="Employee ID" name="employee_id" value="" data-toggle="tooltip" data-original-title="Enter Unique Employee Id" data-validation-error-msg-container="#employee_id-error">
+													{% endif %}
+													<span id="employee_id-error"></span>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="extension" class="col-sm-4 col-form-label">Date Of Birth :</label>
+												<div class="col-sm-8">
+													<div id="datepicker-popup" class="input-group date datepicker">
+								                        <input type="text" class="form-control" name="date_of_birth" value="{{ user_detail.date_of_birth|date:"Y-m-d"}}">
+								                        <span class="input-group-addon input-group-append border-left">
+								                          <span class="far fa-calendar input-group-text" style="padding: 10px"></span>
+								                        </span>
+							                      	</div>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="extension" class="col-sm-4 col-form-label">User role<span class="star">*</span> :</label>
+												<div class="col-sm-8">
+													<select class="form-control select2-class" name="user_role" id="user_role" {% if user_detail.is_superuser %}disabled{% endif %}>
+														<option value="" disabled>Select Role</option>
+														{% if not user_detail.is_superuser %}
+														{% for role in user_role %}
+															{% if role.id == user_detail.user_role.id %}
+																<option value="{{ role.id }}" data-name="{{role.name}}" data-level="{{ role.access_level }}" selected>{{ role.name }}</option>
+															{% else %}
+																<option value="{{ role.id }}" data-name="{{role.name}}" data-level="{{ role.access_level }}">{{ role.name }}</option>
+															{% endif %}
+														{% endfor %}
+														{% endif %}
+													</select>
+												</div>
+											</div>
+										</div>
+										{% if available_users %}
+										<div class="col-md-6">
+											{% if user_detail.user_role != None %}
+											<div class="form-group row" id="reporting-row">
+											{% else %}
+											<div class="form-group row d-none" id="reporting-row">
+											{% endif %}
+												<label for="" class="col-sm-4 col-form-label">Reporting To </label>
+												<div class="col-sm-8">
+													<select class="form-control" name="reporting_to" id="user_access_level">
+														<option value="">Select User</option>
+														{% for available_user in available_users %}
+															{% if available_user.id == user_detail.reporting_to.id %}
+																<option value="{{ available_user.id}}" data-access="{{available_user.user_role.access_level}}" selected>{{available_user.username}}</option>
+															{% else %}
+															<option value="{{ available_user.id }}" data-access="{{available_user.user_role.access_level}}">{{available_user.username}}</option>
+															{% endif %}
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+										{% endif %}
+									</div>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="" class="col-sm-4 col-form-label">Group :</label>
+												<div class="col-sm-8">
+													<select class="form-control" id="group" name="group" multiple>
+														<option value="" disabled="disabled">Select Group</option>
+														{% for group in user_detail.group.all %}
+															<option value="{{ group.id }}" selected>{{ group.name }}</option>
+														{% endfor %}
+														{% for group in groups %}
+															<option value="{{ group.id }}">{{ group.name }}</option>
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+											
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="" class="col-sm-4 col-form-label">Timezone :</label>
+												<div class="col-sm-8">
+													<select class="form-control" name="user_timezone" id="user_timezone">
+														<option value="">Select Timezone</option>
+														{% for timezone in user_timezone %}
+															{% if timezone.0 == user_detail.user_timezone %}
+															<option value="{{ timezone.0 }}" selected>{{timezone.1 }}</option>
+															{% else %}
+															<option value="{{ timezone.0 }}">{{timezone.1 }}</option>
+															{% endif %}
+															
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+											
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="trunk" class="col-sm-4 col-form-label">Dial Trunk :</label>
+												<div class="col-sm-8">
+													<select class="form-control" name="trunk" id="user_trunk">
+														<option value="">Select Trunk</option>
+														{% for trunk in trunk_list %}
+														{% if trunk.id == user_detail.trunk_id %}
+															<option value="{{ trunk.id }}" data-did_range="{{ trunk.did_range }}" selected>{{trunk.name }}</option>
+														{% else %}
+															<option value="{{ trunk.id }}" data-did_range="{{ trunk.did_range }}">{{trunk.name }}</option>
+														{% endif %}
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="user_caller_id" class="col-sm-4 col-form-label">Caller ID :</label>
+												<div class="col-sm-8"> 
+													<select class="form-control" name="caller_id" id="user_caller_id">
+														<option value="">Select Caller ID</option>
+													</select>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="email" class="col-sm-4 col-form-label">Email Id:</label>
+												<div class="col-sm-8"> 
+													<input type="email" class="form-control" id="email" data-toggle="tooltip" data-original-title="Enter Valid Email Id" placeholder="email" name="email" value="{{ user_detail.email }}" data-validation-error-msg-container="#email-error">
+													<span id="email-error"></span>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="email_password" class="col-sm-4 col-form-label">Email Password :</label>
+												<div class="col-sm-8">
+													<input type="password" class="form-control" id="email_password" data-toggle="tooltip" data-original-title="Enter Your Email Password" placeholder="email password" name="email_password" value="{{user_detail.email_password|default_if_none:''}}" onpaste="pasteNumber(event)" autocomplete="false">
+													<span id="callerid-error"></span>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="extension" class="col-sm-4 col-form-label">Status :</label>
+												<div class="col-sm-8">
+													<select class="form-control" name="is_active">
+														{% for status in user_status %}
+															{% if status.0 == user_detail.is_active %}
+																<option value="{{ status.0 }}" selected>{{ status.1 }}</option>
+															{% else %}
+																<option value="{{ status.0 }}">{{ status.1 }}</option>
+															{% endif %}
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+									</div>
+									<!-- work from home functionality -->
+									<div class="row {% if not enable_wfh %}d-none{% endif %}">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="wrap_up_time" class="col-sm-4 col-form-label">WFH Numeric :</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control" name="wfh_numeric" id="wfh_numeric" placeholder="Agent Mobile Number" {% if user_detail.properties.wfh_numeric != None %} value="{{user_detail.properties.wfh_numeric}}" {%else%} value = ''{%endif%} data-toggle="tooltip" onkeypress="return isNumber(event)" data-original-title="Enter numeric ID Eg:9xxxxx" data-validation-length="max12" onpaste="pasteNumber(event)" data-validation-error-msg="The input value must be upto 12 numbers" data-validation-error-msg-container="#wfh_numeric-error">
+													<span id="wfh_numeric-error"></span>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6" id="w_req_callback">
+											<div class="form-group row">
+												<label class="col-sm-4 col-form-label">WFH Request Callback :</label>
+												<div class="col-sm-8 form-check form-check-primary">
+						                            <label class="form-check-label">
+														<input type="checkbox" class="form-check-input"  name="w_req_callback" {% if user_detail.properties.w_req_callback == True %} checked {% endif %} id="wfh_req_callback" value="{{user_detail.properties.w_req_callback}}">
+														<i class="input-helper"></i>
+													</label>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-sm-6">
+											<div class="alert alert-danger d-none" id="user-err-msg">
+											 </div>
+										</div>
+										<div class="col-sm-6 mt-3 mt-sm-0">
+											<div class="float-sm-right">
+												<button type="button" class="btn btn-success btn-icon-text edit-user mr-sm-2" id="edit-user-btn"><i class="far fa-check-square btn-icon-prepend"></i>Update</button>
+												<button type="button" class="btn btn-light btn-icon-text" id="" onclick="showSwal('warning-message-and-cancel','OK', '{% url 'users' %}')"><i class="fas fa-arrow-left btn-icon-prepend"></i>Cancel</button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="tab-pane fade" id="user-additional-settings" role="tabpanel" aria-labelledby="user-additional-settings">
+							<div class="card">
+								<div class="card-body">
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="device_pass" class="col-sm-4 col-form-label">Device Pass <span class="star">*</span>:</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control" id="device_pass" placeholder="Device Pass" name="device_pass" value="{{ user_detail.properties.device_pass }}" data-validation="required">
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="domain" class="col-sm-4 col-form-label">Domain <span class="star">*</span>:</label>
+												<div class="col-sm-8">
+													<!-- <input type="text" class="form-control" id="domain" placeholder="domain" name="domain" value="{{ user_detail.properties.domain }}" data-validation="required"> -->
+													<select class="form-control" name="domain" id="domain" data-validation="required">
+														<option value="">Select Server</option>
+														{% for switch in switch_list %}
+															{% if switch.id == user_detail.properties.domain.id %}
+																<option value="{{ switch.id}}" selected>{{switch.name}}</option>
+															{% else %}
+															<option value="{{ switch.id }}">{{switch.name}}</option>
+															{% endif %}
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="level" class="col-sm-4 col-form-label">Level <span class="star">*</span>:</label>
+												<div class="col-sm-8">
+													<input type="number" class="form-control" id="level" placeholder="Device Pass" name="level" value="{{ user_detail.properties.level }}" data-validation="required" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)">
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="position" class="col-sm-4 col-form-label">Position <span class="star">*</span>:</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control" id="position" placeholder="position" name="position" value="{{ user_detail.properties.position }}" data-validation="required">
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="level" class="col-sm-4 col-form-label">Type :</label>
+												<div class="col-sm-8">
+													<select class="form-control" name="type">
+														{% for type in agent_type %}
+															{% if type.0 == user_detail.properties.type %}
+																<option value="{{ type.0 }}" selected>{{ type.1 }}</option>
+															{% else %}
+																<option value="{{ type.0 }}">{{ type.1 }}</option>
+															{% endif %}
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="contact" class="col-sm-4 col-form-label">Contact <span class="star">*</span>:</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control" id="contact" placeholder="contact" name="contact" value="{{ user_detail.properties.contact }}" data-validation="required">
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="level" class="col-sm-4 col-form-label">Status :</label>
+												<div class="col-sm-8">
+													<select class="form-control" name="status">
+														{% for status in agent_status_choice %}
+															{% if status.0 == user_detail.properties.status %}
+																<option value="{{ status.0 }}" selected>{{ status.1 }}</option>
+															{% else %}
+																<option value="{{ status.0 }}">{{ status.1 }}</option>
+															{% endif %}
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="max_no_answer" class="col-sm-4 col-form-label">Max No Answer <span class="star">*</span>:</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control" id="max_no_answer" placeholder="max_no_answer" name="max_no_answer" value="{{ user_detail.properties.max_no_answer }}" data-validation="required">
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="wrap_up_time" class="col-sm-4 col-form-label">Wrap Up Time <span class="star">*</span>:</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control" id="wrap_up_time" placeholder="wrap_up_time" name="wrap_up_time" value="{{ user_detail.properties.wrap_up_time }}" data-validation="required">
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="reject_delay_time" class="col-sm-4 col-form-label">Reject Delay Time <span class="star">*</span>:</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control" id="reject_delay_time" placeholder="reject_delay_time" name="reject_delay_time" value="{{ user_detail.properties.reject_delay_time }}" data-validation="required">
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="extension" class="col-sm-4 col-form-label">Call Protocol :</label>
+												<div class="col-sm-8 form-inline">
+												{% for type in call_type %}
+													{% if not enable_wfh and type.0 == '2'%}
+													{% else %}
+													<div class="form-check mr-sm-2">
+														<label class="form-check-label">
+															<input type="radio" class="form-check-input" name="call_type" {% if type.0 == user_detail.call_type %}checked=""{% endif %} value="{{type.0}}" >
+															<i class="input-helper"></i>
+															{{type.1}}
+														</label>
+													</div>
+													{% endif %}
+												{% endfor %}
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+				                          	<div class="form-group row">
+												<label for="busy_delay_time" class="col-sm-4 col-form-label">Busy Delay Time <span class="star">*</span>:</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control" id="busy_delay_time" placeholder="busy_delay_time" name="busy_delay_time" value="{{ user_detail.properties.busy_delay_time }}" data-validation="required">
+												</div>
+											</div>
+										</div>
+									</div>
+
+									{% if user_detail.user_role.user_group == "admin" %}
+									<div class="row" id="superuser_div">
+									{% else %}
+									<div class="row d-none" id="superuser_div">
+									{% endif %}
+										<div class="col-md-6">
+											<div class="form-check form-check-primary">
+					                            <label class="form-check-label">
+					                            	{% if user_detail.is_superuser %}
+				                              		<input type="checkbox" class="form-check-input"  name="is_superuser" checked="" id="superuser_chkbox">
+				                              		<i class="input-helper"></i>
+				                              		{% else %}
+				                              		<input type="checkbox" class="form-check-input"  name="is_superuser" id="superuser_chkbox" onclick="confirmBeforeChk('Are you sure you want to make this user a superuser', '#superuser_chkbox')">
+				                              		<i class="input-helper"></i>
+				                              		{% endif %}
+					                              Is SuperUser
+					                            <i class="input-helper"></i></label>
+				                          	</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-sm-6">
+											<div class="alert alert-danger d-none" id="user-settings-err-msg">
+											 </div>
+										</div>
+										<div class="col-sm-6 mt-3 mt-sm-0">
+											<div class="float-sm-right">
+												<button type="button" class="btn btn-success btn-icon-text mr-sm-2" id="edit-user-settings-btn"><i class="far fa-check-square btn-icon-prepend"></i>Update</button>
+												<button type="button" class="btn btn-light btn-icon-text" id="" onclick="showSwal('warning-message-and-cancel','OK', '{% url 'users' %}')"><i class="fas fa-arrow-left btn-icon-prepend"></i>Cancel</button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+<input type="hidden" id="ext_reporting_to" value="{{user_detail.reporting_to.id}}">
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/jquery.validate.min.js' %}" ></script>
+<script src="{% static 'js/form-validator.min.js' %}"></script>
+<script type="text/javascript">
+	if($("#wfh_numeric").val().length<10) {
+	 	$("#w_req_callback").addClass("d-none")
+	 }
+	$("#wfh_numeric").keypress(function() {
+	    if($(this).val().length>=9) {
+	    	$("#w_req_callback").removeClass("d-none")
+	    }else{
+	    	$("#w_req_callback").addClass("d-none")
+	    }
+	});
+	$("#wfh_numeric").keydown(function() {
+	    if($(this).val().length<9) {
+	    	$("#w_req_callback").addClass("d-none")
+	    }
+	});
+	$('#wfh_req_callback').change(function(){
+	    $('#wfh_req_callback').val('False');
+	    if(this.checked){
+	        $('#wfh_req_callback').val('True');
+	    }    
+	});
+	{% if can_update %}
+		$.validate({
+			form:'#user-edit-form',
+		});
+
+		var user_id = '{{user_detail.id}}'
+		var used_did_list = {{ used_did_list|safe }}
+		$(document).ready(function() {
+			$('#user_trunk').trigger('change');
+			$('#user_caller_id').val('{{ user_detail.caller_id }}').trigger('change');
+			$('#user-edit-form #datepicker-popup').datepicker({
+				endDate: '+0d',
+				enableOnReadonly: true,
+				todayHighlight: true,
+				format: 'yyyy-mm-dd',
+				orientation: 'bottom auto',
+		  		autoclose: true,
+		  		assumeNearbyYear: true,
+			});
+			// if(!$('input[name="call_type"]').is(':checked')){
+			// 	$("input[name='call_type'][value='webrtc']").prop("checked",true)
+			// }
+		});
+		var ext_user = $("#ext_reporting_to").val()
+		{% if not user_detail.is_superuser or user_detail.user_role.user_group == "admin" %}
+			$("#user_role").trigger("change")
+		{% endif %}
+
+	{% else %}
+		PermissionDeny();
+	{% endif %}
+</script>
+
+{% endblock extra-js %}

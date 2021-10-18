@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+{% block title %}Email Gateway{% endblock title %}
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+{% endblock extra-stylesheets %}
+{% block header %}Modules<small>Email Gateway Setting</small>{% endblock header %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Email Gateway</li>
+{% endblock breadcrumb %}
+{% block content %}
+{% if can_read %}
+<div class="card">
+	<div class="card-body">
+		<legend>Email Gateway</legend>
+		{% csrf_token %}
+		{% include "search.html" %}    
+		<div class="">
+			<table id="email-gateway-list-table" class="table display table-striped nowrap avatar-table" style="width: 100%">
+				<thead>
+					<tr>
+						<th class="avatar"></th>
+						{% for column in col_list %}
+							<th data-data="{{column}}" class="{% if column == 'name' %}name{% endif %} text-capitalize">{{ column|table_header }}</th>
+						<th data-data="created_date" class="list_date">created date</th>
+						<th data-data="modified_date" class="list_date">modified date</th>
+						{% endfor %}
+						{% if can_update or can_delete %}
+							<th data-data="checkbox_col" class="checkbox_col">
+								<div class="btn-group select-all-div">
+									<div class="form-check">
+										<label class="form-check-label ml-3">
+											<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+											<i class="input-helper"></i>
+										</label>
+									</div>
+									{% if can_delete %}
+									<div class="dropdown">
+										<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+											<span class="caret"></span></button>
+										<ul class="dropdown-menu">
+											<li class="dropdown-item" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">Delete</li>
+										</ul>
+									</div>
+									{% endif %}
+								</div>
+							</th>
+							<th data-data="action" class="action">Action</th>
+						{% endif %}
+					</tr>
+				</thead>
+			</table>
+		</div>
+		<input type="hidden" id="app_name" value="callcenter">
+		<input type="hidden" id="model_name" value="EmailGateway">
+		{% include "vue_pagination.html" %} 
+	</div>
+</div>
+{% endif %}
+{% if can_create   %}
+<!-- action buttons -->
+<div class="bottom-menu">
+	<div class="action-button-circle">
+		<a title="Add Email Gateway" href="{% url 'create-email_gateway' %}">
+			<div class="circle-button skin-black">
+				<i class="fa fa-plus button-area add-campaigns"></i>
+			</div>
+		</a>
+	</div>
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		{% if can_read %}
+			var script_table = $('#email-gateway-list-table')
+			selective_datatable(script_table);  //datatbale jquery
+			edit_url = "{% url 'edit-email_gateway' 123 %}"
+			get_pagination_data(1, true)
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+	});
+</script>
+{% endblock extra-js %}

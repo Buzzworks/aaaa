@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Create Dispos{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+{% endblock extra-stylesheets %}
+
+{% block header %}Campaign Management<small>Dispositions</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'dispositions' %}">Dispositions</a></li>
+<li class="breadcrumb-item active" aria-current="page">Create</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<form id="create-disposition-form">
+					<legend>Create Dispositions</legend>
+					<div class="row">
+						<div class="col-12 grid-margin stretch-card">
+							<div class="card">
+								<div class="card-body">
+									<form class="forms-sample" id="calltime-create-form">
+										{% csrf_token %}
+										<input type="hidden" name="dispos" id="dispos">
+										<div class="row">
+											<div class="col-md-6 pl-4">
+												<div class="form-group row">
+													<label for="calltime-name" class="col-sm-4 col-form-label"> Primary Dispo Name:</label>
+													<div class="col-sm-8">
+														<input type="text" class="form-control" id="calltime-name" placeholder="Enter Primary Disposition" name="name" data-validation="required" data-validation-error-msg-container="#dispo-name-error">
+														<span id="dispo-name-error"></span>
+													</div>
+												</div>
+											</div>
+											<div class="col-md-4 pl-4">
+												<div class="form-group row">
+													<label class="col-sm-4 col-form-label"> Status:</label>
+													<div class="col-sm-8">
+														<select class="form-control" name="status" id="user_role">
+														<option value="Active">Active</option>
+														<option value="Inactive">Inactive</option>
+													</select>
+													</div>
+												</div>
+											</div>
+											<div class="col-md-2">
+												<button type="button" class="btn btn-info  mr-2" id="add-sub-dispo">Add</button>
+												
+											</div>
+										</div>
+										<div class="accordion" id="accordion" role="tablist">
+											
+										</div>
+										<div class="row clone-subdispo d-none">
+											<div class="col-12">
+												<div class="card">
+													<div class="card-header py-3" role="tab" id="dispo-heading">
+														<div class="row">
+															<div class="col-10 col-sm-11">
+																<h6 class="mb-0">
+																	<a data-toggle="collapse" href="#dispo-collaps" aria-expanded="false" aria-controls="collapse-1" class="sub-dispo-heading collapsed">
+																		Sub Dispo
+																	</a>
+		       													</h6>
+		       												</div>
+													        <div class="col-2 col-sm-1">
+																<i class="fa fa-times-circle text-danger fa-5x remove-sub-dispo "></i>
+															</div>
+														</div>
+													</div>
+													<div id="dispo-collaps" class="collapse show collapse-div" role="tabpanel" aria-labelledby="lead-heading" data-parent="#accordion">
+														<div class="card-body">
+															<div class="row">
+																<div class="col-md-1">
+																	<label for="lead_name" class="col-form-label">Name:</label>
+																</div>
+																<div class="col-md-2">
+																	<input type="text" class="form-control" id="sub-dispo-name" placeholder="name" >
+																</div>
+																<div class="col-md-1">
+																	<label for="count" class=" col-form-label">Type:</label>
+																</div>
+																<div class="col-md-2">
+																	<select class="form-control field_type" id="">
+																		{% for type in field_types %}
+																		<option value="{{ type.0 }}">{{ type.1 }}</option>
+																		{% endfor %}
+																	</select>
+																</div>
+																<div class="col-md-1 size-div d-none">
+																	<label for="" class=" col-form-label">Size:</label>
+																</div>
+																<div class="col-md-2 size-div d-none">
+																	<input type="text" class="form-control select-size" id="select-size" placeholder="Size" >
+																</div>
+																<div class="col-md-1 option-div d-none">
+																	<label for="" class=" col-form-label">Options:</label>
+																</div>
+																<div class="col-md-2 option-div d-none">
+																	<input type="text" class="form-control select-options" id="select-options" placeholder="Options" >
+																</div>
+																<div class="col-md-1">
+																		<label for="" class=" col-form-label">Edit:</label>
+																</div>
+																<div class="col-md-2">
+																	<div class="form-group row">
+																		<div class="col-sm-2">
+																			<input type="checkbox" name="" class="dispo-checkbox">
+																		</div>
+																		<div class="col-sm-2">
+																			<i class="fa fa-plus-circle text-success fa-5x add-sub-dispo-child" id="add-sub-dispo-child"></i>
+																		</div>
+																		<div class="col-sm-2">
+																			<!-- <i class="fa fa-times-circle text-danger fa-5x remove-sub-dispo-child"></i> -->
+																		</div>
+																	</div>
+																</div>
+															</div>
+															<div id="subdispo-child" class="subdispo-child">
+																<input type="hidden" id="sub-dispo-child-count" value="0">
+																
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="d-none" id="subdispo-child-clone">
+											<div class="card">
+												<div class="card-header py-3" role="tab" id="subdispo-child-heading">
+													<div class="row">
+														<div class="col-10 col-sm-11">
+															<h6 class="mb-0">
+																<a data-toggle="collapse" href="#dispo-collaps" aria-expanded="false" aria-controls="collapse-1" class="sub-dispo-heading collapsed">
+																	Sub Dispo
+																</a>
+	       													</h6>
+	       												</div>
+												        <div class="col-2 col-sm-1">
+															<i class="fa fa-times-circle text-danger fa-5x remove-subdispo-child "></i>
+														</div>
+													</div>
+												</div>
+												<div id="dispo-collaps" class="collapse show collapse-div" role="tabpanel" aria-labelledby="lead-heading" data-parent="#accordion">
+													<div class="card-body">
+														<div class="row">
+															<div class="col-md-1">
+																<label for="lead_name" class="col-form-label">Name:</label>
+															</div>
+															<div class="col-md-2">
+																<input type="text" class="form-control" id="sub-dispo-name" placeholder="name" data-validation="required">
+															</div>
+															<div class="col-md-1">
+																<label for="count" class=" col-form-label">Type:</label>
+															</div>
+															<div class="col-md-2">
+																<select class="form-control subfield_type" id="">
+																	{% for type in field_types %}
+																	<option value="{{ type.0 }}">{{ type.1 }}</option>
+																	{% endfor %}
+																</select>
+															</div>
+															<div class="col-md-1 size-div d-none">
+																<label for="" class=" col-form-label">Size:</label>
+															</div>
+															<div class="col-md-2 size-div d-none">
+																<input type="text" class="form-control select-subparent-size" id="select-subparent-size" placeholder="Size" >
+															</div>
+															<div class="col-md-1 option-div d-none">
+																<label for="" class=" col-form-label">Options:</label>
+															</div>
+															<div class="col-md-2 option-div d-none">
+																<input type="text" class="form-control select-subparent-option" id="select-subparent-option" placeholder="Options" >
+															</div>
+															<div class="col-md-1">
+																	<label for="" class=" col-form-label">Edit:</label>
+															</div>
+															<div class="col-md-2">
+																<div class="form-group row">
+																	<div class="col-sm-2">
+																		<input type="checkbox" name="" class="edit-checkbox">
+																	</div>
+																	<div class="col-sm-2">
+																		<i class="fa fa-plus-circle text-success fa-5x last-sub-dispo-child" id="add-sub-dispo-child"></i>
+																	</div>
+																	<div class="col-sm-2">
+																		<!-- <i class="fa fa-times-circle text-danger fa-5x remove-sub-dispo-child"></i> -->
+																	</div>
+																</div>
+															</div>
+														</div>
+														<div id="last-subdispo-div" class="last-subdispo-div">
+															<input type="hidden" id="last-dispo-child-count" value="0">
+														</div>
+													</div>
+												</div>
+
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-6"></div>
+											<div class="col-md-6" style="margin-top: 10px;">
+												<div class="float-right">
+													<button type="button" class="btn btn-success mr-2" id="create-disposition-btn">Submit</button>
+													<button type="button" class="btn btn-light" id="" onclick="showSwal('warning-message-and-cancel','OK', '/CampaignManagement/CampaignSchedule/')">Cancel</button>
+												</div>
+											</div>
+										</div>
+									</form>
+								</div>
+							</div>
+						</div>
+					</div>
+					
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+<input type="hidden" id="count" value="0">
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/form-validator.min.js' %}"></script>
+<script src="{% static 'js/disposition.js' %}"></script>
+<script src="{%static 'melody/js/form-addons.js'%}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+	  	{% if can_create %}
+			$.validate({
+				form:'#create-disposition-form',
+			});
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+	  } );
+</script>
+{% endblock extra-js %}

@@ -1,0 +1,15 @@
+[Unit]
+Description=flexydial - dialplan daemon for flexydial
+After=network.target
+StartLimitInterval = 0
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+
+ExecStart=/usr/bin/node /usr/local/src/flexydial/fs-dialplan/callcenter.js
+
+[Install]
+WantedBy=multi-user.target
+

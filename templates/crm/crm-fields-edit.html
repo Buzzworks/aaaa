@@ -1,0 +1,486 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% load getcrmdata %}
+
+{% block title %}Crm Field{% endblock title %}
+
+{% block extra-stylesheets %}
+
+<link rel="stylesheet" href="{% static 'css/dataTables.bootstrap4.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/responsive.bootstrap4.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/select.dataTables.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+<style type="text/css">
+.asColorPicker-preview, 
+.asColorPicker-palettes{
+	display:none;
+}
+.asColorPicker-alpha, 
+.asColorPicker-alpha-vertical{
+	display:none;
+}
+</style>
+{% endblock extra-stylesheets %}
+
+{% block header %}Administration Management<small>Edit CRMFields</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm_fields' %}">Crm Fields</a></li>
+<li class="breadcrumb-item active" aria-current="page">Edit</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_create %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Edit CRM Field</legend>
+				<!-- disposition tab and table -->
+				<form id="crm-field-form">
+				{% csrf_token %}
+				<div class="row">
+					<div class="col-md-4">
+						<div class="form-group row">
+							<label for="crm-field-name" class="col-sm-4 col-form-label">Name :</label>
+							<div class="col-sm-8">
+								<input type="text" class="form-control" data-toggle="tooltip" data-original-title="Update CRM name" id="crm-field-name" placeholder="Name" name="name" data-validation="length alphanumeric" data-validation-length="min4" data-validation-allowing="_" value="{{ crmfield.name }}">
+							</div>
+						</div>
+					</div>
+					<div class="col-md-5">
+						<div class="form-group row">
+							<label for="campaign" class="col-sm-4 col-form-label">Campaign:</label>
+							<div class="col-sm-8">
+								<select class="form-control" name="campaign" id="crm_field_campaign" multiple>
+									{% for campaign in campaign_list %}
+										{% if campaign.name in crmfield.campaign_list %}
+											<option value="{{ campaign.name}}" locked="locked" selected>{{ campaign.name }}</option>
+										{% else %}
+											<option value="{{ campaign.name}}">{{ campaign.name }}</option>
+										{% endif %}
+									{% endfor %}
+								</select>
+								<span id="campaign_error"></span>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-1">
+						<button type="button" class="btn btn-info btn-icon-text mr-sm-2" id="add-section">
+							<i class="fa fa-plus"></i>
+						Add</button>
+					</div>
+					
+				</div>
+				<div class="accordion" id="crmf-accordion" role="tablist">
+					{% for field in crm_fields %}
+						<div id="section-{{ forloop.counter }}" class="card pr-2">
+							<div role="tab" id="" class="card-header py-3">
+								<h6 class="mb-0">
+									<a data-toggle="collapse" href="#section-collapse-{{ forloop.counter }}" aria-expanded="false" aria-controls="collapse-1" class="clone-crm-heading">{% if field.section_name %}{{ field.section_name }}{% endif %}{% if field.section_priority %}:{{ field.section_priority }}{% endif %}</a>
+									{% if status == 'false' %} 
+									<span class="d-inline fa fa-times-circle text-danger remove-section" id="remove-section-{{ forloop.counter }}"></span>
+									{% endif %}
+								</h6>
+							</div>
+							<div id="section-collapse-{{ forloop.counter }}" role="tabpanel" aria-labelledby="clone-crm-heading" data-parent="#crmf-accordion" class="collapse collapse-div">
+								<div class="card-body">
+									<div id="" class="row crm-fields">
+										<div class="col-12 col-sm-6 col-md-4">
+											<div class="form-group row">
+												<label for="field" class="col-4 col-form-label">Section Name:</label>
+												<div class="col-8">
+													<input type="text" placeholder="Section Name" data-validation="required alphanumeric"  data-validation-allowing="-_/ " class="form-control section_name" value="{{ field.section_name }}" data-parent="#section-{{ forloop.counter }}"{% if status == 'true' %} readonly="true" {% endif %}>
+												</div>
+											</div>
+										</div>
+										<div class="col-12 col-sm-6 col-md-4">
+											<div class="form-group row">
+												<label for="priority" class="col-4 col-form-label">Priority :</label>
+												<div class="col-8">
+													<input type="text" placeholder="Priority" data-validation="number" data-toggle="tooltip" class="form-control section-priority" data-validation-error-msg-container="#priority-error-msg-{{ forloop.counter }}" value="{{ field.section_priority }}" data-parent="#section-{{ forloop.counter }}" min="1" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)"> 
+													<span id="priority-error-msg-{{ forloop.counter }}" class="priority-msg"></span>
+												</div>
+											</div>
+										</div>
+										<div class="col-12 col-sm-6 col-md-4">
+											<!-- <div class="col-1 form-inline ml-auto">
+												<i id="add-crm-field-{{ forloop.counter }}" class="fa fa-plus-circle text-success fa-5x add-crm-field"></i>
+											</div> -->
+										</div>
+										<div class="col-1"></div>
+									</div>
+									<div class="row crmfield-div" id="crmfield-div-{{ forloop.counter }}">
+										<input type="hidden" id="crmfield-count" value="{{ field.section_fields|length }}">
+										{% for section in field.section_fields %}
+											<div id="crmf-card-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" class="card col-md-12">
+												<div role="tab" id="crmf-heading-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" class="card-header py-3">
+													<h6 class="mb-0">
+														<a data-toggle="collapse" href="#crmf-collapse-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" aria-expanded="false" aria-controls="collapse-4">{% if section.field %}{{section.field}}{% endif %}{% if section.priority %}:{{section.priority }}{% endif %}</a>
+														{% if status == 'false' %}
+														<span class="d-inline fa fa-times-circle text-danger remove-crmfield" id="remove-crmfield-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"></span>
+														{% endif %}
+													</h6>
+												</div>
+												<div id="crmf-collapse-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" role="tabpanel" aria-labelledby="crmf-heading-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" data-parent="#crmfield-div-{{ forloop.parentloop.counter }}" class="collapse collapse-div">
+													<div class="card-body">
+														<div id="crm-field-{{ forloop.counter }}" class="row crm-fields">
+															<div class="col-12 col-sm-6 col-md-3">
+																<div class="form-group row">
+																	<label for="field" class="col-4 col-form-label">Field :</label>
+																	<div class="col-8">
+																		   	{% custom_format_crmfield field.db_section_name section.db_field as formatted_field_name %}
+																		   	{% if formatted_field_name in check_list %}
+																		   		<input type="text" id="field_name" placeholder="Field" data-validation="required alphanumeric"  data-validation-allowing="-_/ " class="form-control field_name" value="{{ section.field }}" data-parent="#crmf-card-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" data-master="#crmfield-div-{{forloop.parentloop.counter}}" disabled>
+																		   	{% else %}
+																		   		<input type="text" id="field_name" placeholder="Field" data-validation="required alphanumeric"  data-validation-allowing="-_/ " class="form-control field_name" value="{{ section.field }}" data-parent="#crmf-card-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" data-master="#crmfield-div-{{forloop.parentloop.counter}}" {% if status == 'true' %} readonly="true" {% endif %}>
+																		   	{% endif %}
+																		<span id="field_error"></span>
+																	</div>
+																</div>
+															</div>
+															<div class="col-12 col-sm-6 col-md-3">
+																<div class="form-group row">
+																	<label class="col-4 col-form-label">Type :
+																	</label>
+																	<div class="col-8">
+																		<select id="field_type" class="form-control" data-parent="#crmf-collapse-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" data-old_value="{{ section.field_type|lower }}" data-span_id="#field-type-error-msg-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" {% if status == 'true' %}disabled {% endif %}>
+																			{% for type in field_types %}
+																				{% if type.0|lower == section.field_type|lower %}
+																					<option value="{{ type.0|lower }}" selected>{{ type.1 }}</option>
+																				{% else %}
+																					<option value="{{ type.0|lower }}">{{ type.1 }}</option>
+																				{% endif %}
+																			{% endfor %}
+																		</select>
+																		<span id="field-type-error-msg-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" class="field-type-msg"></span>
+																	</div>
+																</div>
+															</div>
+															{% if section.field_type in "text,textarea,integer,float" %}
+																<div id="field_size_div" class="col-12 col-sm-6 col-md-3">
+															{% else %}
+																<div id="field_size_div" class="col-12 col-sm-6 col-md-3 d-none">
+															{% endif %}
+																<div class="form-group row">
+																	<label for="size" class="col-4 col-form-label">Size :</label>
+																	<div class="col-8">
+																		<input type="text" id="field_size" placeholder="Size" data-validation="required" class="form-control field_size" value="{{ section.size }}" min="1" onpaste="pasteNumber(event)" onkeypress="return isNumber(event)" {% if section.unique == True %}disabled{% endif %}>
+																		<span class="field-size-msg"></span>
+																	</div>
+																</div>
+															</div>
+															{% if section.field_type in "dropdown, multiselect, multicheckbox, radio" %}
+																<div id="field_options_div" class="col-12 col-sm-6 col-md-3">
+															{% else %}
+																<div id="field_options_div" class="col-12 col-sm-6 col-md-3 d-none">
+															{% endif %}
+																<div class="form-group row">
+																	<label for="options" class="col-4 col-form-label">Options :
+																	</label>
+																	<div class="col-8">
+																		<input type="options" id="field_options" placeholder="Options" data-validation="required" class="form-control" value="{{ section.options }}" data-toggle="tooltip" data-original-title="Enter Values Separated By comma Eg:Option1,Option2,Option3">
+																	</div>
+																</div>
+															</div>
+															<div class="col-12 col-sm-6 col-md-3">
+																<div class="form-group form-inline mt-2">
+																	<div class="form-check mr-sm-3">
+																		<label class="form-check-label d-flex">
+																			<input type="checkbox" id="field_editable" name="" data-id="editable_id_{{ forloop.parentloop.counter }}_{{ forloop.counter }}" class="form-check-input required_enable editable_fields_check" {% if section.editable == True %}checked{% endif %} {% if section.unique == True %}disabled{% endif %}>
+																			Editable
+																		</label>
+																	</div>
+																	<div class="form-check mr-sm-3 {% if section.editable != True %}d-none{% endif %}" id="required_field_div">
+																		<label class="form-check-label d-flex">
+																			<input type="checkbox"  name="" id="required_field_{{ forloop.parentloop.counter }}_{{ forloop.counter }}"class="form-check-input required_fields_check" {% if section.required == True %}checked{% endif %}>
+																			Required
+																		</label>
+																	</div>
+																</div>
+															</div>
+															<div class="col-12 col-sm-6 col-md-3">
+																<div class="form-group row">
+																	<label for="priority" class="col-4 col-form-label">Priority :</label>
+																	<div class="col-8">
+																		<input type="text" id="field_priority" placeholder="Priority" data-validation="number" data-toggle="tooltip" class="form-control field_priority" data-validation-error-msg-container="#field-priority-error-msg-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" value="{{section.priority}}" data-parent="#crmf-card-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" data-master="#crmfield-div-{{forloop.parentloop.counter}}" min="1" onpaste="pasteNumber(event)" onkeypress="return isNumber(event)">
+																		<span id="field-priority-error-msg-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" class="field-priority-msg"></span>
+																	</div>
+																</div>
+															</div>
+															<div class="col-12 col-sm-6 col-md-3">
+																<div class="form-group row">
+																	<label for="priority" class="col-4 col-form-label">Color :</label>
+																	<div class="col-8">
+																	<input type="text" class="color-picker form-control crm-color-picker asColorPicker-hex" data-mode="complex" value="#392C70" name="crm_color">
+																	</div>
+																</div>
+															</div>
+															<div class="col-12 col-sm-6 col-md-3">
+																<div class="form-group row">
+																	<label for="field_status" class="col-4 col-form-label">Status :</label>
+																	<div class="col-8">
+																		<select name="field_status" id="field_status" class="form-control">
+																			{% for status in field_status %}
+																				{% if status.0 == section.field_status %}
+																					<option value="{{ status.0 }}" selected>{{ status.1 }}</option>
+																				{% else %}
+																					<option value="{{ status.0 }}">{{ status.1 }}</option>
+																				{% endif %}
+																			{% endfor %}
+																		</select>
+																	</div>
+																</div>
+															</div>
+															<div class="col-12 col-sm-6 col-md-3 unique_field_div">
+																<div class="form-group form-inline ">
+																	<div class="form-check mr-sm-3 mt-2">
+																		<label class="form-check-label d-flex">
+																			<input type="checkbox" id="unique_field_{{ forloop.parentloop.counter }}_{{ forloop.counter }}" name="" class="form-check-input unique_fields_check" {% if section.unique == True %}checked{% endif %}>
+																			Unique Field
+																		</label>
+																	</div>
+																	<span class="form-error unique_fields_check_error d-none" id="unique_field_{{ forloop.parentloop.counter }}_{{ forloop.counter }}_error">only one unique field is allowed</span>
+																	<span class="form-error unique_fields_check_error d-none" id="unique_field_{{ forloop.parentloop.counter }}_{{ forloop.counter }}_field_error">Select field type first</span>
+																</div>
+															</div>
+															<div class="col-1"></div>
+														</div>
+													</div>
+												</div>
+											</div>
+										{% endfor %}
+									</div>
+									<div class="row justify-content-end">
+										<i id="add-crm-field-{{ forloop.counter }}" class="fa fa-plus-circle text-success fa-5x add-crm-field"></i>
+									</div>
+								</div>
+							</div>
+						</div>
+					{% endfor %}
+				</div>
+				<div class="row">
+					<div class="col-sm-6">
+						<div class="alert alert-danger d-none" id="field-msg">
+					 </div>
+					</div>
+					<div class="col-sm-6">
+						<div class="float-right">
+						<a href='/CRM/Download/{{ crmfield.id }}' name='download-crm' class="btn btn-info btn-icon-text mr-sm-2 download-crm-fields" id="download-crm-fields"   data-crmdownload="download-crm">
+							<i class="fa fa-download"></i>
+						</a>
+					</div>
+					<div class="float-right">
+						<button type="button" class="btn btn-success btn-icon-text mr-sm-2 edit-crm-field" id="edit-crm-field" data-operation="{{ crmfield.id }}" >
+							<i class="far fa-check-square"></i>
+						Update</button>
+					</div>
+					</div>
+				</div>
+					<input type="hidden" name="crm_fields" id="hidden_crm_fileds" value="">
+					<input type="hidden" name='unique_fields' id="hidden_unique_fields" value="">
+					<input type="hidden" id="hidden_u_fields" value="">
+					<input type="hidden" id="old_u_fields" value="">
+				</form>
+				<div class="card d-none col-md-12" id="clone-crmf-card">
+					<div class="card-header py-3" role="tab" id="clone-crmf-heading">
+						<h6 class="mb-0">
+							<a data-toggle="collapse" href="#clone-crmf-collapse" aria-expanded="false" aria-controls="collapse-4" class="">
+							</a>
+						<span class="d-inline fa fa-times-circle text-danger remove-crmfield"></span>
+						</h6>
+					</div>
+					<div id="clone-crmf-collapse" class="collapse show collapse-div" role="tabpanel" aria-labelledby="clone-crmf-heading" data-parent="#crmf-accordion" style="">
+						<div class="card-body">
+							<div class="row crm-fields" id="clone-crm-field">
+								<div class="col-12 col-sm-6 col-md-3">
+									<div class="form-group row">
+										<label for="field" class="col-4 col-form-label">Field :</label>
+										<div class="col-8">
+											<input type="text" class="form-control field_name" id="field_name" placeholder="Field" data-validation="required alphanumeric"  data-validation-allowing="-_/ ">
+											<span id="field_error"></span>
+										</div>
+									</div>
+								</div>
+								<div class="col-12 col-sm-6 col-md-3">
+									<div class="form-group row">
+										<label for="extension" class="col-4 col-form-label">Type :</label>
+										<div class="col-8">
+											<select class="form-control" id="field_type">
+												{% for type in field_types %}
+												<option value="{{ type.0|lower }}">{{ type.1 }}</option>
+												{% endfor %}
+											</select>
+										</div>
+									</div>
+								</div>
+								<div id="field_size_div" class="col-12 col-sm-6 col-md-3">
+									<div class="form-group row">
+										<label for="size" class="col-4 col-form-label">Size :</label>
+										<div class="col-8">
+											<input type="text" class="form-control field_size" id="field_size" placeholder="Size" data-validation="required" min="1" onpaste="pasteNumber(event)" onkeypress="return isNumber(event)">
+										</div>
+									</div>
+								</div>
+								<div id="field_options_div" class="col-12 col-sm-6 col-md-3 d-none">
+									<div class="form-group row">
+										<label for="options" class="col-4 col-form-label">Options :</label>
+										<div class="col-8">
+											<input type="options" class="form-control" id="field_options" placeholder="Options" data-validation="required">
+										</div>
+									</div>
+								</div>
+								<div class="col-12 col-sm-6 col-md-3">
+									<div class="form-group form-inline mt-2">
+										<div class="form-check mr-sm-3">
+											<label class="form-check-label d-flex">
+												<input type="checkbox" id="field_editable" class="form-check-input required_enable editable_fields_check" name="">
+												Editable
+											</label>
+										</div>
+										<div class="form-check mr-sm-3 d-none" id="required_field_div">
+											<label class="form-check-label d-flex">
+												<input type="checkbox" id="field_required" class="form-check-input required_fields_check" name="">
+												Required
+											</label>
+										</div>
+									</div>
+								</div>
+								<div class="col-12 col-sm-6 col-md-3">
+									<div class="form-group row">
+										<label for="priority" class="col-4 col-form-label">Priority :</label>
+										<div class="col-8">
+											<input type="text" class="form-control field_priority" id="field_priority" placeholder="Priority" data-validation="number" data-toggle="tooltip" min="1" onpaste="pasteNumber(event)" onkeypress="return isNumber(event)">
+											<span id="field-priority-error-msg" class="field-priority-msg"></span>
+										</div>
+									</div>
+								</div>
+								<div class="col-12 col-sm-6 col-md-3">
+									<div class="form-group row">
+										<label for="priority" class="col-4 col-form-label">Color :</label>
+										<div class="col-8">
+											<input type="text" class="color-picker form-control crm-color-picker asColorPicker-hex" data-mode="complex" value="#392C70" name="crm_color">
+										</div>
+									</div>
+								</div>
+								<div class="col-12 col-sm-6 col-md-3">
+									<div class="form-group row">
+										<label for="field_status" class="col-4 col-form-label">Status :</label>
+										<div class="col-8">
+											<select class="form-control" name="field_status" id="field_status">
+												{% for status in field_status %}
+												<option value="{{ status.0 }}">{{ status.1 }}</option>
+												{% endfor %}
+											</select>
+										</div>
+									</div>
+								</div>
+								<div class="col-12 col-sm-6 col-md-3 unique_field_div">
+									<div class="form-group form-inline">
+										<div class="form-check mr-sm-3 mt-2">
+											<label class="form-check-label d-flex">
+												<input type="checkbox" class="form-check-input unique_fields_check" name="">
+												Unique Field
+											</label>
+										</div>
+										<span class="form-error unique_fields_check_error d-none">Only one unique field is allowed</span>
+									</div>
+								</div>
+								<div class="col-1">
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="card pr-2 d-none" id="clone-crm-section">
+					<div class="card-header py-3" role="tab" id="">
+						<h6 class="mb-0">
+							<a data-toggle="collapse" href="#clone-section-collapse" aria-expanded="true" aria-controls="collapse-1" class="clone-crm-heading">Section 1
+							</a>
+							<span class="d-inline fa fa-times-circle text-danger remove-section"></span>
+						</h6>
+					</div>
+					<div id="clone-section-collapse" class="collapse collapse-div show" role="tabpanel" aria-labelledby="clone-crm-heading" data-parent="#crmf-accordion" style="">
+						<div class="card-body">
+							<div class="row crm-fields" id="">
+								<div class="col-12 col-sm-6 col-md-4">
+									<div class="form-group row">
+										<label for="field" class="col-4 col-form-label">Section Name:</label>
+										<div class="col-8">
+											<input type="text" class="form-control section_name"  placeholder="Section Name" data-validation="required alphanumeric"  data-validation-allowing="-_/ ">
+										</div>
+									</div>
+								</div>
+								<div class="col-12 col-sm-6 col-md-4">
+									<div class="form-group row">
+										<label for="priority" class="col-4 col-form-label">Priority :</label>
+										<div class="col-8">
+											<input type="number" class="form-control section-priority" placeholder="Priority" data-validation="number" data-toggle="tooltip" min="1" onpaste="pasteNumber(event)" onkeypress="return isNumber(event)">
+											<span id="priority-error-msg" class="priority-msg"></span>
+										</div>
+									</div>
+								</div>
+								<div class="col-12 col-sm-6 col-md-4">
+									<!-- <div class="col-1 form-inline ml-auto"><i id="" class="fa fa-plus-circle text-success fa-5x add-crm-field"></i></div> -->
+								</div>
+								
+								<div class="col-1">
+								</div>
+							</div>
+							<div class="row crmfield-div">
+								<input type="hidden" id="crmfield-count" value="0">
+							</div>
+							<div class="row justify-content-end"><i id="" class="fa fa-plus-circle text-success fa-5x add-crm-field"></i></div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<input type="hidden" name="" id="get-count" value="{{ crm_fields|length }}">
+{% endif %}
+
+<!-- update modal form ends here ---------------->
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/crmfield.js' %}"></script>
+<script src="{% static 'js/vendor.bundle.color.js' %}"></script>
+<script src="{% static 'melody/js/alerts.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function(){
+		is_editable = {{status}}
+	})
+</script>
+<script type="text/javascript">
+	unique_field_exist = false
+	{% if unique_field_exist %}
+		unique_field_exist = {{unique_field_exist}}
+	{% endif %}
+	$.validate({form : "#crm-field-form"});
+	{% if not can_create %}
+		PermissionDeny();
+	{% endif %}
+ 	$('[data-toggle="tooltip"]').tooltip();
+ 	$(document).ready(function(){
+ 		unique_field_count = {{unique_fields_count}}
+ 		if (unique_field_count > 0) {
+			u_field = {{ crmfield.unique_fields|safe }}
+	 		$("#hidden_u_fields, #old_u_fields").val(u_field[0].split(":")[1])
+
+
+	 	}
+	 	var itemsToKeep = {{non_user_campaigns|safe}}
+	 	$('#crm_field_campaign').on('select2:unselecting', function(event) {
+	 		if (itemsToKeep.indexOf(event.params.args.data.text) > -1) {
+	 			event.preventDefault();
+	 			showDangerToast(`Opration can't perform`,`${event.params.args.data.text} campaign does not belong in your scope`,'top-right')
+	 		}
+	 	})
+ 	})
+</script>
+
+{% endblock extra-js %}

@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Create Lead List {% endblock title %}
+
+{% block extra-stylesheets %}
+
+
+{% endblock extra-stylesheets %}
+
+{% block header %}CRM<small>Create Lead List</small>{% endblock header %}
+
+{% block breadcrumb %}
+
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'phonebook' %}">Lead List </a></li>
+<li class="breadcrumb-item active" aria-current="page">Create</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_create %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Create Lead List</legend>
+				<form class="forms-sample" id="phonebook-form" method="POST" action="{% url 'validate-phonebook-file' %}">
+					{% csrf_token %}
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group row">	
+								<label for="phonebook_name" class="col-sm-3 col-form-label">Name<span class="star">*</span> :</label>
+								<div class="col-sm-9">
+									<input type="text" class="form-control" data-toggle="tooltip" title="Enter PhoneBook Name" id="phonebook_name" placeholder="Name" name="name" value="" data-validation="length alphanumeric" data-validation-length="max100" data-validation-allowing="_" >
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="phonebook_slug" class="col-sm-3 col-form-label">Slug :</label>
+								<div class="col-sm-9">
+									<input type="text" class="form-control slug_css" id="phonebook_slug" placeholder="Slug" name="slug" value="" readonly>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="description" class="col-sm-3 col-form-label">Description :</label>
+								<div class="col-sm-9 mb-3">
+									<textarea type="text" class="form-control" id="description" placeholder="Description" name="description" rows="4"></textarea>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="priority" class="col-sm-3 col-form-label">Priority :</label>
+								<div class="col-sm-9">
+									<input type="number" class="form-control" id="priority" placeholder="Priority Level" name="priority" value="1" min="1" max="9" maxlength="1" data-toggle="tooltip" title="Priority between 1-9">
+								</div>
+								<div class="d-none" id="priority_err_msg"></div>
+							</div>
+							<div class="form-group row">
+								<label for="caller_id" class="col-sm-3 col-form-label">Caller ID :</label>
+								<div class="col-sm-9">
+									<input type="text" class="form-control" id="caller_id" placeholder="Caller ID" name="caller_id" onkeypress="return isNumber(event)" autocomplete="off">
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="campaign" class="col-sm-3 col-form-label">Campaign<span class='star'>*</span> :</label>
+								<div class="col-sm-9">
+									<select class="form-control select2-class" name="campaign" data-validation="required" id="phonebook-campaign">
+										<option value="">Select Campaign</option>
+										{% for campaign in campaign %}
+										<option value="{{ campaign.id }}" data-name="{{ campaign.name }}">{{ campaign.name }}</option>
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="status" class="col-sm-3 col-form-label">Status :</label>
+								<div class="col-sm-9">
+									<select class="form-control" name="status">
+										{% for status in campaign_status %}
+										<option value="{{ status.0 }}">{{ status.1 }}</option>
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="campaign" class="col-sm-3 col-form-label">Expire List Date:</label>
+								<div class="col-sm-9"> 
+								<div class="input-group date " id="expire-list-date" data-target-input="nearest">
+									<div class="input-group" placeholder="YYYY-MM-DD HH:mm" data-target="#expire-list-date" data-toggle="datetimepicker">
+										<input type="text" class="form-control slug_css datetimepicker-input" data-target="#expire-list-date" name="expire_date" value="" data-toggle="tooltip" title="Enter List Expire Date & Time">
+										<div class="input-group-addon input-group-append"><i class="far fa-clock input-group-text" style="padding:9px; height: 38px;"></i></div>
+									</div>
+								</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="caller_id" class="col-sm-3 col-form-label">Order By :</label>
+								<div class="col-sm-9">
+									<select class="form-control" name="order_by">
+										{% for order in order_by %}
+											<option value="{{ order.0 }}">{{ order.1 }}</option>
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label for="caller_id" class="col-sm-3 col-form-label">Duplicate Check :</label>
+								<div class="col-sm-9">
+									<select class="form-control" name="duplicate_check" id="duplicate_check">
+										<option value="">select duplicate check</option>
+										{% for option in duplicate_options %}
+											<option value="{{ option.0 }}">{{ option.1 }}</option>
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6" id="search_type_div">
+							<div class="form-group row">
+								<label class="col-sm-3 col-form-label">Search Mode :</label>
+								<div class="col-sm-9 form-inline">
+									<div class="form-inline">
+									{% for type in search_type %}
+										<div class="form-check mr-sm-3">
+											<label class="form-check-label">
+												<input type="radio" class="form-check-input" name="search_type" {% if type.0 == '1' %}checked=""{% endif %} value="{{type.0}}">
+												{{type.1}}
+												<i class="input-helper"></i>
+											</label>
+										</div>
+									{% endfor %}
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="card">
+						<div class="card-body">
+							<h4 class="card-title mb-2">File Upload<span class='star'>*</span></h4>
+							<p class="card-description">Select CSV File to Upload, Refer sample file for format</p>
+							<div class="row">
+								<div class="col-6">
+									<input type="file" class="dropify uploaded-file" data-show-loader="true" id="uploaded-file" name="uploaded_file" data-validation="length" data-validation-length="min1"/>
+								</div>
+								<div class="col-6 dropify-wrapper">
+									<div class="dropify-message d-flex justify-content-center">
+										<a id="sample_phonebook" class="mr-5 sample_phonebook csv">
+											<span class="csv-download"></span>
+											<span class="sample-csv-text">Sample Csv</span>
+										</a>
+										<a id="sample_phonebook" class="sample_phonebook xls">
+											<span class="csv-download"></span>
+											<span class="sample-csv-text">Sample Xls</span>
+										</a>
+									</div>
+								</div>
+							</div>
+							<!-- 
+    							<div class="col-md-6">
+    								<div class="progress progress-lg mt-2 d-none" id="phonebook-progressbar">
+                      					<div class="progress-bar bg-primary"  role="progressbar" style="width: 1%" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100">	
+                      					</div>
+                   					 </div>
+                   				</div>
+    						  -->
+							<div class="row mt-2">
+								<div class="col-md-3 proper_data_div">
+									<a id="proper-data" class="d-none upload-css text-info" download>
+										<span class="fa fa-download download-file-css"></span>
+										<span class="msg"></span>
+									</a>
+								</div>
+								<div class="col-md-3 improper_data_div">
+									<a id="improper-data" class="d-none upload-css text-danger" download>
+										<span class="fa fa-download download-file-css"></span>
+										<span class="msg"></span>
+									</a>
+								</div>
+								<div class="col-sm-9 col-md-6 col-md-6">
+									<p id="empty-data" class=" d-none alert alert-danger"> 
+										No Data is Found in File, Add Atleast one Contact 
+									</p>
+								</div>
+							</div>
+
+							<div class="row mt-2">
+								<div class="col-sm-9 col-md-6 col-md-6">
+									<div class="dot-opacity-loader phonebook-valid-loader" style="display:none">
+			                          <span></span>
+			                          <span></span>
+			                          <span></span>
+			                        </div>
+									<div class="alert alert-danger mb-sm-0 p-2 d-none" id="phonebook-err-msg">
+									</div>
+								</div>
+								<div class="col-md-4">
+									<div class="float-right">
+										<button type="button" class="btn btn-success btn-icon-text create-phonebook" id="">
+										<i class="far fa-check-square btn-icon-prepend"></i>Submit</button>
+										<button type="button" class="btn btn-light btn-icon-text phonebook-cancel-btn " id="" onclick="showSwal('warning-message-and-cancel','OK', '/CRM/phonebook/')">
+										<i class="fas fa-arrow-left btn-icon-prepend"></i>Cancel</button>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<input type="hidden" name="proper_file" id="upload-proper-file">
+					<input type="hidden" name="improper_file" id="upload-improper-file">
+					<input type="hidden" name="confirm_file_upload" id="confirm_file_upload" value="true">
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script type="text/javascript">
+	var user_id = '{{user.id}}'
+	phonebook_id=""
+</script>
+<script src="{% static 'melody/js/settings.js' %}"></script>
+<script src="{% static 'melody/js/dragula.js' %}"></script>
+<script src="{% static 'melody/js/dropify.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	$.validate({
+		form:'#phonebook-form',
+	});
+	{% if not can_create %}
+		PermissionDeny();
+	{% endif %}
+</script>
+<script>
+	$('#expire-list-date').datetimepicker({
+		  	todayHighlight: true,
+		  	format : 'YYYY-MM-DD HH:mm',
+		  	orientation: 'bottom auto',
+		  	autoclose: true,
+		  	minDate: new Date(),
+		  	ignoreReadonly: true,
+		  	icons: {
+				time: 'fa fa-clock'
+			},
+		  });
+ $('#priority').keypress(function(e){
+  	 if (e.which == 48 ){
+      return false;
+   }
+  })
+	</script>
+{% endblock extra-js %}

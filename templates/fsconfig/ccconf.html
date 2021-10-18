@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<document type="freeswitch/xml">
+	<section name="configuration">
+		<configuration name="callcenter.conf" description="CallCenter">
+  <settings>
+	<!--<param name="odbc-dsn" value="dsn:user:pass"/>-->
+	<!--<param name="dbname" value="/dev/shm/callcenter.db"/>-->
+  </settings>
+{% load check_user %}
+  <queues>
+	{% for queue in Campaign %}
+	  <queue name="{{queue.campaign.slug}}">
+	<param name="strategy" value="{{queue.strategy}}"/>
+	{% if queue.moh_sound == None %}
+		<param name="moh-sound" value="$${hold_music}"/>
+	{% else %}
+		<param name="moh-sound" value="/var/lib/flexydial/media/{{queue.moh_sound.audio_file}}"/>
+	{% endif %}
+	<param name="record-template" value="/var/spool/freeswitch/{{queue.record_template}}/${strftime(%d-%m-%Y-%H-%M)}_${cc_customer}_${uuid}.mp3"/>
+	<param name="time-base-score" value="{{queue.time_base_score}}"/>
+	<param name="max-wait-time" value="{{queue.max_wait_time}}"/>
+	<param name="max-wait-time-with-no-agent" value="{{queue.max_wait_time_with_no_agent}}"/>
+	<param name="max-wait-time-with-no-agent-time-reached" value="{{queue.max_wait_time_with_no_agent_time_reached}}"/>
+	<param name="tier-rules-apply" value="{{queue.tier_rules_apply}}"/>
+	<param name="tier-rule-wait-second" value="{{queue.tier_rule_wait_second}}"/>
+	<param name="tier-rule-wait-multiply-level" value="{{queue.tier_rule_wait_multiply_level}}"/>
+	<param name="tier-rule-no-agent-no-wait" value="{{queue.tier_rule_no_agent_no_wait}}"/>
+	<param name="discard-abandoned-after" value="{{queue.discard_abandoned_after}}"/>
+	<param name="abandoned-resume-allowed" value="{{queue.abandoned_resume_allowed}}"/>
+	  </queue>
+   {% endfor %}
+  </queues>
+
+  <agents>
+    {% for users in User %}
+    {% if users.is_active == 1 %}
+    {% if "freetdm" in users.properties.contact %}
+    <agent name="{{users.properties.extension}}" type="{{users.properties.type}}" contact="{{users.properties.contact}}/{{users.properties.extension}}" status="{{users.properties.status}}" max-no-answer="{{users.properties.max_no_answer}}" wrap-up-time="{{users.properties.wrap_up_time}}" reject-delay-time="{{users.properties.reject_delay_time}}" busy-delay-time="{{users.properties.busy_delay_time}}" />
+    {% else %}
+    <agent name="{{users.properties.extension}}" type="{{users.properties.type}}" contact="{{users.properties.contact}}/{{users.properties.extension}}@{{users.properties.domain.ip_address}}" status="{{users.properties.status}}" max-no-answer="{{users.properties.max_no_answer}}" wrap-up-time="{{users.properties.wrap_up_time}}" reject-delay-time="{{users.properties.reject_delay_time}}" busy-delay-time="{{users.properties.busy_delay_time}}" />
+    {% endif %}
+    {% endif %}
+	{% endfor %}
+  </agents>
+
+
+  <tiers>
+	{% for queue in Campaign %}
+		{% if queue.campaign.slug in r_campaigns %}
+	  		{% for users in queue.campaign.users.all %}
+	  		{% check_user_r_campaigns r_campaigns users.properties.extension queue.campaign.slug as status %}
+	  			{% if status %}
+  	  			<tier agent="{{users.properties.extension}}" queue="{{queue.campaign.slug}}" level="1" position="1"/>
+	  			{% endif %}
+	  		{% endfor %}
+	  	{% endif %}
+	{% endfor %}
+  </tiers>
+  </configuration>
+</section>
+</document>

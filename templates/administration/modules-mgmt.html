@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Module Management{% endblock title %}
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+<style type="text/css">
+	#table_name{
+		display: flex;
+	    align-items: center;
+	    justify-content: flex-end;
+	}
+</style>
+{% endblock extra-stylesheets %}
+{% block header %}Modules Management<small>Modules</small>{% endblock header %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Modules</li>
+{% endblock breadcrumb %}
+{% block content %}
+<div class="card" id="module_management_vue">
+	<div class="card-body">
+		<legend>Modules Management</legend>
+		{% csrf_token %}
+		<div class="row mb-2">
+			<div class="col-sm-6">
+				<div class="alert alert-danger d-none" id="user-err-msg">
+				 </div>
+			</div>
+			<div class="col-sm-6">
+				<div class="float-right">
+					<button type="button" class="btn btn-success mr-sm-2" @click="saveModules">Update</button>
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div v-for="module in data" class="col-md-6 mb-2">
+				<div class="card mx-0 mx-sm-4">
+					<div class="card-body">
+						<div class="row mb-2" id="table_name">
+							<div class="col-md-4">
+								<h6 class="mb-0">
+									<b>${module.title}</b>
+								</h6>
+							</div>
+							<div class="col-md-2">
+								<div class="form-check" style="width:auto;">
+									<label class="form-check-label">
+										<input v-if="module.status == 'Active'" type="checkbox" class="form-check-input" :value="module.status" @change="checked_parent(event,module)" checked><i class="input-helper"></i>
+										<input v-if="module.status == 'Inactive'" type="checkbox" class="form-check-input" :value="module.status" @change="checked_parent(event,module)"><i class="input-helper"></i>
+									</label>
+								</div>
+							</div>
+							<div class="col-md-4">
+								<div class="form-group row">
+									<input type="number" class="form-control" placeholder="Sequence" v-model="module.sequence">
+								</div>
+							</div>
+							<div class="col-md-2">
+								<a data-toggle="collapse" :href="'#perm-'+module.name" aria-expanded="false" aria-controls="collapse-4">
+									<button data-repeater-create="" type="button" class="btn btn-info btn-sm icon-btn ml-2 mb-2">
+										<i class="fa fa-plus"></i>
+									</button>
+								</a>
+							</div>
+						</div>
+						<div class="accordion accordion-bordered" :id="'2-' + module.name" role="tablist">
+							<div :id="'perm-'+module.name" class="collapse" role="tabpanel" aria-labelledby="heading-4" :data-parent="'#2-' + module.name">
+								<div class="row mb-2" id="table_name" v-for="child in module.parent_menu">
+									<div class="col-md-4">
+										<label>
+											<b class="float-sm-right text-capitalize">${child.title} :</b>
+										</label>
+									</div>
+									<div class="col-md-1">
+										<div class="form-check" style="width:auto;">
+											<label class="form-check-label">
+												<input v-if="child.status == 'Active'" type="checkbox" class="form-check-input" :value="child.status" :disabled="module.status == 'Inactive'" @change="checkRead(event,child)" checked><i class="input-helper"></i>
+												<input v-if="child.status == 'Inactive'" type="checkbox" class="form-check-input" :value="child.status" :disabled="module.status == 'Inactive'" @change="checkRead(event,child)"><i class="input-helper"></i>
+											</label>
+										</div>
+									</div>
+									<div class="col-md-4">
+										<select class="form-control" id='role_status' name ="status" v-model="child.parent">
+											<option v-for="main_menu in data" :value="main_menu.id">${main_menu.title}</option>
+										</select>
+									</div>
+									<div class="col-md-3">
+										<input type="number" class="form-control" placeholder="Sequence" v-model="child.sequence">
+									</div>
+								</div>
+							</div>
+						</div>
+						
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<div class="bottom-menu">
+	<div class="action-button-circle" data-toggle="modal">
+		<a data-toggle="modal" data-target="#modal_add_module" title="Add Module">
+			<div class="circle-button skin-black">
+				<i class="fa fa-plus button-area add-switch"></i>
+			</div>
+		</a>
+	</div>
+</div>
+<!-- model forms -->
+<div class="modal fade" id="modal_add_module" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to create switch details."></i>
+					<b>Module Wizard » Add New Module</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body">
+				<form id="module-form" class="wizard-form" action="#">
+					<div>
+						<h3>Add Module <br> <small>Set detail for Module</small></h3>
+						<section>
+							<div class="form-group row">
+								<label for="modulename" class="col-4 col-form-label">Name<span class="star">*</span> :</label>
+								<div class="col-8">
+									<input type="text" name ="name" data-toggle="tooltip" data-original-title="Enter Module Url Name" class="form-control" id="modulename" placeholder="Please Enter Valid Url Name" data-validation="length alphanumeric" data-validation-length="min4" data-validation-allowing="_" data-validation-error-msg-container="#module_name_msg">
+									<span id="module_name_msg"></span>
+								</div>
+								<label for="moduletitle" class="col-4 col-form-label">Title<span class="star">*</span> :</label>
+								<div class="col-8">
+									<input type="text" name ="title" data-toggle="tooltip" data-original-title="Enter Module Title" class="form-control" id="moduletitle" placeholder="Please Enter Module Title" data-validation="length" data-validation-length="min4" data-validation-allowing="_" data-validation-error-msg-container="#module_title_msg">
+									<span id="module_title_msg"></span>
+								</div>
+								<label for="permissions" class="col-sm-4 col-form-label"> Read Only:</label>
+								<div class="col-sm-7 form-inline">
+									<div class="form-check">
+										<input type="checkbox" id="permissions_id" class="form-check-input" name="allow_readonly" />
+										<i class="input-helper"></i>
+									</div>
+								</div>
+								<label for="parent" class="col-form-label col-4">Select Parent Module :</label>
+								<div class="col-8">
+									<select class="form-control" name="parent">
+										<option value="">Select Parent</option>
+										{% for parent_module in data  %}
+											<option value="{{ parent_module.id }}">{{ parent_module.title }}</option>
+										{% endfor %}
+									</select>
+								</div>
+								<label for="status" name ="status" class="col-form-label col-4">Status :</label>
+								<div class="col-8">
+									<select class="form-control" name="status">
+										{% for status in status_list  %}
+											<option value="{{ status.0 }}">{{ status.1 }}</option>
+										{% endfor %}
+									</select>
+								</div>
+								<label for="status" name ="sequence" class="col-form-label col-4">Sequence :</label>
+								<div class="col-8">
+									<input type="number" class="form-control" placeholder="Sequence" data-validation="length" data-validation-length="min1" data-validation-allowing="_" data-validation-error-msg-container="#module_sequence_msg" name="sequence">
+									<span id="module_sequence_msg"></span>
+								</div>
+							</div>
+						</section>
+					</div>
+					<input type="hidden" name="created_by" value="{{user.id}}">
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/form-validator.min.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function(){
+		module_management_vue.data = {{modules_data|safe}}
+	  });
+	
+	$(document).ready(function() {
+		$(".wizard li a[href='#previous']").addClass("d-none");
+		$(".wizard li a[href='#finish']").text('Submit');
+		$("#modal_add_module").on('hidden.bs.modal', function () {
+			var model_form = $(this).find('form')
+			model_form[0].reset();
+		});
+	});
+</script>
+{% endblock extra-js %}
+

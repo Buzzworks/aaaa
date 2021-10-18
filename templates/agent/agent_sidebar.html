@@ -1,0 +1,396 @@
+{% load static %}
+<style type="text/css">
+.conferencediv {
+ width: 151px;
+ height: 32px;
+ border-style: solid;
+ border-width: thin;
+ border-color: white;
+ background-color: #3a3f51;
+ -moz-border-radius: 135px / 75px;
+ -webkit-border-radius: 135px / 75px;
+ border-radius: 1 / 0px;padding:9px;
+}
+}
+
+</style>
+<link rel="stylesheet" href="{% static '/css/password-strength.css' %}">
+<div id="right-sidebar" class="settings-panel">
+	<!-- sidebar tab list start  -->
+	<ul class="nav nav-tabs nav-justified" id="setting-panel" role="tablist">
+		<li class="nav-item">
+			<a class="nav-link active" id="dialer-tab" data-toggle="tab" href="#setting-content-dialer-tab" role="tab" aria-controls="todo-section" aria-expanded="true"><i class="fa fa-phone fa-rotate-90"></i></a>
+		</li>
+		<li class="nav-item">
+			<a class="nav-link" id="profile-tab" data-toggle="tab" href="#setting-content-profile-tab" role="tab" aria-controls="chats-section"><i class="fa fa-user"></i></a>
+		</li>
+	</ul>
+	<!-- sidebar tab list end  -->
+	<!-- sidebar content start -->
+	<div class="tab-content" id="setting-content" style="padding-top: 10px; border-width: 0px; overflow-y: auto; padding-bottom: 30px;  height:calc(100vh - 175px);">
+		<!-- dailer tab content start -->
+		<div class="tab-pane fade show active" id="setting-content-dialer-tab" role="tabpanel" aria-labelledby="dialer-section">
+			<!-- <div class="" style="height: calc(100vh - 160px);overflow-y: auto;"> -->
+				<ul class="control-sidebar-menu d-none" id="flexy-agent-dialer">
+					<li id="flexy-nav-btn" style="margin-top: 10px;">
+						<div id="livecall" class="">
+							<h3 class="nolivecall" title="NO LIVE CALL">NO LIVE CALL</h3>
+						</div>
+						<div id="flexy-btn-div" class="text-center">
+							<button id="btnPrevCall" title="Dial Previous Call" class="btn btn-secondary btn-lg d-none">
+								<i class="fa fa-phone"></i>
+							</button>
+							<button id="btnNextCall" title="Dial Next Call" class="btn btn-info btn-lg d-none">
+								<i class="fa fa-step-forward"></i>
+							</button>
+							<button id="btnDialHangup" title="Dial" class="btn btn-success btn-lg d-none" disabled>
+								<i class="fa fa-phone fa-rotate-90"></i>
+							</button>
+							<button id="btnResumePause" title="Start Predictive Dialing" class="btn btn-success btn-lg d-none">
+								<i class="fa fa-play"></i>
+							</button>
+							<button id="ibc_btnResumePause" title="Start Inbound" class="btn btn-success btn-lg d-none">
+								<i class="fa fa-play"></i>
+							</button>
+							<button id="blndd_btnResumePause" title="Start Blended Mode" class="btn btn-success btn-lg d-none">
+								<i class="fa fa-play"></i>
+							</button>														
+							<button id="btnParkCall" title="Hold Call" class="btn btn-warning btn-lg d-none" disabled>
+								<i class="fa fa-music"></i>
+							</button>
+							<button id="btnTransferCall" title="Transfer Call" data-toggle="modal" data-target="#transfer-call-modal" class="btn btn-default btn-lg d-none" value='false' disabled>
+								<i class="fa fa-random"></i>
+							</button>
+							
+							<button id="btnIVRParkCall" title="IVR Park Call" class="btn btn-default btn-lg d-none">
+								<i class="fa fa-tty"></i>
+							</button>
+							<button id="btnReQueueCall" title="Re-Queue Call" class="btn btn-default btn-lg d-none">
+								<i class="fa fa-sync-alt"></i>
+							</button>
+							<button id="btnQuickTransfer" title="quick_transfer" class="btn btn-default btn-lg d-none"><i class="fa fa-exchange-alt"></i>
+							</button>
+						</div>
+					</li>
+					<li id="call-loader" style="display:none;">
+						<div class="bar-loader" id="">
+							<span></span>
+							<span></span>
+							<span></span>
+							<span></span>
+						</div>
+					</li>
+
+				</ul>
+					<ul class="control-sidebar-menu d-none" id="flexy-agent-manualdial" style="margin-bottom: -10px;padding: 0 15px;">
+					<li>
+						<div class="input-group">
+							<input type="text" maxlength="18" name="MDPhonENumbeR" id="MDPhonENumbeR" class="form-control" value="" placeholder="Enter a Phone Number" style="padding: 3px 2px; color: #222; height: 30px;" aria-label="..." autocomplete="off"  onkeypress= "return isNumber(event)" inputmode="numeric">
+							<div class="input-group-append" role="group">
+								<button type="button" class="btn btn-success btn-raised" id="manual-dial-now" style="padding: 6px; height: 30px;">
+									<i class="fa fa-phone fa-rotate-90"></i>
+								</button>
+								<button type="button" class="btn btn-secondery btn-raised" id="dialpad-toggle" title="Dial Pad" style="padding: 6px; height: 30px;">
+									<i class="fab fa-buromobelexperte"></i>
+								</button>
+							</div>
+						</div>
+					</li>
+				</ul>
+				<ul class="control-sidebar-menu mt-3 d-none" id="flexy-agent-dialpad">
+					<li>
+						<div id="AgentDialPad" class="" style="text-align: center; min-width: 200px; display: none"><button type="button" id="dialer-pad-1" class="btn btn-default btn-lg btn-raised">1</button><button type="button" id="dialer-pad-2" class="btn btn-default btn-lg btn-raised">2</button><button type="button" id="dialer-pad-3" class="btn btn-default btn-lg btn-raised">3</button><button type="button" id="dialer-pad-4" class="btn btn-default btn-lg btn-raised">4</button><button type="button" id="dialer-pad-5" class="btn btn-default btn-lg btn-raised">5</button><button type="button" id="dialer-pad-6" class="btn btn-default btn-lg btn-raised">6</button><button type="button" id="dialer-pad-7" class="btn btn-default btn-lg btn-raised">7</button><button type="button" id="dialer-pad-8" class="btn btn-default btn-lg btn-raised">8</button><button type="button" id="dialer-pad-9" class="btn btn-default btn-lg btn-raised">9</button><button type="button" id="dialer-pad-ast" class="btn btn-default btn-lg btn-raised d-none"> * </button><button type="button" id="dialer-pad-clear" class="btn btn-default btn-lg btn-raised" style="padding: 10px 22.6px;" title="Clear"><i class="fa fa-times"></i></button><button type="button" id="dialer-pad-0" class="btn btn-default btn-lg btn-raised">0</button><button type="button" id="dialer-pad-hash" class="btn btn-default btn-lg btn-raised d-none"> # </button><button type="button" id="dialer-pad-undo" class="btn btn-default btn-lg btn-raised" style="padding: 10px 22.6px;" title="Undo"> <i class="fa fa-undo"></i> </button><span id="for_dtmf" class="d-none"><small>(For DTMF, click the dialpad above)</small></span></div>
+					</li>
+				</ul>
+				<ul v-cloak class="control-sidebar-menu" id="three_way_conference_div" style="margin: 0 0 15px;padding: 0 0 10px;">
+					<li class="conference_call_list" v-show="three_way_list.length >=1">Conference Call List</li>
+					<li v-for="item, index in three_way_list" class="d-flex px-3 my-2">
+						<div>
+							<i class="fa fa-user pr-2" aria-hidden="true" data-toggle="tooltip" :title="item.conf_number"></i>
+							<strong style="font-size:15px;">${item.conf_number}</strong>
+						</div>
+						<div class="ml-auto">
+							<button :class="[item.is_mute ? 'active': '' ,'btn btn-warning btn-sm btn-rounded mr-1 conf-btn']" style="width: 30px; height: 30px;" @click="confMute(index)">
+								<i class="fa fa-music" aria-hidden="true"></i>
+							</button>
+							<button class="conference_hangup btn btn-danger btn-sm btn-rounded conf-btn" style="width: 30px; height: 30px;" @click="confHangup(index)">
+								<i class="fas fa-stop" aria-hidden="true"></i>
+							</button>
+						</div>
+					</li>
+					<li v-show="three_way_list.length > 1" style="text-align:center;">
+						<button type="button" class="btn btn-danger btn-sm" @click="confHangupAll('hangup')">Hangup All</button>
+					</li>
+				</ul>
+				<ul class="control-sidebar-menu hidden-xs d-none" id="flexy-agent-other-buttons" style="margin-top: 15px;">
+					<li style="padding: 0 15px 15px;" class="lead-preview-li d-none">
+						<div class="material-switch fa-pull-right">
+							<label for="LeadPreview" class="switch" style="top: 4px;">
+								<input type="checkbox" id="LeadPreview" checked>
+								<span class="slider round"></span>
+							</label>
+						</div>
+						<div class="text-uppercase font-weight-bold">Lead Preview</div>
+					</li>
+					<li id="DialALTPhoneMenu" style="padding: 0 5px 15px; display: none;">
+						<div class="material-switch fa-pull-right">
+							<label for="DialALTPhone" class="switch" style="top: 4px;">
+								<input type="checkbox" id="DialALTPhone">
+								<span class="slider round"></span>
+							</label>
+						</div>
+						<div class="text-uppercase font-weight-bold">ALT Phone Dial</div>
+					</li>
+					{% comment %}
+					<li id="toggleHotkeys" style="padding: 0 5px 15px;">
+						<div class="material-switch fa-pull-right">
+							<label for="enableHotKeys" class="switch" style="top: 4px;">
+								<input type="checkbox" id="enableHotKeys">
+								<span class="slider round"></span>
+							</label>
+						</div>
+						
+						<div class="text-uppercase font-weight-bold">Enable Hot Keys</div>
+					</li>
+					{% endcomment %}
+					<li class="pb-2" id="show-callbacks-active">
+						<a href="#">
+							<span style="color:#fff" class="pr-3">Active Callback(s)</span>
+								<span class="notify" id="heartbit">
+									<span class="heartbit"></span>
+									<span class="point"></span>
+								</span>
+							<small class="badge badge-pill badge-success fa-pull-right font-weight-bold">
+								<span id="c-activecallbacks-count">0</span>
+								<i class="fas fa-phone fa-rotate-90"></i>
+							</small>
+						</a>
+					</li>
+					<li class="pb-2" id="show-callbacks-campaign">
+						<a href="#">
+							<span style="color:#fff" class="pr-3">Campaign Callback(s)</span>
+							<small class="badge badge-pill badge-success fa-pull-right font-weight-bold">
+								<span id="c-totalcallbacks-count">0</span>
+								<i class="fas fa-phone fa-rotate-90"></i>
+							</small>
+						</a>
+					</li>
+					<li class="pb-2" id="show-abandonedcalls-campaign">
+						<a href="#">
+							<span style="color:#fff" class="pr-3">Abandoned Calls</span>
+							<small class="badge badge-pill badge-danger fa-pull-right font-weight-bold">
+								<span id="c-abandonedcalls-count">0</span>
+								<i class="fas fa-phone-slash fa-rotate-90"></i>
+							</small>
+						</a>
+					</li>
+					<li class="pb-2 show-assigned-calls" style="cursor: pointer;" id="show-camp-assigned-notdialed-calls">
+						<a href='#'>
+							<span style="color:#fff" class="pr-1">NotDialed Assign Bucket</span>
+							<small class="badge badge-pill badge-success fa-pull-right font-weight-bold">
+								<span>0</span>
+								<!-- <i class="fas fa-phone fa-rotate-90"></i> -->
+							</small>
+						</a>
+					</li>
+					<li class="pb-2 show-assigned-calls" style="cursor: pointer;" id="show-camp-assigned-dialed-calls">
+						<a href='#'>
+							<span style="color:#fff" class="pr-1">Dialed Assign Bucket</span>
+							<small class="badge badge-pill badge-success fa-pull-right font-weight-bold">
+								<span>0</span>
+								<!-- <i class="fas fa-phone fa-rotate-90"></i> -->
+							</small>
+						</a>
+					</li>
+					<!-- <li class="pb-2 show-assigned-calls" style="cursor: pointer;" id="show-campaign-assigned-calls">
+						<a href='#'>
+							<span style="color:#fff" class="pr-1">Camp Assign Calls</span>
+							<small class="badge badge-pill badge-success fa-pull-right">
+								<span>0</span>
+								<i class="fas fa-phone fa-rotate-90"></i>
+							</small>
+						</a>
+					</li> -->
+					<li class="pb-2 show-lead-bucket" id="show-campaign-lead-bucket" style="cursor: pointer;">
+						<a href="#">
+							<span style="color:#fff" class="pr-3">Lead Bucket</span>
+							<small class="badge badge-pill badge-success fa-pull-right font-weight-bold">
+								<span>0</span>
+								<!-- <i class="fas fa-phone fa-rotate-90"></i> -->
+							</small>
+						</a>
+					</li>
+					<li class="pb-2 show-lead-bucket" id="show-camp-requeue-lead-bucket" style="cursor: pointer;">
+						<a href="#">
+							<span style="color:#fff" class="pr-3">Requeue Lead Bucket</span>
+							<small class="badge badge-pill badge-success fa-pull-right font-weight-bold">
+								<span>0</span>
+								<!-- <i class="fas fa-phone fa-rotate-90"></i> -->
+							</small>
+						</a>
+					</li>
+				</ul>
+				<ul class="control-sidebar-menu" id="flexy_agent_login" style="width: 100%; margin: 25px auto 15px; text-align: center;">
+					<li><button id="btnLogMeIn" class="btn btn-warning btn-icon-text" style="margin-top: 2px;" data-toggle="modal" data-target="#select-campaign">
+						<i class="fa fa-sign-in-alt"></i>
+						 Login to Dialer</button>
+					</li>
+				</ul>
+			<!-- </div> -->
+			<!-- <div style="bottom: 10px; position: absolute; width: 100%; text-align: center; padding-top:10px"> -->
+				<ul class="control-sidebar-menu d-none" id="flexy-agent-logout" style="bottom: 0px; position: absolute; width: 100%; text-align: center;margin: 25px 0px 15px;" >
+					<li>
+						<button id="btnLogMeOut" class="btn btn-warning btn-icon-text d-sm-inline-flex" style="margin-top: 2px;"><i class="fa fa-sign-out-alt"></i> <span class="d-none d-sm-block">Logout From Dialer</span></button>
+					</li>
+				</ul>
+			<!-- </div> -->
+		</div>
+		<!-- dialer tab content ends -->
+		<!-- setting tab content start -->
+		<div class="tab-pane fade" id="setting-content-profile-tab" role="tabpanel" aria-labelledby="profile-section">
+			<ul class="control-sidebar-menu" id="flexy_agent_profile">
+				<li>
+					<div class="center-block">
+						<a href="#">
+							<p><div style="width: 100%; text-align: center;"><div id="avatar" style="width: 96px; height: 96px; border-radius: 0px; text-align: center; vertical-align: middle; display: inline-block; background: url({% static 'images/defaultAvtar.png' %}) 0% 0% / 96px 96px no-repeat content-box;">  </div></div></p>
+							<p style="color:white;">{{request.user}}<br>Extension: <span class="" style="font-weight: bold;"> {{user.extension}}</span><br><span class="d-none" id="camp_name_div">Campaign: <span style="font-weight: 700" id="campain_name_disp"></span></span></p>
+						</a>
+					</div>
+				</li>
+				<li class="mt-1">
+					<div class="center-block">
+	                	<div id="agent_info_vue_mode" v-show="show_modes">
+		                    <div class="nav-link" style="font-size:0.8125rem;">
+		                        <span class="dropdown-toggle" v-if= 'mode_list != ""' id="active_mode" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"  style="cursor: pointer;">
+		                            <span class="text-white"><b>Active Mode's: </b><span class="badge badge-pill badge-outline-warning mode_count">${mode_list.length}</span></span>
+		                            <div class="dropdown-menu navbar-dropdown" aria-labelledby="state_dropdown">
+		                                <a v-for='val, key in mode_list' class="dropdown-item">${val}</a>
+		                            </div>
+		                        </span>
+		                    </div>
+	                    </div>
+	                </div>
+                </li> 
+				<li class="mt-1">
+					<a href="#callbacklist" id="callbacks" class="d-none">
+						<span style="color:#fff" class="pr-3">Callbacks</span>
+						<small class="badge badge-pill badge-success fa-pull-right">
+							<span>0</span>
+							<i class="fa fa-phone fa-rotate-90 ml-1"></i>
+						</small>
+					</a>
+				</li>
+				<li class="mt-1">
+					<a id="abandonedcalls" class="d-none">
+						<span style="color:#fff" class="pr-3">Abandoned Calls</span>
+						<small class="badge badge-pill badge-danger fa-pull-right">
+							<span>0</span>
+							<i class="fas fa-phone-slash fa-rotate-90 ml-1"></i>
+						</small>
+					</a>
+				</li>        
+                <li class="mt-1" style="cursor: pointer;">
+                    <a id="show-agent-assigned-calls" class="show-assigned-calls">
+                        <span style="color:#fff" class="pr-3">Assigned Calls</span>
+                        <small class="badge badge-pill badge-success fa-pull-right">
+                            <span>0</span>
+                            <i class="fas fa-phone fa-rotate-90"></i>
+                        </small>
+                    </a>
+                </li>
+                 <li class="mt-1" style="cursor: pointer;">
+                    <a id="show-agent-totalcall-today">
+                        <span style="color:#fff" class="pr-3"><b>Total Calls Today</b></span>
+                        <small class="badge badge-pill badge-success fa-pull-right">
+                            <span>0</span>
+                            <i class="fas fa-phone fa-rotate-90"></i>
+                        </small>
+                    </a>
+                </li>
+                <li class="mt-1" style="cursor: pointer;">
+                    <a id="show-agent-totalcall-month">
+                        <span style="color:#fff" class="pr-3">Total Calls Monthly</span>
+                        <small class="badge badge-pill badge-success fa-pull-right">
+                            <span>0</span>
+                            <i class="fas fa-phone fa-rotate-90"></i>
+                        </small>
+                    </a>
+                </li>
+            </ul>
+		</div>
+
+		<!-- setting tab content ends -->
+	</div>
+	<!-- sidebar content end -->
+</div>
+<div id="select-campaign" class="modal fade" tabindex="-1" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header p-3">
+				<h5 class="modal-title">SELECT CAMPAIGN</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
+			<div class="modal-body p-3">
+				<div class="form-group" id="set-agent-campaign">
+					{% csrf_token %}
+					<label for="select_camp" class="text-muted">Available Campaigns</label>
+					<select id="select_camp" class="crm-form-control">
+						<option value="">SELECT A CAMPAIGN</option>
+						<option v-for="camp in active_campaign" :data-server="camp.switch__ip_address" :data-feedback_time="camp.auto_feedback_time" :data-progressive_time="camp.auto_progressive_time" :value="camp.id">${ camp.name }</option>
+					</select>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button id="scSubmit" class="btn btn-warning text-white mb-btn-primary" disabled>
+					<span class="fa fa-check-square" aria-hidden="true"></span> SUBMIT
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+<div id="c_password_modal" class="modal fade" tabindex="-1" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header p-3">
+				<h5 class="modal-title">Change Password</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
+			<div class="modal-body p-3">
+				{% csrf_token %}
+				<form class="forms-sample" id="change_password_form">
+					<div class="form-group row mb-0">
+						<label for="old_password" class="col-sm-4 col-form-label text-dark mb-0 mb-sm-2 font-weight-bold">Current Password <span class="star">*</span></label>
+						<div class="col-sm-8">
+							<input class="form-control" type="password" id="old_password" name="old_password" placeholder="Enter Old Password" autocomplete="off">
+							<span id="old-password-msg"></span>
+						</div>
+					</div>
+					<div class="form-group row mb-0">
+						<label for="new_password" class="col-sm-4 col-form-label text-dark mb-0 mb-sm-2 font-weight-bold">New Password <span class="star">*</span></label>
+						<div class="col-sm-8">
+							<input type="password" class="form-control pr-password" id="new_password" placeholder="Enter New Password" name="new_password" data-validation="length" data-validation-length="min8" data-validation-error-msg-container="#new-password-msg" data-validation="strength" data-validation-strength="2" autocomplete="off">
+							<span id="new-password-msg"></span>
+						</div>
+					</div>
+					<div class="form-group row mb-0">
+						<label for="" class="col-sm-4 col-form-label text-dark mb-0 mb-sm-2 font-weight-bold">Confirm New Password <span class="star">*</span></label>
+						<div class="col-sm-8">
+							<input type="password" class="form-control" id="confirm_password" placeholder="Confirm New Password" name="confirm_password" validate_confirmation = "new_password" data-validation="confirmation" data-validation-error-msg-container="#confirm-password-msg" data-validation-confirm="new_password" autocomplete="off">
+							<span id="confirm-password-msg"></span>
+						</div>
+					</div>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button id="submit_cpassword_form" class="btn btn-warning text-white">
+					<span class="fa fa-check-square" aria-hidden="true"></span> SUBMIT
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+

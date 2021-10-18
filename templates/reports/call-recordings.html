@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+{% block title %}Call Recordings{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/datatablecss/buttons.bootstrap4.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/audioplayer.css'%}">
+<style type="text/css">
+	.accordion.accordion-solid-header .card .card-header a{
+		    padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+	}
+	.accordion.accordion-solid-header .card .card-body{
+		padding:0.5rem;
+	}
+	.accordion .card .card-body i{
+		font-size: 1rem;
+	}
+	.highlighted_row:not(.selected){
+		background-color: #9dc9ee!important
+	}
+	table.dataTable.display tbody tr.highlighted_row:not(.selected)>.sorting_1{
+		background-color: #9dc9ee!important
+	}
+	.feedback_saved:not(.selected){
+		background-color: #e5fafe!important
+	}
+	table.dataTable.display tbody tr.feedback_saved:not(.selected)>.sorting_1{
+		background-color: #e5fafe!important
+	}
+</style>
+{% endblock extra-stylesheets %}
+
+{% block header %}Call Reports<small>Call Recordings</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Call Recordings</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Call Recordings</legend>
+				<!-- Dialler Logs tab and table -->
+				<div class="mt-1">
+                    <div class="accordion" id="accordion" role="tablist">
+                        <div class="card">
+                            <div class="card-header" role="tab" id="heading-2">
+                                <h6 class="mb-0">
+                                    <a class="" data-toggle="collapse" href="#collapse-2" aria-expanded="true" aria-controls="collapse-2">
+                                        Search Report
+                                    </a>
+                                </h6>
+                            </div>
+                            <div id="collapse-2" class="collapse show" role="tabpanel" aria-labelledby="heading-2" data-parent="#accordion" style="">
+                                <div class="card-body">
+								<form method="post" class="call-recordings-form" id="report_form">
+									{% csrf_token %}
+									<div class="row">
+										<div class="col-sm-6 col-md-3">
+											<div class="form-group">
+												<label class="col-form-label mb-0">Numeric</label>
+												<input type="text" class="form-control" name="customer_cid" id="destination_extension" placeholder="Phone Number" value="{{ selected_cid }}">
+											</div>
+										</div>
+										<div class="col-md-3 col-sm-6">
+											<div class="form-group">
+												<label class="col-form-label mb-0">Campaign</label>
+												<select class="form-control" name="selected_campaign" id="agent_report_campaign" multiple>
+													{% for campaign in campaign_list %}
+														<option value="{{ campaign.name}}" data-name="{{campaign.name}}">{{ campaign.name }}</option>
+													{% endfor %}
+												</select>
+											</div>
+										</div>
+										<div class="col-md-3 col-sm-6">
+											<div class="form-group">
+												<label class="col-form-label mb-0">User</label>
+												<select class="form-control" name="selected_user" id="agent_activity_users" multiple>
+													{% for user in users %}
+														<option value="{{ user.id }}">{{ user.username }}</option>
+													{% endfor %}
+												</select>
+											</div>
+										</div>
+										<div class="col-md-3 col-sm-6">
+											<div class="form-group row">
+												<label class="col-form-label mb-0">Call Duration
+													<a data-container="body" data-toggle="popover" data-placement="top" data-content="<ul><li>for >= fill value in first field</li><li>for <= fill value in second field</li><li>for range fill value in both field</li><li><span class='text-danger font-weight-bold'>Note:</span> for range first field value should be less than second filed</li></ul>" id="popover" data-trigger="hover" data-html="true">
+														<i class="fa fa-info-circle" style="font-size: 1rem"></i>
+													</a>
+												</label>
+												<div class="col-12">
+													<div class="row">
+													<input type="text" class="form-control datetimepicker-input col-6" id="start_duration" name="start_duration" data-toggle="datetimepicker" data-target="#start_duration" placeholder="HH:MM:SS" />
+							                      	<input type="text" class="form-control datetimepicker-input col-6" id="end_duration" name="end_duration" data-toggle="datetimepicker" data-target="#end_duration" placeholder="HH:MM:SS"/>
+							                      </div>
+							                </div>
+											</div>
+										</div>
+										<div class="col-md-3 col-sm-6 agent-datepicker">
+											<div class="form-group">
+												<label class="col-form-label mb-0">Start Date</label>
+												<div data-target-input="nearest" class="input-group date" id="start-date">
+													<div data-target="#start-date" data-toggle="datetimepicker" class="input-group datetimepicker">
+														<input type="text" name="start_date" placeholder="YYYY-MM-DD HH:mm" data-target="#start-date" class="form-control crm-form-control datetimepicker-input" autocomplete="off">
+														<div class="input-group-addon input-group-append"></div>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-3 col-sm-6 agent-datepicker">
+											<div class="form-group">
+												<label class="col-form-label mb-0">End Date</label>
+												<div data-target-input="nearest" class="input-group date " id="end-date">
+													<div data-target="#end-date" data-toggle="datetimepicker" class="input-group">
+														<input type="text" name="end_date" placeholder="YYYY-MM-DD HH:mm" data-target="#end-date" class="form-control crm-form-control datetimepicker-input" autocomplete="off">
+														 <div class="input-group-addon input-group-append"></div>
+													</div>
+												</div>
+												<span class="text-danger d-none" id="end-date-error">End Date Should Be Greater Than Start Date</span>
+											</div>
+										</div>
+										<div class="col-sm-6 col-md-3">
+											<div class="form-group">
+                                                <label class="col-form-label mb-0">UniqueId</label>
+                                                <input type="text" class="form-control" name="unique_id" id="unique_id" placeholder="Unique Id" value="{{ unique_id }}">
+                                            </div>
+										</div>
+										<div class="form-group">
+											<label class="col-form-label"></label>
+											<div>
+												<button type="button" class="btn btn-success btn-sm mt-2" id="mis-report-filter"><i class="fas fa-filter"></i>Filter</button>
+											</div>
+										</div>
+										<div class="form-group"> 								
+											<label class="col-form-label"></label> 								
+											<div> 									
+												<button type="button" value="" id="agent_reports_download" class="btn btn-primary btn-sm mt-2 ml-2" title="Download Recordings"><i class="fa fa-download"></i></button> 								
+											</div> 						
+										</div>
+									</div>
+									<input type="hidden" name="column_name" id="column_name_list">
+									<!-- <input type="hidden" name="down_zip" id="down_zip" value="true"> -->
+									<input type="hidden" name="agent_reports_download" id="call_details_flag" value="false">
+									<input type="hidden" name="page" id="nextPage_number" value="1">
+									<input type="hidden" name="paginate_by" id="page_length" value="10">
+									<input type="hidden" name="all_users" id="all_users">
+									<input type="hidden" name="all_campaigns" id="all_campaigns">
+									<input type="hidden" name="selected_records" id="selected_records">
+									<input type="hidden" name="order_col" id="order_col" value="init_time">
+									<input type="hidden" name="order_by" id="order_by" value="desc">
+								</form>
+							</div>
+	                    </div>
+	                </div>
+	            </div>
+	        </div>
+				<div class="row">
+					<div class="col-12">
+						<table id="callrecordings-list-table" class="table display table-striped nowrap mt-2" style="width: 100%">
+							<thead>
+								<tr id="column_name">
+									<th class="select-checkbox"></th>
+									{% for field in all_fields.diallereventlog %}
+										{% if field == 'bill_sec' %}
+											<th data-data="{{field}}" data-field_name="{{field}}" class="talk_time_col text-capitalize">talk time</th>
+										{% elif field == 'init_time' or field == 'ring_time' or field == 'connect_time' or field == 'hangup_time' %}
+											<th data-data="{{field}}" data-field_name="{{field}}" class="text-capitalize timestamp-field">{{ field|table_header }}</th>
+										{% elif field == 'id' %}
+											<th data-data="{{field}}" class="text-capitalize">{{ field|table_header }}</th>
+										{% else %}
+											<th data-data="{{field}}" data-field_name="{{field}}" class="text-capitalize">{{ field|table_header }}</th>
+										{% endif %}
+									{% endfor %}
+									<th data-data="id" data-field_name="recording_col"  class="recording-field">Recording</th>
+								</tr>
+							</thead>
+						</table>
+						{% include "vue_report_pagination.html" %}
+					</div>
+				</div>
+				<div class="modal fade" id="recordingPlay_modal" tabindex="-1" role="dialog" aria-labelledby="play_recording" aria-hidden="true">
+					<div class="modal-dialog h-100 d-flex flex-column justify-content-center my-0" role="document">
+						<div class="modal-content">
+							<div class="modal-header">
+								<h5 class="modal-title" id="play_recording">Call Recording Playback</h5>
+								<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+									<span aria-hidden="true">&times;</span>
+								</button>
+							</div>
+							<div class="modal-body text-center">
+								<span style="color: Tomato;">
+									<i class="fas fa-music fa-3x "></i>
+								</span>
+								<div class="row">
+									<div class="col-12">
+										<strong>Number : </strong>
+										<span id="rp_cust_number"></span>
+									</div>
+									<div class="col-12">
+										<strong>Agent : </strong>
+										<span id="rp_agent"></span>
+									</div>
+									<div class="col-12">
+										<strong>Campaign : </strong>
+										<span id="rp_campaign"></span>
+									</div>
+								</div>
+							</div>
+							<div class="modal-footer p-0 border-top-0">
+								<audio class="" preload="auto" id="audio_div" src="" style="width: 100%" controls></audio>
+								<!-- <div id="audio_div" class="w-100">
+									<audio class="d-none" preload="auto" controls>
+									</audio>
+								</div> -->
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="modal fade" id="recordingFeedback_modal" tabindex="-1" role="dialog" aria-labelledby="play_recording" aria-hidden="true">
+					<div class="modal-dialog h-100 d-flex flex-column justify-content-center my-0 modal-lg" role="document">
+						<div class="modal-content">
+							<div class="modal-header">
+								<h5 class="modal-title" id="play_recording">Call Recording Feedback</h5>
+								<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+									<span aria-hidden="true">&times;</span>
+								</button>
+							</div>
+							<div class="modal-body text-center pd-4">
+								<form class="forms-sample" style="padding: 15px;" id="recording-form">
+									<div class="row">
+										<span style="color: Tomato;" class="col-12 text-center">
+											<i class="fas fa-music fa-3x "></i>
+										</span>
+									</div>
+									<div class="row justify-content-center">
+										<div class="col-8 text-center">
+											<audio class="" preload="auto" id="qc_audio_div" src="" style="width: 100%" controls></audio>
+											<span class="form-error d-none" id="audio_file_error">Error: Requested file might be removed or corrupted</span>
+										</div>
+									</div>
+									<div class="row mt-3 text-left">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="username" class="col-sm-4 col-form-label text-left">Agent Name :</label>
+												<label for="username" class="col-sm-8 col-form-label reset-label" id="username"></label>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="username" class="col-sm-4 col-form-label text-left">Disposition:</label>
+												<label for="username" class="col-sm-8 col-form-label reset-label" id="primary_dispo"></label>
+											</div>
+										</div>
+									</div>
+									<div class="row text-left">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="supervisor_name" class="col-sm-4 col-form-label text-left">Supervisor Name :</label>
+												<label class="col-sm-8 col-form-label reset-label" id="supervisor"></label>
+											</div>
+										</div>
+										<!-- <div class="col-md-6">
+											<div class="form-group row">
+												<label for="sub_disposition" class="col-sm-4 col-form-label text-left">Sub-Disposition :</label>
+												<div class="col-sm-8">
+													<label class="col-sm-4 col-form-label" id="sub_disposition"></label>
+												</div>
+											</div>
+										</div> -->
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="supervisor_name" class="col-sm-4 col-form-label">Customer Name :</label>
+												<label class="col-sm-8 col-form-label reset-label" id="customer_name">Admin</label>
+											</div>
+										</div>
+									</div>
+									<div class="row text-left">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="sub_disposition" class="col-sm-4 col-form-label">Remarks:</label>
+												<label class="col-sm-8 col-form-label reset-label" id="comment"></label>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="supervisor_name" class="col-sm-4 col-form-label">Cli :</label>
+												<label class="col-sm-8 col-form-label reset-label" id="customer_cid"></label>
+											</div>
+										</div>
+									</div>
+									<div class="row text-left">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="sub_disposition" class="col-sm-4 col-form-label">Call Duration:</label>
+												<label class="col-sm-8 col-form-label reset-label" id="call_duration"></label>
+											</div>
+										</div>
+									</div>
+									<div class="row text-left">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="supervisor_name" class="col-sm-4 col-form-label">Quality Feedback:</label>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-12">
+											<div class="form-group row">
+												<textarea class="form-control reset-label" name="feedback" rows="4" id="feedback"></textarea>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="alert alert-success recording_feedback_msg mt-3 d-none">
+												Feedback submitted successfully
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="float-right">
+												<button type="button" class="btn btn-success btn-fw btn-fw mt-3" id="submit-recording-feedback">Submit</button>
+												<button type="button" class="btn btn-light btn-fw btn-fw mt-3" id="cancel_recording">Cancel & Close</button>
+											</div>
+										</div>
+									</div>
+								</form>
+								<input type="hidden" name="calldetail_id" id="calldetail_id">
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="callcenter">
+	<input type="hidden" id="model_name" value="CallDetail">
+	<input type="hidden" name="report_name" id="report_name" value="2">
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/reports.js' %}"></script>
+<script src="{% static 'js/audioplayer.js'%}"></script>
+<script src="{% static 'js/datatablejs/dataTables.select.min.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		$("#popover").popover({ trigger: "hover" });
+		{% if can_read %}
+		can_qc_update = {{can_qc_update}}
+		url = "/CallReports/CallRecordings/"
+		report_visible_cols = []
+		{% if report_visible_cols %}
+			report_visible_cols={{report_visible_cols|safe}}
+			customPaginationTable($('#callrecordings-list-table'), report_visible_cols)
+		{% else %}
+			customPaginationTable($('#callrecordings-list-table'))
+		{% endif %}
+
+		users = {{users|safe}}
+		$("#mis-report-filter").click()
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+	});
+</script>
+<script type="text/javascript">
+	$(document).on('keydown',function(e) {
+	if (e.keyCode == 82) { 
+	    console.log('r key = rewind');
+	    rewindAudio();
+	}
+	else if(e.keyCode == 70){
+	    console.log('f key = forward');
+	    forwardAudio();
+	}
+	});
+
+	function rewindAudio() {            
+	    console.log('rewindAudio');
+	    oAudio = $('audio')[0];
+	    oAudio.currentTime -= 1.0;   
+	}
+	function forwardAudio() {            
+	    console.log('forwardAudio');
+	    oAudio = $('audio')[0];
+	    oAudio.currentTime += 1.0;   
+	}
+</script>
+{% endblock extra-js %}

@@ -1,0 +1,552 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Crm Field{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/dataTables.bootstrap4.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/responsive.bootstrap4.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/select.dataTables.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+<style type="text/css">
+.asColorPicker-preview, 
+.asColorPicker-palettes,{
+	display:none;
+}
+.asColorPicker-alpha, 
+.asColorPicker-alpha-vertical{
+	display:none;
+}
+
+
+</style>
+{% endblock extra-stylesheets %}
+
+{% block header %}Administration Management<small>Create CRMFields</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'crm_fields' %}">Crm Fields</a></li>
+<li class="breadcrumb-item active" aria-current="page">Create</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_create %}
+<div class="row" id="crm_vue">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Create CRM Field</legend>
+				<!-- disposition tab and table -->
+				<form id="crm-field-form">
+				{% csrf_token %}
+				<div class="row">
+					<div class="col-md-5">
+						<div class="form-group row">
+							<label for="crm-field-name" class="col-sm-4 col-form-label">Name<span class="star">*</span> :</label>
+							<div class="col-sm-8">
+								<input type="text" class="form-control" data-toggle="tooltip" data-original-title="Enter CRM Name" id="crm-field-name" placeholder="Name" name="name" data-validation="length alphanumeric" data-validation-length="min4" data-validation-allowing="_">
+							</div>
+						</div>
+					</div>
+					<div class="col-md-5">
+						<div class="form-group row">
+							<label for="campaign" class="col-sm-4 col-form-label">Campaign :</label>
+							<div class="col-sm-8">
+								<select class="form-control" name="campaign" id="crm_field_campaign" multiple>
+									{% for campaign in campaign_list %}
+									<option value="{{ campaign.name}}">{{ campaign.name }}</option>
+									{% endfor %}
+								</select>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-2">
+						<button type="button" class="btn btn-info btn-icon-text mr-sm-2" id="add-section" @click="addSection">
+							<i class="fa fa-plus"></i>
+						Add</button>
+					</div>
+				</div>
+				<div v-dragula="sections" class="accordion" id="crmf-accordion" role="tablist">
+					<div v-for="(section,index) in sections" v-bind:key="index" class="card">
+						<div class="card-header py-3" role="tab" id="">
+							<h6 class="mb-0">
+								<a data-toggle="collapse" :href="'#section-collapse-'+index" aria-expanded="true" aria-controls="collapse-1" class="section-heading-${index}">Section-${section.section_name}
+								</a>
+								<span @click="removeSection(index)" class="d-inline fa fa-times-circle text-danger remove-section"></span>
+								<span v-if="index + 1 === sections.length" @click="addSection" class="d-inline fa fa-plus-circle text-success fa-5x add-section"></span>
+							</h6>
+						</div>
+						<div :id="'section-collapse-'+index" class="collapse collapse-div show" role="tabpanel" aria-labelledby="section-heading" data-parent="#crmf-accordion" style="">
+							<div class="card-body">
+								<div class="row crm-fields" id="">
+									<div class="col-12 col-sm-6 col-md-4">
+										<div class="form-group row">
+											<label for="field" class="col-4 col-form-label">Section Name<span class="star">*</span>:</label>
+											<div class="col-8">
+												<input v-model="section.section_name" type="text" data-toggle="tooltip" title="Enter Section Name" class="form-control section_name"  placeholder="Section Name" data-validation="required">
+											</div>
+										</div>
+									</div>
+									<div class="col-12 col-sm-6 col-md-4">
+										<div class="form-group row">
+											<label for="priority" class="col-4 col-form-label">Priority<span class="star">*</span> :</label>
+											<div class="col-8">
+												<input v-model="section.priority" type="text" class="form-control section-priority" placeholder="Priority" data-validation="number" data-toggle="tooltip" :value="index">
+												<span id="priority-error-msg" class="priority-msg"></span>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="row crmfield_div" :id="'crmfield_div_'+index">
+									<div v-for="(field,field_index) in section.section_fields" v-bind:key="field_index" class="card col-12">
+										<div class="card-header py-3" role="tab" id="">
+											<h6 class="mb-0">
+												<a data-toggle="collapse" :href="'#crmf-collapse-'+index+'-'+field_index" aria-expanded="false" aria-controls="collapse-4" class="">Field-${field.field}
+												</a>
+												<span @click="removeField(index, field_index)" class="d-inline fa fa-times-circle text-danger remove-section"></span>
+												<span v-if="field_index + 1 === section.section_fields.length" @click="addField(index)" class="d-inline fa fa-plus-circle text-success fa-5x add-section"></span>
+											</h6>
+										</div>
+										<div :id="'crmf-collapse-'+index+'-'+field_index" class="collapse show collapse-div" role="tabpanel" aria-labelledby="clone-crmf-heading" :data-parent="'#crmfield_div_'+index" style="">
+											<div class="card-body">
+												<div class="row crm-fields" id="clone-crm-field">
+													<div class="col-12 col-sm-6 col-md-3">
+														<div class="form-group row">
+															<label for="field" class="col-4 col-form-label">Field<span class="star">*</span> :</label>
+															<div class="col-8">
+																<input v-model="field.field" type="text" class="form-control field_name" id="field_name" placeholder="Field"data-validation="required">
+															</div>
+														</div>
+													</div>
+													<div class="col-12 col-sm-6 col-md-3">
+														<div class="form-group row">
+															<label for="" class="col-4 col-form-label">Type<span class="star">*</span>  :</label>
+															<div class="col-8">
+																<select class="form-control" id="field_type" v-model="field.field_type">
+																	{% for type in field_types %}
+																	<option value="{{ type.0 }}">{{ type.1 }}</option>
+																	{% endfor %}
+																</select>
+															</div>
+														</div>
+													</div>
+													<div id="field_size_div" class="col-12 col-sm-6 col-md-3">
+														<div class="form-group row">
+															<label for="size" class="col-4 col-form-label">Size<span class="star">*</span>  :</label>
+															<div class="col-8">
+																<input v-model="field.size" type="number" class="form-control field_size" id="field_size" placeholder="Size" data-validation="required" min="1" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)">
+															</div>
+														</div>
+													</div>
+													<div id="field_options_div" class="col-12 col-sm-6 col-md-3 d-none">
+														<div class="form-group row">
+															<label for="options" class="col-4 col-form-label">Options<span class="star">*</span>  :</label>
+															<div class="col-8">
+																<input v-model="field.options" type="options" class="form-control" id="field_options" placeholder="Options" data-validation="required" data-toggle="tooltip" data-original-title="Enter Values Separated By comma Eg:Option1,Option2,Option3">
+															</div>
+														</div>
+													</div>
+													<div class="col-12 col-sm-6 col-md-3">
+														<div class="form-group row">
+															<label class="col-4 col-md-5 ml-md-4 col-form-label">Editable:</label>
+															<div class="col-8 col-md-5 form-inline">
+																<div class="form-check">
+																	<label class="form-check-label">
+																		<input v-model="field.editable" type="checkbox" id="field_editable" class="form-check-input" name="">
+																		<i class="input-helper"></i>
+																	</label>
+																</div>
+															</div>
+														</div>
+													</div>
+													<div class="col-12 col-sm-6 col-md-3">
+														<div class="form-group row">
+															<label class="col-4 col-md-5 ml-md-4 col-form-label">Required:</label>
+															<div class="col-8 col-md-5 form-inline">
+																<div class="form-check">
+																	<label class="form-check-label">
+																		<input v-model="field.is_required" type="checkbox" id="field_is_required" class="form-check-input" name="">
+																		<i class="input-helper"></i>
+																	</label>
+																</div>
+															</div>
+														</div>
+													</div>
+													<div class="col-12 col-sm-6 col-md-3">
+														<div class="form-group row">
+															<label for="priority" class="col-4 col-form-label">Priority<span class="star">*</span>  :</label>
+															<div class="col-8">
+																<input v-model="field.priority" type="number" class="form-control field_priority" id="field_priority" placeholder="Priority" data-validation="number" data-toggle="tooltip" min="1" onkeypress="return isNumber(event)"  onpaste="pasteNumber(event)">
+																<span id="field-priority-error-msg" class="field-priority-msg"></span>
+															</div>
+														</div>
+													</div>
+													<div class="col-12 col-sm-6 col-md-3">
+														<div class="form-group row">
+															<label for="spandiv" class="col-4 col-form-label">Column Span :</label>
+															<div class="col-8">
+																<select v-model="field.column_span" class="form-control" name="field_status" id="column-span">
+																	{% for col in "123" %}
+																	<option value="{{ col }}">{{ col }}</option>
+																	{% endfor %}
+																</select>
+															</div>
+														</div>
+													</div>
+													<div class="col-12 col-sm-6 col-md-3">
+														<div class="form-group row">
+															<label for="field_status" class="col-4 col-form-label">Status :</label>
+															<div class="col-8">
+																<select v-model="field.field_status" class="form-control" name="field_status" id="field_status">
+																	{% for status in field_status %}
+																	<option value="{{ status.0 }}">{{ status.1 }}</option>
+																	{% endfor %}
+																</select>
+															</div>
+														</div>
+													</div>
+													<div class="col-1">
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-sm-6">
+						<div class="alert alert-danger d-none" id="field-msg">
+					 </div>
+					</div>
+					<div class="col-sm-6">
+						<div class="float-right">
+							<button type="button" class="btn btn-success btn-icon-text mr-sm-2 create-crm-field" id="create-crm-field">
+								<i class="far fa-check-square"></i>
+							Submit</button>
+						</div>
+					</div>
+				</div>
+					<input type="hidden" name="crm_fields" id="hidden_crm_fileds">
+				</form>
+				<div class="card d-none col-md-12" id="clone-crmf-card">
+					<div class="card-header py-3" role="tab" id="clone-crmf-heading">
+						<h6 class="mb-0">
+							<a data-toggle="collapse" href="#clone-crmf-collapse" aria-expanded="false" aria-controls="collapse-4" class="">
+							</a>
+						<span class="d-inline fa fa-times-circle text-danger remove-crmfield"></span>
+						</h6>
+					</div>
+					<div id="clone-crmf-collapse" class="collapse show collapse-div" role="tabpanel" aria-labelledby="clone-crmf-heading" data-parent="#crmf-accordion" style="">
+						<div class="card-body">
+							<div class="row crm-fields" id="clone-crm-field">
+								<div class="col-12 col-sm-6 col-md-3">
+									<div class="form-group row">
+										<label for="field" class="col-4 col-form-label">Field<span class="star">*</span> :</label>
+										<div class="col-8">
+											<input type="text" class="form-control field_name" id="field_name" placeholder="Field"data-validation="required">
+										</div>
+									</div>
+								</div>
+								<div class="col-12 col-sm-6 col-md-3">
+									<div class="form-group row">
+										<label for="extension" class="col-4 col-form-label">Type<span class="star">*</span>  :</label>
+										<div class="col-8">
+											<select class="form-control" id="field_type">
+												{% for type in field_types %}
+												<option value="{{ type.0 }}">{{ type.1 }}</option>
+												{% endfor %}
+											</select>
+										</div>
+									</div>
+								</div>
+								<div id="field_size_div" class="col-12 col-sm-6 col-md-3">
+									<div class="form-group row">
+										<label for="size" class="col-4 col-form-label">Size<span class="star">*</span>  :</label>
+										<div class="col-8">
+											<input type="number" class="form-control field_size" id="field_size" placeholder="Size" data-validation="required" min="1" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)">
+										</div>
+									</div>
+								</div>
+								<div id="field_options_div" class="col-12 col-sm-6 col-md-3 d-none">
+									<div class="form-group row">
+										<label for="options" class="col-4 col-form-label">Options<span class="star">*</span>  :</label>
+										<div class="col-8">
+											<input type="options" class="form-control" id="field_options" placeholder="Options" data-validation="required" data-toggle="tooltip" data-original-title="Enter Values Separated By comma Eg:Option1,Option2,Option3">
+										</div>
+									</div>
+								</div>
+								<div class="col-12 col-sm-6 col-md-3">
+									<div class="form-group row">
+										<label class="col-4 col-md-5 ml-md-4 col-form-label">Editable:</label>
+										<div class="col-8 col-md-5 form-inline">
+											<div class="form-check">
+												<label class="form-check-label">
+													<input type="checkbox" id="field_editable" class="form-check-input" name="">
+													<i class="input-helper"></i>
+												</label>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="col-12 col-sm-6 col-md-3">
+									<div class="form-group row">
+										<label class="col-4 col-md-5 ml-md-4 col-form-label">Required:</label>
+										<div class="col-8 col-md-5 form-inline">
+											<div class="form-check">
+												<label class="form-check-label">
+													<input type="checkbox" id="field_is_required" class="form-check-input" name="">
+													<i class="input-helper"></i>
+												</label>
+											</div>
+										</div>
+									</div>
+								</div>
+								<!-- <div class="col-12 col-sm-6 col-md-3">
+									<div class="form-group row">
+										<label class="col-4 col-md-5 ml-md-4 col-form-label">Required:</label>
+										<div class="col-8 col-md-5 form-inline">
+											<div class="form-check">
+												<label class="form-check-label">
+													<input v-model="field.is_required" type="checkbox" id="field_is_required" class="form-check-input" name="">
+													<i class="input-helper"></i>
+												</label>
+											</div>
+										</div>
+									</div>
+								</div> -->
+								<div class="col-12 col-sm-6 col-md-3">
+									<div class="form-group row">
+										<label for="priority" class="col-4 col-form-label">Priority<span class="star">*</span>  :</label>
+										<div class="col-8">
+											<input type="number" class="form-control field_priority" id="field_priority" placeholder="Priority" data-validation="number" data-toggle="tooltip" min="1" onkeypress="return isNumber(event)"  onpaste="pasteNumber(event)">
+											<span id="field-priority-error-msg" class="field-priority-msg"></span>
+										</div>
+									</div>
+								</div>
+								<div class="col-12 col-sm-6 col-md-3">
+									<div class="form-group row">
+										<label for="spandiv" class="col-4 col-form-label">Column Span :</label>
+										<div class="col-8">
+											<select class="form-control" name="field_status" id="column-span">
+												{% for col in "123" %}
+												<option value="{{ col }}">{{ col }}</option>
+												{% endfor %}
+											</select>
+										</div>
+									</div>
+								</div>
+								<div class="col-12 col-sm-6 col-md-3">
+									<div class="form-group row">
+										<label for="field_status" class="col-4 col-form-label">Status :</label>
+										<div class="col-8">
+											<select class="form-control" name="field_status" id="field_status">
+												{% for status in field_status %}
+												<option value="{{ status.0 }}">{{ status.1 }}</option>
+												{% endfor %}
+											</select>
+										</div>
+									</div>
+								</div>
+								<div class="col-12 col-sm-6 col-md-3">
+									<div class="form-group row">
+										<label class="col-4 col-md-5 ml-md-4 col-form-label">Unique Field:</label>
+										<div class="col-8 col-md-5 form-inline">
+											<div class="form-check">
+												<label class="form-check-label">
+													<input type="checkbox" id="field_unique" class="form-check-input" name="">
+													<i class="input-helper"></i>
+												</label>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="card d-none" id="clone-crm-section">
+					<div class="card-header py-3" role="tab" id="">
+						<h6 class="mb-0">
+							<a data-toggle="collapse" href="#clone-section-collapse" aria-expanded="true" aria-controls="collapse-1" class="clone-crm-heading">Section 1
+							</a>
+							<span class="d-inline fa fa-times-circle text-danger remove-section"></span>
+						</h6>
+					</div>
+					<div id="clone-section-collapse" class="collapse collapse-div show" role="tabpanel" aria-labelledby="clone-crm-heading" data-parent="#crmf-accordion" style="">
+						<div class="card-body">
+							<div class="row crm-fields" id="">
+								<div class="col-12 col-sm-6 col-md-4">
+									<div class="form-group row">
+										<label for="field" class="col-4 col-form-label">Section Name<span class="star">*</span>:</label>
+										<div class="col-8">
+											<input type="text" data-toggle="tooltip" title="Enter Section Name" class="form-control section_name"  placeholder="Section Name" data-validation="required">
+										</div>
+									</div>
+								</div>
+								<div class="col-12 col-sm-6 col-md-4">
+									<div class="form-group row">
+										<label for="priority" class="col-4 col-form-label">Priority<span class="star">*</span> :</label>
+										<div class="col-8">
+											<input type="number" class="form-control section-priority" placeholder="Priority" data-validation="number" data-toggle="tooltip" min="1" onkeypress="return isNumber(event)"  onpaste="pasteNumber(event)">
+											<span id="priority-error-msg" class="priority-msg"></span>
+										</div>
+									</div>
+								</div>
+								<div class="col-12 col-sm-6 col-md-4">
+									<!-- <div class="col-1 form-inline ml-auto"><i id="" class="fa fa-plus-circle text-success fa-5x add-crm-field"></i></div> -->
+								</div>
+								
+								<div class="col-1">
+								</div>
+							</div>
+							<div class="row crmfield-div">
+								<input type="hidden" id="crmfield-count" value="0">
+							</div>
+							<div class="row justify-content-end"><i id="" class="fa fa-plus-circle text-success fa-5x add-crm-field"></i></div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<input type="hidden" name="" id="get-count" value="0">
+{% endif %}
+<!-- update modal form ends here ---------------->
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/vendor.bundle.color.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<!-- <script src="{% static 'js/crmfield.js' %}"></script> -->
+<script type="text/javascript">
+	$.validate({form : "#crm-field-form"});
+	$('[data-toggle="tooltip"]').tooltip();  
+	{% if not can_create %}
+		PermissionDeny();
+	{% endif %}
+</script>
+<script>
+	var vueDragula = {
+		install: function(Vue, options){
+			Vue.directive('dragula',{
+				bind: function(el,binding,vnode){
+					var self = this
+					var dragIndex;
+					var dragElm;
+					this.dragula = dragula([el])
+					this.dragula.on('drag',function(el,source){
+						dragElm = el;
+						dragIndex = domIndexOf(el, source)
+					})
+					this.dragula.on('drop',function(dropElm,target,source){
+						if (!target) return;
+						var dropIndex = domIndexOf(dropElm, target);
+						if (target===source){
+							vnode.context.sections.splice(dropIndex,0,vnode.context.sections.splice(dragIndex,1)[0])
+						}
+						refreshModel();
+					})
+						console.log(self,"self")
+
+					function domIndexOf(child, parent){
+						return Array.prototype.indexOf.call(parent.children, child);
+					}
+					function refreshModel() {
+						// trigger rerendering of the v-for items to keep the dom elements under vue's control
+						vnode.context.sections = JSON.parse(JSON.stringify(vnode.context.sections))
+					}
+				}
+			})
+		}
+	}
+	Vue.use(vueDragula)
+	var crmfield_vue = new Vue({
+		el: '#crm_vue',
+		delimiters: ["${","}"],
+		data(){
+			return{
+				sections:[],
+				fields: [],
+				blockRemoval: true,
+				field_type:{
+					label:'',
+					value:''
+				}
+			}
+		},
+		watch:{
+			sections(){
+				this.blockRemoval = this.sections.length <= 1
+			},
+		},
+		methods:{
+			addField(index){
+				let checkEmptyfield = this.sections[index]['section_fields'].filter(field => field.field_name === null)
+				if (checkEmptyfield.length >= 1 && this.sections[index]['section_fields'].length > 0)
+					return
+					this.sections[index]['section_fields'].push({
+						field:null,
+							field_type:"text",
+							size:"",
+							options:"",
+							editable:false,
+							priority:null,
+							column_span:"1",
+							field_status:"Active",
+							is_required:false,
+					})
+			},
+			addSection(){
+				let checkEmptysection = this.sections.filter(section => section.section_name === null)
+				if (checkEmptysection.length >= 1 && this.sections.length > 0)
+					return 
+					this.sections.push({
+						section_name: null,
+						priority: null, 
+						section_fields:[{
+							field:null,
+							field_type:"text",
+							size:"",
+							options:"",
+							editable:false,
+							priority:null,
+							column_span:"1",
+							field_status:"Active",
+							is_required:false,
+						}]
+					})
+			},
+			removeSection(sectionId){
+				if(!this.blockRemoval) this.sections.splice(sectionId,1)
+			},
+			removeField(sectionId, fieldId){
+				if(!(this.sections[sectionId]['section_fields'].length<=1)){
+					this.sections[sectionId]['section_fields'].splice(fieldId,1)
+				}
+			}
+		},
+		mounted(){
+			this.addSection()
+			// this.addField()
+		}
+	})
+	// dragula([document.getElementById("crmf-accordion")])
+	// .on('drag', function(el, source){
+	// 	console.log(el,"drag el")
+	// 	console.log(source,"drag source")
+	// 	console.log(domIndexOf(el,source))
+	// })
+	// .on('drop',function(dropElm, target, source){
+	// 	console.log(dropElm)
+	// 	console.log(target)
+	// 	console.log(source)
+	// })
+	// function domIndexOf(child, parent) {
+ //          return Array.prototype.indexOf.call(parent.children, child);
+ //      }
+</script>
+{% endblock extra-js %}

@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+{% block title %}Email Scheduler{% endblock title %}
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+{% endblock extra-stylesheets %}
+{% block header %}Modules<small> Email Scheduler</small>{% endblock header %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Email Scheduler</li>
+{% endblock breadcrumb %}
+{% block content %}
+{% if can_read %}
+<div class="card">
+    <div class="card-body">
+        <legend>Email Scheduler</legend>
+        {% csrf_token %}
+        <!-- department tab and table -->
+        <form class="forms-sample" id="report-scheduler-form">
+        <div class="row" id="report_schedule_vue">
+        	<div class="col-md-6">
+        		 <div class="form-group row">
+	                <label for="" class="col-sm-4 col-form-label">Reports :<span class="star">*</span></label>
+	                <div class="col-sm-8">
+	                	{% if selected_reports %}
+	                	<select class=form-control id='reports' name='reports' multiple>
+	                		<!-- <option value="">Select Reports</option> -->
+	                		{% for report in reports_list %}
+	                			{% if report.0 in reports %}
+	                				<option value="{{report.0}}" selected="selected">{{report.1}}</option>
+	                			{% else %}
+	                				<option value="{{report.0}}">{{report.1}}</option>
+	                			{% endif%}
+	                		{% endfor %} 
+	                	</select>
+	                	{% else %}
+	                		<select class=form-control id='reports' name='reports' multiple>
+	                			<!-- <option value="">Select Reports</option> -->
+	                		{% for report in reports_list %}
+	                				<option value="{{report.0}}">{{report.1}}</option>
+	                		{% endfor %} 
+	                	</select>
+	                	{% endif%}
+	                </div>
+	             </div> 
+        	</div>
+        		<div class="col-md-6">
+		            <div class="form-group row">
+		                <label for="" class="col-sm-4 col-form-label">Schedule Time :<span class="star">*</span></label>
+		                <div class="col-sm-8">
+		                	<div class="input-group date schedule-timepicker" id="schedule-timepicker" data-target-input="nearest">
+								<div class="input-group" data-target="#schedule-timepicker" data-toggle="datetimepicker">
+									<input type="text" class="form-control datetimepicker-input" data-target="#schedule-timepicker" name="schedule_time" data-toggle="tooltip" title="Select time for Schedule the report " placeholder="hh:mm" data-validation="required" data-validation="time" id="schedule-timepicker_val" {% if selected_reports %} value="{{schedule_time}}"{% endif %}>
+										<div class="input-group-addon input-group-append"><i class="far fa-clock input-group-text" style="padding:9px; height: 38px;"></i>
+										</div>
+									</div>
+								</div>
+							</div>
+		                </div>
+		            </div>
+	        </div>
+	        <div class="row">
+		              <div class="col-md-6">
+		            	  <div class="form-group row">
+		                <label for="" class="col-sm-4 col-form-label">From Email :<span class="star">*</span></label>
+		                 <div class="col-sm-8">
+			                	<input type="email" data-toggle="tooltip" data-original-title="From mail" class="form-control" id="from_mails" placeholder="From mail" name="from" {% if selected_reports%} value="{{ from }}" {% endif %}  data-validation-length="max100" data-validation-allowing="_",data-validation-error-msg-container="#from_mail_exist">
+								<span id="from_mail_exist"></span>
+			                </div>
+		            	</div>
+		            </div>
+		             <div class="col-md-6">
+		            <div class="form-group row">
+		                <label for="" class="col-sm-4 col-form-label">Password :<span class="star">*</span></label>
+		                 <div class="col-sm-8">
+			                	<input type="password" data-toggle="tooltip" data-original-title="Password" class="form-control" id="password" placeholder="password" name="Password" {% if selected_reports%} value="{{ password }}" {% endif %}  data-validation-length="max100" data-validation-allowing="_",data-validation-error-msg-container="#password_mail_exist">
+								<span id="password_mail_exist"></span>
+			                </div>
+		            	</div>
+		            </div>
+		            <div class="col-md-6">
+		            <div class="form-group row">
+		                <label for="" class="col-sm-4 col-form-label">To Email's :<span class="star">*</span></label>
+		                 <div class="col-sm-8">
+			                	<input type="text" data-toggle="tooltip" data-original-title="To mail, with comma seperated address" class="form-control" id="to_mails" placeholder="To mail, with comma seperated address" name="to" {% if selected_reports%} value="{{ to }}" {% endif %}  data-validation-length="max100" data-validation-allowing="_",data-validation-error-msg-container="#to_mail_exist">
+								<span id="to_mail_exist"></span>
+			                </div>
+		            	</div>
+		            </div>
+		           <div class="col-md-6">
+	            <div class="form-group row">
+	                <label for="" class="col-sm-4 col-form-label">Status :<span class="star">*</span></label>
+	                <div class="col-sm-8">
+	                    {% if selected_reports %}
+	                    <select class="form-control" name="status" id="status">
+	                        {% for st in status_choice %}
+	                        {% if st.0 == status %}
+	                        <option value="{{ st.0 }}" selected>{{ st.1 }}</option>
+	                        {% else %}
+	                        <option value="{{ st.0 }}">{{ st.1 }}</option>
+	                        {% endif %}
+	                        {% endfor %}
+	                    </select>
+	                    {% else %}
+	                    <select class="form-control" name="status" id="status">
+	                        {% for st in status_choice %}
+	                        <option value="{{ st.0 }}">{{ st.1 }}</option>
+	                        {% endfor %}
+	                    </select>
+	                    {% endif %}
+	                </div>
+	            </div>
+	       		</div>
+	       	</div>
+	       		<div class="row mt-4">
+				<div class="col-sm-6">
+					<div class="alert alert-danger d-none" id="script-err-msg">
+					</div>
+				</div>
+				<div class="col-sm-6">
+					<div class="float-right">
+						<button type="button" class="btn btn-light btn-icon-text cancel" id="" onclick="showSwal('warning-message-and-cancel','OK', '/dashboard/')">
+							<i class="fas fa-arrow-left btn-icon-prepend"></i>Cancel
+						</button>
+						<button type="button" class="btn btn-success btn-icon-text ml-2" id="schedule-report-btn">
+							<i class="far fa-check-square btn-icon-prepend"></i>{% if selected_reports %}Update{% else %}Submit{% endif %}
+						</button>
+					</div>
+				</div>
+			</div>
+	        </div>
+	    </form>
+        </div>
+    </div>
+{% endif %}
+<input type="hidden" id="app_name" value="callcenter">
+<input type="hidden" id="model_name" value="EmailScheduler">
+</div>
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/reports.js' %}"></script>
+<script type="text/javascript">
+	{% if can_read %}
+		$('#reports').select2()
+	$(".schedule-timepicker").datetimepicker({
+			format: 'HH:mm'
+		});
+	{% else %}
+		PermissionDeny();
+	{% endif %}
+</script>
+{% endblock extra-js %}

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}ThirdParty User{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+{% endblock extra-stylesheets %}
+
+{% block header %}Modules<small>ThirdParty User</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'third_party_user_campaign' %}">ThirdParty User</a></li>
+<li class="breadcrumb-item active" aria-current="page">Modify</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_create %}
+<div class="card">
+	<div class="card-body">
+		<legend>Edit ThirdParty User</legend>
+		<form class="forms-sample" id="thirdparty-user-camp-edit-form">
+			<input type="hidden" id="token_id" value="{{queryset.id}}">
+			<input type="hidden" id="token" name='token' value="{{queryset.token}}">
+			{% csrf_token %}
+			<div class="row">
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="" class="col-sm-4 col-form-label">User<span class="star">*</span> :</label>
+						<div class="col-sm-8">
+							<select class="form-control" name="user" id="user" data-validation="required">
+							{% for user in users %}
+								{% if user.id == queryset.user.id %}
+									<option value="{{user.id}}" selected>{{ user.username }}</option>
+								{% else %}
+									<option value="{{user.id}}">{{ user.username }}</option>
+								{% endif %}
+							{% endfor %}
+							</select>
+						<span id='user-error'></span>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="" class="col-sm-4 col-form-label">Campaign<span class="star">*</span>:</label>
+						<div class="col-sm-8">
+							<select class="form-control" name="campaign" id="campaign" data-validation="required">
+								{% for campaign in campaigns %}
+									{% if campaign.id == queryset.campaign.id %}
+									<option value="{{campaign.id}}" selected>{{ campaign.name }}</option>
+								{% else %}
+									<option value="{{campaign.id}}">{{ campaign.name }}</option>
+								{% endif %}
+								{% endfor %}
+							</select>
+						</div>
+					</div>
+					<span id="camp_exists"></span>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="thirdParty-name" class="col-sm-4 col-form-label">Domain Name<span class="star">*</span> :</label>
+						<div class="col-sm-8">
+							<input type="text" data-toggle="tooltip" data-original-title="Enter domain " class="form-control" id="doamin_name" placeholder="Domain Name" name="domain" data-validation="length" data-validation-length="max100" data-validation-error-msg-container="#domain_exists" value="{{queryset.domain}}">
+							<span id="domain_exists"></span>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="thirdParty-name" class="col-sm-4 col-form-label">Mobile Number<span class="star">*</span> :</label>
+						<div class="col-sm-8">
+							<input type="text" data-toggle="tooltip" data-original-title="Enter mobile Number" class="form-control" id="mobile_no" placeholder="Mobile Number" name="mobile_no" data-validation="length" data-validation-length="max100"data-validation-error-msg-container="#mobile_exists" value="{{queryset.mobile_no}}">
+							<span id="mobile_exists"></span>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row mt-4">
+				<div class="col-sm-6">
+					<div class="alert alert-danger d-none" id="thirdparty-user-err-msg"></div>
+				</div>
+				<div class="col-sm-6">
+					<div class="float-right">
+						<button type="button" class="btn btn-light btn-icon-text" onclick="showSwal('warning-message-and-cancel','OK', '/CampaignManagement/third_party_user_campaign/')">
+							<i class="fas fa-arrow-left btn-icon-prepend"></i>Cancel
+						</button>
+						<button type="button" class="btn btn-success btn-icon-text ml-2" id="edit-third_party_user_campaign">
+							<i class="far fa-check-square btn-icon-prepend"></i>Update
+						</button>
+					</div>
+				</div>
+			</div>
+		</form>
+	</div>
+</div>
+<input type="hidden" id="app_name" value="callcenter">
+<input type="hidden" id="model_name" value="ThirdPartyApi">
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	
+</script>
+{% endblock extra-js %}

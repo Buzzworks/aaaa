@@ -1,0 +1,37 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+        path('CRM/phonebook/',views.CrmListApiView.as_view(), name="phonebook" ),
+        path('CRM/create-phonebook/',views.CrmCreatePhonebookApiView.as_view(), name="create-phonebook" ),
+        path('CRM/bulk-delete-contact/',views.BulkDeleteContactApiView.as_view(), name="users-bulk-delete"),
+        path('CRM/phonebook/<int:pk>/',views.CrmEditPhonebookApiView.as_view(), name="edit-phonebook" ),
+        path('CRM/phonebook/edit/<int:pk>/',views.CrmCreatePhonebookApiView.as_view(), name="edit-phonebook-detail" ),
+        path('CRM/phonebook/transfer_contacts/<int:pk>/',views.BulkTransferContactApiView.as_view(), name="transfer_phonebook_contacts" ),
+        path('CRM/phonebook/lead-list-Churn/<int:pk>/',views.LeadListChurnAPI.as_view(), name="lead-list-Churn" ),
+        path('CRM/phonebook/validate-file/',views.ValidatePhoneBookUploadApiView.as_view(), name="validate-phonebook-file"),
+        path('CRM/get-sample-phonebook/<str:campaign>/<str:file_type>/',views.DownloadSamplePhoneBookCsv.as_view(), name="get-sample-phonebook"),
+        path('api/get-sample-update-phonbook-file/',views.DownloadSampleUpdatePhonebookCsv.as_view(), name="get-sample-update-phonebook"),
+        path('CRM/duplicate-list-for-phonebook/',views.GetDuplicateListForPhonebook.as_view(), name="duplicate-list-for-phonebook"),
+        path('CRM/crm-fields/',views.CustomCrmFieldApiView.as_view(), name="crm_fields"),
+        path('CRM/lead-priority/',views.LeadPriorityListAPIView.as_view(), name="lead_priority"),
+        path('CRM/lead-priority-csv/',views.LeadPriorityCsvAPIView.as_view(), name="custom-lead-priority-csv"),
+        path('CRM/CrmField/create/',views.CreateCustomCrmFieldApiView.as_view(), name="create-crm_fields"),
+        path('CRM/CrmField/<int:pk>/',views.EditCustomCrmFieldApiView.as_view(), name="edit-crm_fields"),
+        path('CRM/save-agent-breaks/',views.SaveAgentBreakApiView.as_view(), name="save-agent-breaks"),
+        path('CRM/ContactInfo/',views.ContactInfoApiView.as_view(), name="contact_info"),
+        path('CRM/ContactInfo/<int:pk>/',views.ContactInfoEditApiView.as_view(), name="edit-contact_info"),
+        path('CRM/upload-crm-field/',views.UploadCremFieldApiView.as_view(), name="upload-crm-field"),
+        path('CRM/check-campaign-avail/',views.CheckCampaignAvailApiView.as_view(), name="crm-check-campaign-avail"),
+        path('CRM/validate-crm-field/',views.ValidateUploadedCrmField.as_view(), name="validate-crm-field"),
+        path('Contacts/ContactStatus/',views.ConnectedCallStatusApiView.as_view(), name="connected_contact_info"),
+    	path('api/get-dispo/', views.GetDispoAPIView.as_view(), name="get-dispo"),
+        path('api/get-contact-info/<int:pk>/', views.GetContactInfoAPIView.as_view(), name="get-contact-info"),
+        path('CRM/Download/<int:pk>/',views.DownloadCrmFields, name='download-crm-fields'),
+        path('CRM/phonebook/status/',views.CrmPhonebookStatusApiView.as_view(), name="status-phonebook" ),
+        path('download/',views.DownloadAPIView.as_view(),name="download"),
+        path('api/perform-action-on-entry/', views.PerformActionOnSelectedEntry.as_view(), name="perform-action-on-entry"),
+        path('api/get-edit-contact/<int:pk>/', views.GetEditContactInfoApiView.as_view(), name="get-edit-contact"),
+        path('api/download-phonebook/',views.DownloadPhonebook.as_view(),name="download_phoenbook"),
+]
+

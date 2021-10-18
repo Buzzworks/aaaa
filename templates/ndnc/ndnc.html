@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Ndnc{% endblock title %}
+
+{% block extra-stylesheets %}
+{% endblock extra-stylesheets %}
+
+{% block header %}NDNC Management<small>Users</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">NDNC</li>
+{% endblock breadcrumb %}
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>NDNC</legend>
+				<div class="tab-content">
+					<div class="row tab-pane fade show active" id="user" role="tabpanel" aria-labelledby="user">
+						<div class="col-12">
+							<div class="">
+								<table id="ndnc-list-table" class="table display table-striped nowrap" style="width:100%">
+									<thead>
+										<tr>
+											<th></th>
+											<th>NDNC File</th>
+											<th>Created</th>
+											{% if can_update or can_delete %}
+											<th class="px-1">
+												<div class="btn-group select-all-div">
+													<div class="form-check">
+														<label class="form-check-label ml-3">
+															<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+														</label>
+													</div>
+													{% if can_delete %}
+													<div class="dropdown">
+														<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+															<center>
+																<span class="caret"></span>
+															</center>
+														</button>
+														<ul class="dropdown-menu">
+															<li class="dropdown-item text-center" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">Delete Selected</li>
+														</ul>
+													</div>
+													{% endif %}
+												</div>
+											</th>
+											<th>Action</th>
+											{% endif %}
+										</tr>
+									</thead>
+									<tbody id="user-table-body" class="data-body-div">
+										{% for ndnc in ndnc_records.all %}
+										<tr id="{{ ndnc.id }}">
+											<td><avatar username="{{ ndnc.delta_file_name}}" :size="36"></avatar></td>
+											<td>{{ ndnc.delta_file_name }}</td>
+											<td>{{ ndnc.created }}</td>
+											{% if can_update or can_delete %}
+											<td>
+												<div class="form-check">
+													<label class="form-check-label">
+														<input type="checkbox" class="form-check-input"><i class="input-helper"></i>
+													</label>
+												</div>
+											</td>
+											<td>
+												<div class="dropdown show">
+													<button class="btn btn-secondary dropdown-toggle table-dropdown" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+														Choose Action
+													</button>
+													
+													<div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+														<div class="dropdown-divider"></div>
+														{% if can_delete %}
+														<a class="dropdown-item"  onclick="confirmDelete('delete_one', 'Ok','particular_entry-{{ ndnc.id }}')">Delete</a>
+														{% endif %}
+													</div>
+												</div>
+											</td>
+											{% endif %}
+										</tr>
+										{% endfor %}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+
+{% if can_create %}
+<!-- action buttons -->
+<div class="bottom-menu">
+	<div class="action-button-circle">
+		<a><div class="circle-button skin-black"><i class="fa fa-plus"></i></div></a>
+	</div>
+	<div class="fab-div-area" id="fab-div-area" style=" height: 100px; padding-top: 0px; margin-top: 0px; padding-bottom: 0px; margin-bottom: 0px;">
+		<ul class="fab-ul" style="height: 170px;">
+			<li class="li-style"><a class="fas fa-cloud-upload-alt fab-div-item" data-toggle="modal" data-target="#fileupload-wizard-modal" title="Upload User"></a></li><br>
+		</ul>
+	</div>
+</div>
+<!-- model forms  -->
+<div class="modal fade" id="fileupload-wizard-modal" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to create users."></i>
+					<b>NDNC Wizard » Upload</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body pt-3">
+				<form id="ndnc-upload-form" class="wizard-validation-form" action="{% url 'ndnc' %}" method="POST">
+					{% csrf_token %}
+					<div>
+						<button type="button" class="btn btn-dark btn-fw file-upload-label" id="">File Upload</button>
+						<section>
+							<div class="row">
+								<div class="col-6 mt-2">
+									<input type="file" class="dropify" id="uploaded-file" name="delta_file"/>
+								</div>
+							</div>
+							<div class="row">
+								<a id="proper-data" class="d-none upload-css text-info" download>
+									<span class="fa fa-download download-file-css"></span>
+									<span class="msg"></span>
+								</a>
+							</div>
+							<div class="row">
+								<a id="improper-data" class="d-none upload-css text-danger" download>
+									<span class="fa fa-download download-file-css"></span>
+									<span class="msg"></span>
+								</a>
+							</div>
+							<div class="row pull-right">
+								<div class="upload-css">
+									<button type="button" class="btn btn-dark btn-fw" id="upload-ndnc">Upload</button>
+									<button type="button" class="btn btn-light btn-fw" id="cancel-ndnc-upload">Cancel</button>
+
+								</div>
+							</div>
+							<div class="form-group">
+								<p id="upload-file-error" class="text-danger"></p>
+							</div>
+						</section>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="callcenter">
+	<input type="hidden" id="model_name" value="NdncDeltaUpload">
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		{% if can_read %}
+		selective_datatable($('#ndnc-list-table'));  //datatbale jquery
+		query_set_list = {{ndnc_list|safe}}
+		{% else %}
+		PermissionDeny();
+		{% endif %}
+		});
+</script>
+
+{% endblock extra-js %}

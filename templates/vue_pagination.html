@@ -1,0 +1,29 @@
+<div id="pagination_vue" class="row">
+	<div class="col-md-5">
+		<div class="custome_pagination_info text-center text-md-left">
+			Showing ${start_index} to ${end_index} of ${total_records} entries
+		</div>
+	</div>
+	<div class="col-md-7">
+		<div class="custom_paginate text-center text-md-right">
+			<ul class="pagination separated d-flex justify-content-end pagination-danger">
+				<li :class="[has_prev ? 'page-item':'page-item disabled']">
+					<a class="page-link" @click="changePage(page-1)">Previous</a>
+				</li>
+				<li v-if="page-4 > 1" class="page-item"><a class="page-link" @click="changePage(page-5)">&hellip;</a></li>
+				<template v-for="n in total_pages">
+					<li v-if="n==page" class="page-item active">
+						<a class="page-link">${n}</a>
+					</li>
+					<li v-else-if="n > page-3 && n < page+3">
+						<a class="page-link" @click="changePage(n)">${n}</a>
+					</li>
+				</template>
+				<li v-if="total_pages > (page+4)" class="page-item"><a class="page-link" @click="changePage(page+5)">&hellip;</a></li>
+				<li :class="[has_next ? 'page-item':'page-item disabled']">
+					<a class="page-link" @click="changePage(page+1)">Next</a>
+				</li>
+			</ul>
+		</div>
+	</div>
+</div>

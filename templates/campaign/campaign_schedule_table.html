@@ -1,0 +1,81 @@
+<div class="col-12">
+	{% include "search.html" %}
+</div>
+<div class="row">
+	{% csrf_token %}
+	<div class="col-12">
+		<table id="calltime-list-table" class="table display table-striped nowrap avatar-table" style="width: 100%">
+			<thead>
+				<tr>
+					<th></th>
+					<th>Name</th>
+					<th>Description</th>
+					<th>Created By</th>
+					<th>Status</th>
+					{% if can_update or can_delete %}
+					<th>
+						<div class="btn-group select-all-div">
+							<div class="form-check">
+								<label class="form-check-label ml-3">
+									<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+									<i class="input-helper"></i>
+								</label>
+							</div>
+							{% if can_delete %}
+							<div class="dropdown">
+								<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+									<span class="caret"></span>
+								</button>
+								<ul class="dropdown-menu">
+									<li class="dropdown-item" onclick="confirmDelete('warning-message-and-cancel', 'Ok','enable')">Enable</li>
+									<li class="dropdown-item" onclick="confirmDelete('warning-message-and-cancel', 'Ok','disable')">Disable</li>
+									<li class="dropdown-item" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">Delete</li>
+								</ul>
+							</div>
+							{% endif %}
+						</div>
+					</th>
+					<th>Action</th>
+					{% endif %}
+				</tr>
+			</thead>
+			<tbody class="data-body-div">
+				{% for camp_schedule in queryset %}
+				<tr id="{{ camp_schedule.id }}">
+					<td><avatar username="{{ camp_schedule.name }}" :size="36"></avatar></td>
+					<td><a href="{% url 'edit-campaign_schedules' camp_schedule.id %}" class="name-el">{{ camp_schedule.name }}</a></td>
+					<td>{{ camp_schedule.description }}</td>
+					<td>{{camp_schedule.created_by }}</td>
+					<td>{{ camp_schedule.status }}</td>
+					{% if can_update or can_delete %}
+					<td class="calltime_id">
+						<div class="form-check">
+							<label class="form-check-label">
+								<input type="checkbox" class="form-check-input"><i class="input-helper"></i>
+							</label>
+						</div>
+					</td>
+					<td>
+						<div class="dropdown show">
+							<button class="btn btn-secondary dropdown-toggle table-dropdown" role="button" id="dropdownMenuLink"  data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+								Choose Action
+							</button>
+							<div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+								{% if can_update %}
+								<a class="dropdown-item" href="{% url 'edit-campaign_schedules' camp_schedule.id %}">Modify</a>
+								{% endif %}
+								<div class="dropdown-divider"></div>
+								{% if can_delete %}
+								<a class="dropdown-item" onclick="confirmDelete('delete_one', 'Ok','particular_entry-{{ camp_schedule.id}}')">Delete</a>
+								{% endif %}
+							</div>
+						</div>
+					</td>
+					{% endif %}
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+		{% include "custom_pagination.html" %} 
+	</div>
+</div>

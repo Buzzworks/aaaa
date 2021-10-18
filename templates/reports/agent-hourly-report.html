@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% load getattribute %}
+
+{% block title %}TC Hourly Report{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+<link rel="stylesheet" href="{% static 'css/fSelect.css' %}">
+
+
+{% endblock extra-stylesheets %}
+
+{% block header %}Call Reports<small>TC Hourly Report</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">TC Hourly Report</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>TC Hourly Report</legend>
+				<!-- Dialler Logs tab and table -->
+					{% csrf_token %}
+				
+				<form method="get" class="call-detail-form" id="report_form">
+					<div class="row">
+						<div class="col-md-4">
+							<div class="form-group row">
+								<label class="col-form-label col-sm-4">User</label>
+								<div class="col-sm-8">
+									<select class="form-control" name="selected_user" id="avail_users" value="" multiple>
+										<option disabled="">Select User</option>
+										{% for user in available_users %}
+										<option value="{{ user.id }}">{{ user.username }}</option>
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-4">
+							<div class="form-group row">
+								<label for="extension" class="col-sm-4 col-form-label">Select Date :</label>
+								<div class="col-sm-8">
+									<div data-target-input="nearest" class="input-group date" id="datepicker-popup">
+										<div data-target="#datepicker-popup" data-toggle="datetimepicker" class="input-group datetimepicker">
+											<input type="text" name="start_date" placeholder="YYYY-MM-DD HH:mm" data-target="#datepicker-popup" class="form-control crm-form-control datetimepicker-input" autocomplete="off">
+											<div class="input-group-addon input-group-append">
+
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-2">
+							<button type="button" class="btn btn-success btn-sm mt-1" id="filter-hourly-report">Filter</button>
+						</div>
+					</div>
+					<input type="hidden" name="show_result" value="" id="details_flag">
+					<input type="hidden" name="page" id="nextPage_number" value="1">
+					<hr>
+				</form>
+				<div class="row">
+					<div class="col-12">
+						<table class="table table-bordered" id="hourly-report-table">
+						  <thead>
+						    <tr>
+						      <th colspan="28" align="center">TC DISPO</th>
+						    </tr>
+						    <tr>
+						    	<th rowspan="3" data-data="name">Name</th>
+						    	<th colspan="20">DIB</th>
+						    	<th rowspan="3" data-data="total_norm">TOTAL NORM</th>
+						    	<th rowspan="3" data-data="total_stab">TOTAL STAB</th>
+						    	<th rowspan="3" data-data="total_norm_value">Total NORM Value</th>
+						    	<th rowspan="3" data-data="total_stab_value">Total STAB Value</th>
+						    	<th rowspan="3" data-data="total_norm_stab">TOTAL COUNT</th>
+						    	<th rowspan="3" data-data="total_stab_norm_value">TOTAL VALUE</th>
+						    </tr>
+						    <tr>
+						    	<th colspan="2" data-data="9 AM">9 AM</th>
+						    	<th colspan="2" data-data="10 AM">10 AM</th>
+						    	<th colspan="2" data-data="11 AM">11 AM</th>
+						    	<th colspan="2" data-data="12 AM">12 PM</th>
+						    	<th colspan="2" data-data="1 AM">1 PM</th>
+						    	<th colspan="2" data-data="2 AM">2 PM</th>
+						    	<th colspan="2" data-data="3 AM">3 PM</th>
+						    	<th colspan="2" data-data="4 AM">4 PM</th>
+						    	<th colspan="2" data-data="5 AM">5 PM</th>
+						    	<th colspan="2" data-data="6 AM">6 PM</th>
+						    </tr>
+						    <tr>
+						    	<th data-data="hourly_report.0.norm_count">N</th>
+						    	<th data-data="hourly_report.0.stab_count">S</th>
+						    	<th data-data="hourly_report.1.norm_count">N</th>
+						    	<th data-data="hourly_report.1.stab_count">S</th>
+						    	<th data-data="hourly_report.2.norm_count">N</th>
+						    	<th data-data="hourly_report.2.stab_count">S</th>
+						    	<th data-data="hourly_report.3.norm_count">N</th>
+						    	<th data-data="hourly_report.3.stab_count">S</th>
+						    	<th data-data="hourly_report.4.norm_count">N</th>
+						    	<th data-data="hourly_report.4.stab_count">S</th>
+						    	<th data-data="hourly_report.5.norm_count">N</th>
+						    	<th data-data="hourly_report.5.stab_count">S</th>
+						    	<th data-data="hourly_report.6.norm_count">N</th>
+						    	<th data-data="hourly_report.6.stab_count">S</th>
+						    	<th data-data="hourly_report.7.norm_count">N</th>
+						    	<th data-data="hourly_report.7.stab_count">S</th>
+						    	<th data-data="hourly_report.8.norm_count">N</th>
+						    	<th data-data="hourly_report.8.stab_count">S</th>
+						    	<th data-data="hourly_report.9.norm_count">N</th>
+						    	<th data-data="hourly_report.9.stab_count">S</th>
+						    </tr>
+						  </thead>
+						  {% comment %}
+						  <tbody>
+							  	{% for data in all_users %}
+						  		<tr>
+							  		<td>{{ data.name }}</td>
+							  		{% for report in data.hourly_report %}
+							  			<td>{{report.norm_count}}</td>
+							  			<td>{{report.stab_count}}</td>
+							  		{% endfor %}
+							  		<td>{{ data.total_norm }}</td>
+							  		<td>{{ data.total_stab }}</td>
+							  		<td>{{ data.total_norm_value }}</td>
+							  		<td>{{ data.total_stab_value }}</td>
+							  		<td>{{data.total_norm_stab}}</td>
+							  		<td>{{data.total_stab_norm_value}}</td>
+						  		</tr>
+							  	{% endfor %}
+
+						  </tbody>
+						  {% endcomment %}
+						</table>
+						<nav id="report_pagination_vue" >
+							<div class="custome_pagination_info">
+								Showing ${start_index} to ${end_index} of ${total_records} entries
+							</div>
+							<div class="custom_paginate">
+								<ul class="pagination d-flex justify-content-end pagination-danger">
+									<li :class="[has_prev ? 'page-item':'page-item disabled']">
+										<a class="page-link" @click="changePage(page-1)"><i class="fa fa-chevron-left"></i></a>
+									</li>
+									<li v-if="page-4 > 1" class="page-item"><a class="page-link" @click="changePage(page-5)">&hellip;</a></li>
+									<template v-for="n in total_pages">
+									<li v-if="n==page" class="page-item active">
+										<a class="page-link">${n}</a>
+									</li>
+									<li v-else-if="n > page-3 && n < page+3">
+										<a class="page-link" @click="changePage(n)">${n}</a>
+									</li>
+									</template>
+									<li v-if="total_pages > (page+4)" class="page-item"><a class="page-link" @click="changePage(page+5)">&hellip;</a></li>
+									<li :class="[has_next ? 'page-item':'page-item disabled']">
+										<a class="page-link" @click="changePage(page+1)"><i class="fa fa-chevron-right" aria-hidden="true"></i></a>
+									</li>
+								</ul>
+							</div>
+						</nav>
+					</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="callcenter">
+	<input type="hidden" id="model_name" value="AgentActivity">
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/datatablejs/dataTables.buttons.min.js' %}"></script>
+<script src="{% static 'js/datatablejs/buttons.bootstrap4.min.js' %}"></script>
+<script src="{% static 'js/datatablejs/buttons.colVis.min.js' %}"></script>
+<script src="{% static 'js/datatablejs/jszip.min.js' %}"></script>
+<script src="{% static 'js/datatablejs/buttons.html5.min.js' %}"></script>
+<script src="{% static 'js/form-validator.min.js' %}"></script>
+<script src="{% static 'js/fSelect.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/reports.js' %}"></script>
+<script type="text/javascript">
+	var performance_table
+	$(document).ready(function() {
+		$('#datepicker-popup').datetimepicker({
+		format: 'YYYY-MM-DD',
+		useCurrent: true,
+		defaultDate:new Date(),
+		autoclose:false
+	})
+		{% if can_read %}
+		customPaginationTable($('#hourly-report-table'))
+		$("#filter-hourly-report").click()
+			
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+	
+});
+	$('#hourly-report-table').on( 'length.dt', function ( e, settings, len ) {
+		$('#page_length').val(len)
+		customPaginationReport()
+	});
+	$("#filter-hourly-report").click(function() {
+		if ($("#selected_date").val() != "") {
+			$("#details_flag").val("true")
+			customPaginationReport()
+		}
+	})
+
+			
+</script>
+
+{% endblock extra-js %}

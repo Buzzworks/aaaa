@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+
+{% block title %}Call Detail Report{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/datatablecss/buttons.bootstrap4.min.css' %}">
+<style type="text/css">
+	.accordion.accordion-solid-header .card .card-header a{
+		    padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+	}
+	.accordion.accordion-solid-header .card .card-body{
+		padding:0.5rem;
+	}
+    .accordion .card .card-body i{
+        font-size: 1rem;
+    }
+</style>
+
+{% endblock extra-stylesheets %}
+
+{% block header %}Call Reports<small>Call Detail</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Call Detail</li>
+{% endblock breadcrumb %}
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Call Detail</legend>
+				<!-- Dialler Logs tab and table -->
+				<div class="mt-1">
+                    <div class="accordion" id="accordion" role="tablist">
+                        <div class="card">
+                            <div class="card-header" role="tab" id="heading-2">
+                                <h6 class="mb-0">
+                                    <a class="" data-toggle="collapse" href="#collapse-2" aria-expanded="true" aria-controls="collapse-2">
+                                        Search Report
+                                    </a>
+                                </h6>
+                            </div>
+                            <div id="collapse-2" class="collapse show" role="tabpanel" aria-labelledby="heading-2" data-parent="#accordion" style="">
+                                <div class="card-body">
+                                    <form method="post" class="call-detail-form" id="report_form">
+                                        {% csrf_token %}
+                                        <div class="row">
+                                            <div class="col-md-3 col-sm-6">
+                                                <div class="form-group">
+                                                    <label class="col-form-label mb-0">Numeric</label>
+                                                    <input type="text" class="form-control" name="numeric" id="number" placeholder="Phone Number" value="{{ numeric }}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3 col-sm-6">
+                                                <div class="form-group">
+                                                    <label class="col-form-label mb-0">Campaign</label>
+                                                    <select class="form-control" name="selected_campaign" id="agent_report_campaign" multiple="multiple">
+                                                        <!-- <option value="">Select Campaign</option> -->
+                                                        {% for campaign in campaign_list %}
+                                                        <option value="{{ campaign.name }}" data-name="{{campaign.name}}">{{ campaign.name }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3 col-sm-6">
+                                                <div class="form-group">
+                                                    <label class="col-form-label mb-0">User</label>
+                                                    <select class="form-control" name="selected_user" id="agent_activity_users" multiple placeholder="select user">
+                                                        {% for user in users %}
+                                                        <option value="{{ user.id }}" data-name="{{user.username}}">{{ user.username }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3 col-sm-6">
+                                                <div class="form-group">
+                                                    <label class="col-form-label mb-0">Disposition</label>
+                                                    <select class="form-control" name="selected_disposition" id="disposition" multiple>
+                                                        {% for dispo in disposition %}
+                                                        <option value="{{ dispo.name }}">{{ dispo.name }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-3 col-sm-6 agent-datepicker">
+                                                <div class="form-group">
+                                                    <label class="col-form-label mb-0">Start Date</label>
+                                                    <div data-target-input="nearest" class="input-group date" id="start-date">
+                                                        <div data-target="#start-date" data-toggle="datetimepicker" class="input-group datetimepicker">
+                                                            <input type="text" name="start_date" placeholder="YYYY-MM-DD HH:mm" data-target="#start-date" class="form-control crm-form-control datetimepicker-input" autocomplete="off">
+                                                            <div class="input-group-addon input-group-append">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3 col-sm-6 agent-datepicker">
+                                                <div class="form-group">
+                                                    <label class="col-form-label mb-0">End Date</label>
+                                                    <div data-target-input="nearest" class="input-group date " id="end-date">
+                                                        <div data-target="#end-date" data-toggle="datetimepicker" class="input-group datetimepicker">
+                                                            <input type="text" name="end_date" placeholder="YYYY-MM-DD HH:mm" data-target="#end-date" class="form-control crm-form-control datetimepicker-input" autocomplete="off">
+                                                            <div class="input-group-addon input-group-append">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <span class="text-danger d-none" id="end-date-error">End Date Should Be Greater Than Start Date</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3 col-sm-6">
+                                                <div class="form-group">
+                                                    {% if uniquefields|length != 0 and uniquefields|length < 2  %}
+                                                        <label class="col-form-label mb-0">{{uniquefields|first|crm_header}}</label>
+                                                        <input type="text" class="form-control" name="unique_id" id="unique_id" placeholder="{{uniquefields|first|crm_header}}" value="{{ unique_id }}">
+                                                    {% else %}
+                                                        <label class="col-form-label mb-0">UniqueId</label>
+                                                        <input type="text" class="form-control" name="unique_id" id="unique_id" placeholder="Unique Id" value="{{ unique_id }}">
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-form-label"></label>
+                                                <div>
+                                                    <button type="button" class="btn btn-success btn-sm btn-icon-text mt-2 mr-2" id="custom-report-filter">
+                                                        <i class="fas fa-filter"></i>Filter
+                                                    </button>
+                                                    <div class="btn-group">
+                                                        <button type="button" class="btn btn-primary btn-sm mt-2 agent_reports_download" id="xls"><i class="fa fa-download"></i></button>
+                                                        <button type="button" class="btn btn-primary btn-sm mt-2 dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                        </button>
+                                                        <div class="dropdown-menu">
+                                                            <a class="dropdown-item agent_reports_download" id="xls" href="#">Excel</a>
+                                                            <a class="dropdown-item agent_reports_download" id="csv" href="#">Csv</a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" name="column_name" id="column_name_list">
+                                        <input type="hidden" name="agent_reports_download" id="call_details_flag" value="">
+                                        <input type="hidden" name="agent_reports_download_type" id="agent_reports_download_type">
+                                        <input type="hidden" name="all_users" id="all_users">
+                                        <input type="hidden" name="all_campaigns" id="all_campaigns">
+                                        <input type="hidden" name="uniquefields" id="uniquefields" value="{{uniquefields|join:','}}">
+                                        <input type="hidden" name="dispo_keys" id="dispo_keys" value="{{dispo_keys|join:','}}">
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+				<div class="row">
+					<div class="col-12">
+						<table id="diallerlog-list-table" class="table display table-striped nowrap mt-2" style="width: 100%">
+							<thead>
+								<tr id="column_name">
+									{% for field in all_fields.calldetail %}
+										{% if field == 'bill_sec' %}
+											<th data-data="diallereventlog.{{field}}" data-field_name="{{ field }}" class="text-capitalize">Talk time</th>
+                                        {% elif field == 'uniqueid'%}
+                                            {% if uniquefields|length != 0 and uniquefields|length < 2 %}
+                                                <th data-data="{{field}}" data-field_name="{{ field }}" class="text-capitalize">{{ uniquefields|first|crm_header }}</th>
+                                            {% else %}
+                                                <th data-data="{{field}}" data-field_name="{{ field }}" class="text-capitalize">{{ field|table_header }}</th>
+                                            {% endif %}
+										{% elif field == 'feedback_time' %}
+											<th data-data="{{field}}" data-field_name="{{ field }}" class="text-capitalize">WrapUp Time</th>
+										{% elif field in 'init_time,ring_time,connect_time,hangup_time,wait_time,ring_duration,hold_time,bill_sec,ivr_duration,call_duration' %}
+											<th data-data="diallereventlog.{{field}}" data-field_name="{{ field }}" class="text-capitalize">{{ field|table_header }}</th>
+										{% else %}
+											<th data-data="{{field}}" data-field_name="{{ field }}" class="text-capitalize">{{ field|table_header }}</th>
+										{% endif %}
+									{% endfor %}
+
+									{% for cd_field in all_fields.diallereventlog %}
+										<th data-data="diallereventlog.{{cd_field}}" data-field_name="{{cd_field}}"  class="text-capitalize dialler_cols">{{ cd_field|table_header }}</th>
+									{% endfor %}
+									<th data-data="cdrfeedback.primary_dispo" data-field_name="primary_dispo" class="text-capitalize">Primary Dispo</th>
+									{% for sub_dispo in dispo_keys %}
+										<th data-data="cdrfeedback.feedback.{{sub_dispo}}"  data-field_name="{{sub_dispo}}" class="text-capitalize">{{sub_dispo|table_header}}</th>
+									{% endfor %}
+									{% for cd_field in all_fields.smslog %}
+										<th data-data="smslog.{{cd_field}}" data-field_name="{{cd_field}}"  class="text-capitalize ">{{ cd_field|table_header }}</th>
+									{% endfor %}
+									<th data-data="cdrfeedback.comment" data-field_name="comment" class="text-capitalize comment-field">Comment</th>
+								</tr>
+							</thead>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="callcenter">
+	<input type="hidden" id="model_name" value="CallDetail">
+    <input type="hidden" name="report_name" id="report_name" value="1">
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/reports.js' %}"></script>
+<script type="text/javascript">
+	var diallerlog_table
+	$(document).ready(function() {
+		{% if can_read %}
+			// datatable for diallerlog
+			var url = "/CallReports/CallDetailReport/"
+			var dialerlog_table = $('#diallerlog-list-table')
+            report_visible_cols = []
+            {% if report_visible_cols %}
+                report_visible_cols={{report_visible_cols|safe}}
+                report_datatable(dialerlog_table,url,report_visible_cols)
+            {% else %}
+                report_datatable(dialerlog_table,url)
+            {% endif %}
+			users = {{users|safe}}
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+	});
+</script>
+{% endblock extra-js %}

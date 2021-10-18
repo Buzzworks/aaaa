@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Audio{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+<style type="text/css">
+	.tooltip{
+		z-index:100000;
+	}
+</style>
+{% endblock extra-stylesheets %}
+
+{% block header %}Campaign Management<small>Audio</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Audio</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Audio</legend>
+				<!-- audio tab and table -->
+				<div class="append_table">
+					<div class="col-12">
+						{% include "search.html" %}    
+					</div>
+					<div class="row">
+						<div class="col-12">
+							<table id="audio-list-table" class="table display table-striped nowrap avatar-table" style="width: 100%">
+								<thead>
+									<tr>
+										<th class="avatar"></th>
+										<th data-data="name" class="modal_name">Name</th>
+										<th data-data="description">Description</th>
+										<th data-data="created_by_user">Created By</th>
+										<th data-data="status">Status</th>
+										<th data-data="created_date" class="list_date">created date</th>
+										<th data-data="modified_date" class="list_date">modified date</th>
+										{% if can_update or can_delete %}
+											<th data-data="checkbox_col" class="checkbox_col">
+												<div class="btn-group select-all-div">
+													<div class="form-check">
+														<label class="form-check-label ml-3">
+															<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+															<i class="input-helper"></i>
+														</label>
+													</div>
+													<div class="dropdown">
+														<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+															<span class="caret"></span></button>
+														<ul class="dropdown-menu">
+															{% if can_update %}
+																<li class="dropdown-item" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make Active')">
+																	Active Selected
+																</li>
+																<li class="dropdown-item" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make InActive')">
+																	Inactive Selected
+																</li>
+															{% endif %}
+															{% if can_delete %}
+																<li class="dropdown-item" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">
+																	Delete Selected
+																</li>
+															{% endif %}
+														</ul>
+													</div>
+												</div>
+											</th>
+											<th data-data="action" class="action">Action</th>
+										{% endif %}
+									</tr>
+								</thead>
+							</table>
+							{% include "vue_pagination.html" %} 
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% if can_create  %}
+<!-- action buttons -->
+<div class="bottom-menu">
+	<div class="action-button-circle" data-toggle="modal">
+		<a data-toggle="modal" data-target="#audio-wizard-modal" title="Upload Audio Files">
+			<div class="circle-button skin-black">
+				<i class="fa fa-plus button-area add-audio"></i>
+			</div>
+		</a>
+	</div>
+</div>
+{% endif %}
+{% if can_create or can_update %}
+<div class="modal fade" id="audio-wizard-modal" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to create users."></i>
+					<b>File Wizard » Audio File Upload</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body pt-3">
+				<form id="audio-upload-form" class="wizard-form" action="{% url 'users-bulk-upload' %}" method="POST">
+					{% csrf_token %}
+					<div>
+						<h2>Audio<br><small>Browse the file and Click on Submit</small></h2>
+						<section>
+							<div class="form-group row">
+								<label for="audio_name" class="col-sm-4 col-form-label">Name<span class="star">*</span> :</label>
+								<div class="col-sm-8">
+									<input type="text" name="name" data-toggle="tooltip" data-original-title="Enter File Name" class="form-control" id="audio_name" placeholder="audio name" data-validation="required" data-validation-error-msg-container="#name-error">
+									<span id="name-error"></span>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="description" class=" col-sm-4 col-form-label">Description :</label>
+								<div class="col-sm-8">
+									<input type="text" name="description" class="form-control" id="description" placeholder="description">
+								</div>
+							</div>
+							<div class="form-group row">
+							 	<label for="status" class=" col-sm-4  col-form-label">Status :</label>
+							 	<div class="col-sm-8">
+				                    <select class="form-control" name="status" id="status">
+				                    	{% for status in audio_status %}
+					                    	<option value="{{ status.0 }}">{{ status.1 }}</option>
+				                    	{% endfor %}
+				                    </select>
+				                </div>
+							</div>
+							<div id="uploaded_file" class="form-group row d-none">
+								<label for="uploaded_file" class=" col-sm-4 mb-sm-0 col-form-label">Uploaded File :</label>
+                                <div class="col-6 form-inline">
+                                    <a download></a>
+                                </div>
+                            </div>
+							<div class="form-group row">
+									<label for="file" class="col-sm-4 mb-0 col-form-label">Select File:</label>
+									<label id="file-extension-msg" class="col-sm-8 mb-sm-0 col-form-label d-none text-danger"></label>
+							</div>
+							<div class="row">
+								<div class="col-12">
+									<input type="file" class="dropify" id="uploaded-audio-file"  name="audio_file"  accept="audio/*"/>
+								</div>
+							</div>
+							</div>
+							<input type="hidden" id="audio-id">
+						</section>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+<input type="hidden" id="app_name" value="callcenter">
+<input type="hidden" id="model_name" value="AudioFile">
+<!-- model forms -->
+{% endblock content %}
+
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/dropify.js' %}"></script>
+<!-- <script src="{% static 'melody/js/dropify.js' %}"></script> -->
+<script type="text/javascript">
+	$(document).ready(function() {
+		{% if can_read %}
+			modal_url = '<a href="#" id="audio-file-***" class="modify-audio-file name-el">link_name</a>'
+			option_url = '<a href="#" id="audio-file-***" class="dropdown-item modify-audio-file">Modify</a>'
+			var audio_table = $('#audio-list-table')
+			selective_datatable(audio_table);  //datatbale jquery
+			$.validate();
+			$(".wizard li a[href='#previous']").addClass("d-none");
+			$(".wizard li a[href='#finish']").text('Submit');
+			{% if audio_list %}
+				query_set_list={{audio_list|safe}}
+			{% endif %}
+			edit_url = ""
+			get_pagination_data(1, true)
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+	});
+</script>
+
+{% endblock extra-js %}

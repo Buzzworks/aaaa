@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+
+{% block title %}{% if trunk_group %}Edit{% else %}Create{% endif %} Trunk Group{% endblock title %}
+
+{% block header %}Campaign Management<small>{% if trunk_group %}Edit{% else %}Create{% endif %} Trunk Group</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'dialtrunk_group' %}">TrunkGroup</a></li>
+<li class="breadcrumb-item active" aria-current="page">{% if trunk_group %}Edit{% else %}Create{% endif %}</li>
+{% endblock breadcrumb %}
+{% block extra-stylesheets %}
+<style type="text/css">
+	.pass-colorbar {
+		background-image: url({% static "images/passwordstrength.jpg" %});
+	}
+</style>
+{% endblock extra-stylesheets %}
+{% block content %}
+{% if can_create or can_edit %}
+<div class="card">
+	<div class="card-body" id="">
+		<legend>{% if trunk_group %}Edit {% else%}Create {% endif %}Trunk Group</legend>
+		{% if not is_edit and trunk_group.status == 'Active' %}
+				<div class="alert alert-fill-warning mb-2 py-2"> 						
+					<i class="fa fa-exclamation-triangle fa-1x"></i>Status can not be change to inactive as agent is logged in to the campaign 
+				</div>
+				{% endif %}
+		<form class="forms-sample" id="trunk_group_form">
+			{% csrf_token %}
+			<div class="row">
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="username" class="col-sm-4 col-form-label">Name<span class="star">*</span> :</label>
+						<div class="col-sm-8">
+							<input type="text" class="form-control blockfirstspace" id="name" placeholder="Name" name="name" data-toggle="tooltip" data-original-title="Enter Unique Name " data-validation="length alphanumeric" data-validation-length="min4" data-validation-allowing="_" data-validation-error-msg-container="#name-error" value="{{trunk_group.name }}">
+							<span id="name-error"></span>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="" class="col-sm-4 col-form-label">Status :</label>
+						<div class="col-sm-8">
+							{% if not is_edit and trunk_group %}
+								<select class="form-control" name="status" style="pointer-events: none;">
+							{% else %}
+								<select class="form-control" name="status">
+							{% endif %}
+								{% for status in trunk_status %}
+									{% if status.0 == trunk_group.status %}
+										<option value="{{ status.0 }}" selected>{{ status.1 }}</option>
+									{% else %}
+										<option value="{{ status.0 }}">{{ status.1 }}</option>
+									{% endif %}
+								{% endfor %}
+							</select>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div id="add_trunk_div">
+				<fieldset class="mt-3 pt-3" style="border-top: 1px dashed #ccc;">
+					<div class="row">
+						<div class="col-md-8">
+							<div class="form-group row">
+								<label for="" class="col-sm-5 col-form-label">Manage Dial Trunk Group :</label>
+							</div>
+						</div>
+					</div>
+					{% include "campaign/trunk_group_expansion.html" %} 
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group row">
+								<label class="col-sm-4 col-form-label">Total Channel Count:</label>
+								<div class="col-sm-8">
+									<input type="text" class="form-control blockfirstspace" name="total_channel_count" id="total_channel_count" value="{{ trunk_group.total_channel_count }}" readonly="true">
+								</div>
+							</div>
+						</div>
+					</div>
+				</fieldset>
+				<div class="row mt-4">
+					<div class="col-sm-12">
+						<div class="float-right">
+							<button type="button" class="btn btn-light btn-icon-text mr-sm-2" id="" onclick="showSwal('warning-message-and-cancel','OK', '/Modules/DialTrunkGroup/')">
+								<i class="fas fa-arrow-left btn-icon-prepend"></i>Cancel
+							</button>
+							<button type="button" class="btn btn-success btn-icon-text ml-sm-2" @click='saveTrunkGroup'>
+								<i class="far fa-check-square btn-icon-prepend"></i>Submit
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+			<input type="hidden" name="trunk_details" id="trunk_details">
+			<input type="hidden" id="trunk_group_id" value="{{trunk_group.id}}">
+			<!-- all fields div ends -->
+		</form>
+	</div>
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script type="text/x-template" id="single_select_template">
+	<select>
+		<slot></slot>
+	</select>
+</script>
+<script src="{% static 'melody/js/settings.js' %}"></script>
+<script src="{% static 'melody/js/dragula.js' %}"></script>
+<script src="{% static 'js/dial_trunk.js' %}"></script>
+<script type="text/javascript">
+	{% if can_create or can_edit %}
+	$.validate({
+		form:'#trunk_group_form',
+	});
+	add_trunk_vue.trunk_list={{trunk_list|convert_in_json|safe}}
+	add_trunk_vue.did_type = [{"text":"single","id":"single"},{"text":"multiple","id":"multiple"},{"text":"range","id":"range"}]
+	add_trunk_vue.trunk_channel_count = {{trunk_channel_count|safe}}
+	var dummy_dict = {}
+	{% if trunk_group %}
+	var abc = {{trunks|safe}}
+	{% for trunk in trunks %}
+	var trunk_detail = {{trunk|safe}}
+	var range_array = [];
+	$.each(add_trunk_vue.trunk_list, function(index,trunk_val){
+		if( trunk_val["id"] === trunk_detail["trunk"]){
+			var temp_range = trunk_val["did_range"].split(",")
+			var start_end = temp_range[0]
+			if (temp_range[1] == undefined) {
+				end_node = start_end
+			}
+			else {
+				end_node = temp_range[1]
+			}
+			let is_leading_zero = false
+			let start_end_length = start_end.length
+			if (start_end.match(/^0+/)) {
+				is_leading_zero = true
+			}
+			for (i = start_end; i <= end_node; i++) {
+				let did_value = (is_leading_zero) ? i.toString().padStart(start_end_length,"0") : i.toString()
+				range_array.push(did_value)
+			}
+			if(trunk_detail['did']['type_of_did'] == "multiple" || trunk_detail['did']['type_of_did'] == "single"){
+				add_trunk_vue.group_trunk_list.push({"trunk_priority":trunk_detail["priority"], "trunk_id":trunk_detail["trunk"],"did_type":trunk_detail["did"]["type_of_did"],"did_start":"","did_end":"","did":trunk_detail["did"]["did"],"options":range_array, "old_trunk":trunk_detail["trunk"]})
+			}
+			else {
+				did_start = trunk_detail["did"]["start"]
+				did_end = trunk_detail["did"]["end"]
+				add_trunk_vue.group_trunk_list.push({"trunk_priority":trunk_detail["priority"], "trunk_id":trunk_detail["trunk"],"did_type":trunk_detail["did"]["type_of_did"],"did_start":did_start,"did_end":did_end,"did":"","options":range_array, "old_trunk":trunk_detail["trunk"]})
+			}
+		}
+	})
+	{% endfor %}
+	Vue.nextTick(function () {
+		add_trunk_vue.trunk_dict = dummy_dict
+	})
+	if (add_trunk_vue.group_trunk_list.length == 0) {
+		add_trunk_vue.group_trunk_list.push({"trunk_priority":1, "trunk_id":"","did_type":"","did":[],"did_start":"","did_end":"","options":[], "old_trunk":""})
+	}
+	{% else %}
+	add_trunk_vue.group_trunk_list.push({"trunk_priority":1, "trunk_id":"","did_type":"","did":[],"did_start":"","did_end":"","options":[], "old_trunk":""})
+	{% endif %}
+	{% else %}
+	PermissionDeny();
+	{% endif %}
+</script>
+
+{% endblock extra-js %}+

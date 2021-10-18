@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Third Party API{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/select.dataTables.min.css' %}">
+{% endblock extra-stylesheets %}
+
+{% block header %}Third Party API User Campaign Mapping{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Third Party API</li>
+{% endblock breadcrumb %}
+{% block content %}
+<div class="card">
+	<div class="card-body">
+		<legend>Third Party API</legend>
+		{% include "search.html" %}    
+		<div class="row append_table">
+			<div class="col-12">
+				<table id="third-party-api-user-campaign-table" class="table display table-striped nowrap" style="width:100%">
+					<thead>
+						<tr>
+							<th class="avatar"></th>
+							<th data-data="user" class="user name"> User Name </th>
+							<th data-data="campaign" class="campaign"> Campaign </th>
+							<th data-data="domain" class="domain"> Domain </th>
+							<th data-data="mobile_no"> Mobile Number </th>
+							<th data-data="checkbox_col" class="all checkbox_col">
+								<div class="btn-group select-all-div">
+									<div class="form-check">
+										<label class="form-check-label ml-3">
+											<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+											<i class="input-helper"></i>
+										</label>
+									</div>
+									<div class="dropdown">
+										<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+											<span class="caret"></span></button>
+										<ul class="dropdown-menu">
+											<li class="dropdown-item" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">Delete</li>
+										</ul>
+									</div>
+								</div>
+							</th>
+							<th data-data="action" class="all action">Action</th>
+						</tr>
+					</thead>
+				</table>
+			</div>
+		</div>
+		{% include "vue_pagination.html" %}
+	</div>
+</div>
+
+<div class="bottom-menu">
+	<div class="action-button-circle">
+		<a><div class="circle-button skin-black"><i class="fa fa-plus"></i></div></a>
+	</div>
+	<div class="fab-div-area" id="fab-div-area" style=" height: 100px; padding-top: 0px; margin-top: 0px; padding-bottom: 0px; margin-bottom: 0px;">
+		<ul class="fab-ul" style="height: 170px;">
+			<li class="li-style"><a class="fas fa-cloud-upload-alt fab-div-item" data-toggle="modal" data-target="#fileupload-wizard-modal" title="Upload Third Party User Campaign"></a></li><br>
+		</ul>
+	</div>
+</div>
+
+<!-- model forms  -->
+<div class="modal fade" id="fileupload-wizard-modal" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to create users."></i>
+					<b>Click To Call User » Upload</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body pt-3">
+				<form id="ndnc-upload-form" class="wizard-validation-form" action="{% url 'third_party_user_campaign' %}" method="POST">
+					{% csrf_token %}
+					<div>
+						<div class="form-group">
+							<p class="text-danger">**All fields are compulsary in csv file</p>
+						</div>
+						<section>
+							<div class="row">
+								<div class="col-6 mt-2">
+									<select class="form-control" name="campaign" id="campaign_list">
+										<option value="">Select Campaign</option>
+										{% for campaign in campaign_list %}
+											<option value="{{ campaign.id}}">{{ campaign.name }}</option>
+										{% endfor %}
+									</select>
+								</div>
+								<div class="col-6 mt-2">
+									<button type="button" class="btn btn-dark btn-fw d-none" id="download-third-party-sample">Sample CSV</button>
+								</div>
+								<div class="col-12 mt-2">
+									<span class="help-block form-error" id="csv-error">Please Select Campaign</span>
+									{{ msg }}
+								</div>
+
+								<div class="col-6 mt-2">
+									<input type="file" class="dropify" id="uploaded-file" name="delta_file"/>
+								</div>
+							</div>
+							<div class="row">
+								<a id="proper-data" class="d-none upload-css text-info" download>
+									<span class="fa fa-download download-file-css"></span>
+									<span class="msg"></span>
+								</a>
+							</div>
+							<div class="row">
+								<a id="improper-data" class="d-none upload-css text-danger" download>
+									<span class="fa fa-download download-file-css"></span>
+									<span class="msg"></span>
+								</a>
+							</div>
+							<div class="row pull-right">
+								<div class="upload-css">
+									<button type="button" class="btn btn-dark btn-fw d-none" id="upload-priority">Upload</button>
+									<button type="button" class="btn btn-light btn-fw" id="cancel-priority-upload">Cancel</button>
+
+								</div>
+							</div>
+							<div class="form-group">
+								<p id="upload-file-error" class="text-danger">{{ msg }}</p>
+							</div>
+						</section>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="callcenter">
+	<input type="hidden" id="model_name" value="ThirdPartyApiUserToken">
+</div>
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/dropify.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		edit_url = ""
+		option_url = ""
+		var third_party_api_user_campaign = $('#third-party-api-user-campaign-table')
+	  	selective_datatable(third_party_api_user_campaign);  //datatbale jquery
+	  	edit_url = "{% url 'edit-third_party_user_campaign' 123 %}"
+	  	$.validate();
+	  	$(".wizard li a[href='#previous']").addClass("d-none").text('Cancel')
+		$(".wizard li a[href='#finish']").text('Validate')
+		get_pagination_data(1, true)
+	});
+</script>
+{% endblock extra-js %}

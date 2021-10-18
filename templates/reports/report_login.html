@@ -1,0 +1,150 @@
+{% load static %}
+{% load cache %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<!-- Required meta tags -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<meta http-equiv="Cache-control" content="no-cache">
+	<title>Flexydial Download</title>
+	<link rel="shortcut icon" href="{% static '/images/favicon.png' %}"/>
+	<!-- stylesheets -->
+	<link rel="stylesheet" type="text/css" href="{% static 'css/bootstrap.min.css' %}">
+	<link rel="stylesheet" href="{% static 'melody/vendors/iconfonts/font-awesome/css/all.min.css' %}">
+	<link rel="stylesheet" href="{% static 'melody/css/style.css' %}">
+	<!-- custom stylesheet -->
+	<link rel="stylesheet" href="{% static '/css/preloader.css' %}">
+	<link rel="stylesheet" type="text/css" href="{% static 'css/login.css' %}">
+<style type="text/css">
+ .star{
+     color:#FF0000;
+     font-size:15px;
+ }
+
+</style>
+</head>
+<body>
+	<div class="container-scroller">
+		<div class="container-fluid page-body-wrapper full-page-wrapper p-md-3">
+			<div class="content-wrapper d-flex align-items-stretch auth auth-img-bg">
+				<div class="row flex-grow m-0">
+					{% csrf_token %}
+					<!-- Modal -->
+					<div class="modal fade" id="download-file" tabindex="-1" role="dialog" aria-labelledby="downloadFile" aria-hidden="true">
+					  <div class="modal-dialog modal-dialog-top" role="document">
+					    <div class="modal-content">
+					      <div class="modal-header">
+					        <h5 class="modal-title" id="exampleModalLongTitle">Download File</h5>
+					        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					          <span aria-hidden="true">&times;</span>
+					        </button>
+					      </div>
+					      <div class="modal-body">
+					        <h5 id="download_report_error" class="alert alert-danger d-none"></h5>
+					        <h5 id="download_report_success" class="alert alert-success d-none"></h5>
+					      	<form class="cmxform pt-3" id="downloadReportForm" method="post">
+								<div class="form-group">
+								   <label for="username">Username<span class="star"> *</span></label>
+									<div class="input-group">
+										<div class="input-group-prepend bg-transparent">
+											<span class="input-group-text bg-transparent border-right-0">
+												<i class="fa fa-user text-dark"></i>
+											</span>
+										</div>
+										<input type="text" class="form-control form-control-lg border-left-0" id="username" placeholder="Username" name="username">
+									</div>
+								</div>
+								<div class="form-group">
+									<label for="password">Password<span class="star"> *</span></label>
+									<div class="input-group">
+										<div class="input-group-prepend bg-transparent">
+											<span class="input-group-text bg-transparent border-right-0">
+												<i class="fa fa-lock text-dark"></i>
+											</span>
+										</div>
+										<input type="password" class="form-control form-control-lg border-left-0" id="password" placeholder="Password" name="password" autocomplete="off">
+									</div>
+								</div>
+							</form>
+					      </div>
+					      <div class="modal-footer">
+					        <button type="button" id="download_report" class="btn btn-primary">Download</button>
+					      </div>
+					    </div>
+					  </div>
+					</div>
+				</div>
+			</div>
+			<!-- content-wrapper ends -->
+		</div>
+		<!-- page-body-wrapper ends -->
+	</div>
+	<!-- container-scroller -->
+</div>
+<!-- plugins:js -->
+
+<script src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
+<script src="{% static 'js/encrypt.js' %}"></script>
+<script src="{% static 'js/jquery.validate.min.js' %}" ></script>
+<script src="{% static 'melody/js/alerts.js' %}"></script>
+<script src="{% static 'js/bootstrap.min.js' %}"></script>
+
+<script type="text/javascript">
+    $(window).on('load',function(){
+        $('#download-file').modal('show');
+    });
+    var csrf_token = $("input[name='csrfmiddlewaretoken']").val()
+    $('#download_report').unbind('click').click(function(){
+		var downloadReportForm = $('#downloadReportForm')
+		if (downloadReportForm.valid()){
+			var password = Base64.encode($("#password").val());
+		    $("#password").val(password)
+		    var downloadReportForm = $("#downloadReportForm")
+			$.ajax({
+				type: 'post',
+				headers: { "X-CSRFToken": csrf_token },
+				xhrFields: {
+	                responseType: 'blob'
+	            },
+				data: downloadReportForm.serialize(),
+				success: function (data, status, xhr) {
+ 					var fileName = xhr.getResponseHeader('content-disposition').split('filename=')[1].split(';')[0];
+	                var a = document.createElement('a');
+	                var url = window.URL.createObjectURL(data);
+	                a.href = url;
+	                a.download = fileName;
+	                document.body.append(a);
+	                a.click();
+	                a.remove();
+	                window.URL.revokeObjectURL(url);
+	                $("#download_report_success").text('Thanks for download.').removeClass("d-none")
+	                $("#downloadReportForm, #download_report, #download_report_error").addClass('d-none')
+				},
+				error: function (jqXHR) {
+					status = jqXHR.status
+					if (status == 401) {
+						$("#download_report_error").text("File Not Found").removeClass("d-none")	
+					}
+					else if (status == 404) {
+						$("#download_report_error").text("Only Admin or Manager or Supervisor can access this file").removeClass("d-none")		
+					}
+					else if (status == 400) {
+						$("#download_report_error").text("User is not active").removeClass("d-none")			
+					}
+					else {
+						$("#download_report_error").text("Username or Password is incorrect").removeClass("d-none")				
+					}
+					var password = Base64.decode($("#password").val());
+				    $("#password").val(password)
+					$("#download_report_error").text(data['responseJSON']['error']).removeClass("d-none")
+					setTimeout(function(){ $("#download_report_error").addClass("d-none") }, 3000);
+				}
+			})
+		}
+	})
+</script>
+
+</body>
+
+</html>

@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+{% block title %}Agent Activity{% endblock title %}
+
+{% block extra-stylesheets %}
+<style type="text/css">
+	.accordion.accordion-solid-header .card .card-header a{
+		padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+	}
+	.accordion.accordion-solid-header .card .card-body{
+		padding:0.5rem;
+	}
+	.accordion .card .card-body i{
+		font-size: 1rem;
+	}
+</style>
+{% endblock extra-stylesheets %}
+
+{% block header %}Call Reports<small>Agent Activity</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Agent Activity</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Agent Activity</legend>
+				<!-- Dialler Logs tab and table -->
+				<div class="mt-1">
+					<div class="accordion" id="accordion" role="tablist">
+						<div class="card">
+							<div class="card-header" role="tab" id="heading-2">
+								<h6 class="mb-0">
+									<a class="" data-toggle="collapse" href="#collapse-2" aria-expanded="true" aria-controls="collapse-2">
+										Search Report
+									</a>
+								</h6>
+							</div>
+							<div id="collapse-2" class="collapse show" role="tabpanel" aria-labelledby="heading-2" data-parent="#accordion" style="">
+								<div class="card-body">
+									<form method="post" class="call-detail-form" id="report_form">
+										{% csrf_token %}
+										<div class="row">
+											<div class="col-md-3 col-sm-6">
+												<div class="form-group">
+													<label class="col-form-label mb-0">Campaign</label>
+													<select class="form-control" name="selected_campaign" id="agent_report_campaign" multiple>
+														{% for campaign in campaign_list %}
+														<option value="{{ campaign.name }}" data-name="{{campaign.name}}">{{ campaign.name }}</option>
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+											<div class="col-md-3 col-sm-6">
+												<div class="form-group">
+													<label class="col-form-label mb-0">User</label>
+													<select class="form-control" name="selected_user" id="agent_activity_users" multiple>
+														{% for user in user_list %}
+														<option value="{{ user.id }}">{{ user.username }}</option>
+														{% endfor %}
+													</select>
+
+												</div>
+											</div>
+											<div class="col-md-3 col-sm-6 agent-datepicker">
+												<div class="form-group">
+													<label class="col-form-label mb-0">Start Date</label>
+													<div data-target-input="nearest" class="input-group date" id="start-date">
+														<div data-target="#start-date" data-toggle="datetimepicker" class="input-group datetimepicker">
+															<input type="text" name="start_date" placeholder="YYYY-MM-DD HH:mm" data-target="#start-date" class="form-control crm-form-control datetimepicker-input" autocomplete="off">
+															<div class="input-group-addon input-group-append">
+
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+											<div class="col-md-3 col-sm-6 agent-datepicker">
+												<div class="form-group">
+													<label class="col-form-label mb-0">End Date</label>
+													<div data-target-input="nearest" class="input-group date " id="end-date">
+														<div data-target="#end-date" data-toggle="datetimepicker" class="input-group">
+															<input type="text" name="end_date" placeholder="YYYY-MM-DD HH:mm" data-target="#end-date" class="form-control crm-form-control datetimepicker-input" autocomplete="off">
+															<div class="input-group-addon input-group-append">
+
+															</div>
+														</div>
+													</div>
+													<span class="text-danger d-none" id="end-date-error">End Date Should Be Greater Than Start Date</span>
+												</div>
+											</div>
+											<div class="form-group">
+												<div>
+													<button type="button" class="btn btn-success btn-sm btn-icon-text mt-2 mr-2" id="custom-report-filter">
+														<i class="fas fa-filter"></i>Filter
+													</button>
+													<div class="btn-group">
+														<button type="button" class="btn btn-primary btn-sm mt-2 agent_reports_download" id="xls"><i class="fa fa-download"></i></button>
+														<button type="button" class="btn btn-primary btn-sm mt-2 dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+														</button>
+														<div class="dropdown-menu">
+															<a class="dropdown-item agent_reports_download" id="xls" href="#">Excel</a>
+															<a class="dropdown-item agent_reports_download" id="csv" href="#">Csv</a>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+										<input type="hidden" name="agent_reports_download" value="" id="call_details_flag">
+										<input type="hidden" name="column_name" id="column_name_list">
+										<input type="hidden" name="all_users" id="all_users">
+										<input type="hidden" name="all_campaigns" id="all_campaigns">
+										<input type="hidden" name="agent_reports_download_type" id="agent_reports_download_type">
+									</form>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-12">
+						<table id="agent-activity-table" class="table display table-striped nowrap mt-2" style="width: 100%">
+							<thead>
+								<tr id="column_name">
+									{% for field in all_fields %}
+									{% if field == 'event_time' %}
+										<th data-data="{{field}}" data-name="{{field}}" data-field_name="{{field}}" class="text-capitalize timestamp-field">{{ field|table_header }}</th>
+									{% elif field == 'feedback_time' %}
+										<th data-data="{{field}}" data-name="{{field}}" data-field_name="{{field}}" class="text-capitalize ">WrapUp Time</th>
+									{% else %}
+										<th data-data="{{field}}" data-name="{{field}}" data-field_name="{{field}}" class="text-capitalize">{{ field|table_header }}</th>
+									{% endif %}
+									{% endfor %}
+								</tr>
+							</thead>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="callcenter">
+	<input type="hidden" id="model_name" value="AgentActivity">
+	<input type="hidden" name="report_name" id="report_name" value="5">
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/reports.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		{% if can_read %}
+			var url = '/CallReports/AgentActivity/'
+			var activity_table = $('#agent-activity-table')
+			users = {{user_list|safe}}
+			report_visible_cols = []
+			{% if report_visible_cols %}
+				report_visible_cols={{report_visible_cols|safe}}
+				report_datatable(activity_table,url,report_visible_cols)
+			{% else %}
+				report_datatable(activity_table,url)
+			{% endif %}
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+	});
+</script>
+{% endblock extra-js %}

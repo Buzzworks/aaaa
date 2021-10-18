@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+
+{% block title %}ThirdParty CRM{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+{% endblock extra-stylesheets %}
+
+{% block header %}Modules<small>ThirdParty CRM</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">ThirdParty CRM</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+<!-- {% if can_read %} -->
+<div class="card">
+	<div class="card-body">
+		<legend>ThirdParty CRM</legend>
+		<div class="">
+			{% include "search.html" %}  
+			<table id="thirdparty-list-table" class="table display table-striped nowrap avatar-table" style="width:100%">
+				<thead>
+					<tr class="avatar"></tr>
+					<tr>
+						<th class="avatar"></th>
+						<th data-data="name" class="name">ThirdParty Name</th>
+						<th data-data="campaign">Campaign</th>
+						<th data-data="dynamic_api">Dynamic Data</th>
+						<th data-data="status">Status</th>
+						<th data-data="created" class="list_date">created</th>
+						<th data-data="modified" class="list_date">modified</th>
+						{% if can_update or can_delete %}
+						<th data-data="checkbox_col" class="checkbox_col">
+								<div class="btn-group select-all-div">
+									<div class="form-check">
+										<label class="form-check-label ml-3">
+											<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+											<i class="input-helper"></i>
+										</label>
+									</div>
+									{% if can_delete %}
+									<div class="dropdown">
+										<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+											<span class="caret"></span></button>
+											<ul class="dropdown-menu">
+												<li class="dropdown-item" onclick="confirmDelete('warning-message-and-cancel', 'Ok','enable')">Enable</li>
+											<li class="dropdown-item" onclick="confirmDelete('warning-message-and-cancel', 'Ok','disable')">Disable</li>
+											<li class="dropdown-item" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">Delete</li>
+											</ul>
+									</div>
+									{% endif %}
+								</div>
+							</th>
+							<th data-data="action" class="action">Action</th>
+						{% endif %}
+					</tr>
+				</thead>
+			</table>
+		</div>
+		{% include "vue_pagination.html" %}  
+	</div>
+</div>
+<!-- {% endif %} -->
+<!-- action buttons -->
+<div class="bottom-menu">
+	<div class="action-button-circle">
+		<a href="{% url 'create-thirdpartyapi' %}">
+			<div class="circle-button skin-black">
+				<i class="fa fa-plus button-area add-campaigns"></i>
+			</div>
+		</a>
+	</div>
+</div>
+<input type="hidden" id="app_name" value="callcenter">
+<input type="hidden" id="model_name" value="ThirdPartyApi">
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		{% if can_read %}
+			var thirdparty_table = $('#thirdparty-list-table')
+			selective_datatable(thirdparty_table); 	//datatbale jquery
+			edit_url = "{% url 'edit-thirdpartyapi' 123 %}"
+			get_pagination_data(1, true)
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+	} );
+</script>
+{% endblock extra-js %}

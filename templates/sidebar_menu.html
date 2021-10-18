@@ -1,0 +1,517 @@
+{% load get_group %}
+{% load getattribute %}
+{% get_user_group user  as can_access %}
+{% for module in request.session.modules %}
+	{% with module.name as name %}
+	{% if 'R' in  request.user.user_role.permissions|getattribute:name|join:',' or request.user.is_superuser%}
+	{% if module.status == 'Active'%}
+		<li class="nav-item side-menu-e">
+			<a class="nav-link" {% if module.parent_menu %}data-toggle="collapse" href="#{{module.name}}" aria-expanded="false" aria-controls="{{module.name}}" {% else %} href="{% url module.name %}" {% endif %}>
+				<i class="fa {{module.icon}} menu-icon"></i>
+				<span class="menu-title" data-hover="{{module.title}}">{{module.title}}</span>
+				{% if module.parent_menu %}
+					<i class="menu-arrow"></i>
+				{% endif %}
+			</a>
+			{% if module.parent_menu %}
+			<div class="collapse" id="{{module.name}}">
+				<ul class="nav flex-column sub-menu list-unstyled">
+					{% for child in module.parent_menu %}
+						{% with child.name as child_name %}
+						{% if 'R' in  request.user.user_role.permissions|getattribute:child_name|join:',' or request.user.is_superuser%}
+						{% if child.status == 'Active' and child.is_menu %}
+							{% if child.name == 'modules' and request.user.is_superuser %}
+							<li class="nav-item">
+								<a class="nav-link" href="{% url child.url %}">
+									<i class="fas {{child.icon}} menu-icon"></i>
+									<span class="menu-title" data-hover="{{child.title}}">{{child.title}}</span>
+								</a>
+							</li>
+							{% elif child.name != 'modules' %}
+							<li class="nav-item">
+								<a class="nav-link" href="{% url child.url %}">
+									<i class="fas {{child.icon}} menu-icon"></i>
+									<span class="menu-title" data-hover="{{child.title}}">{{child.title}}</span>
+								</a>
+							</li>
+							{% endif  %}
+						{% endif %}
+						{% endif %}
+						{% endwith %}
+					{% endfor %}
+				</ul>
+			</div>
+			{% endif %}
+		</li>
+	{% endif %}
+	{% endif %}
+	{% endwith%}
+{% endfor %}
+
+
+
+{% comment %}
+<li class="nav-item side-menu-e">
+	<a class="nav-link" data-toggle="collapse" href="#user-layouts" aria-expanded="false" aria-controls="user-layouts">
+		<i class="fa fa-users menu-icon"></i>
+		<span class="menu-title" data-hover="User Management">User Management</span>
+		<i class="menu-arrow"></i>
+	</a>
+	<div class="collapse" id="user-layouts">
+		<ul class="nav flex-column sub-menu list-unstyled">
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'users' %}">
+					<i class="fas fa-users-cog menu-icon"></i>
+					<span class="menu-title" data-hover="Users">Users</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'user_roles' %}">
+					<i class="fas fa-user-tie menu-icon"></i>
+					<span class="menu-title" data-hover="Access Management">Access Management</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'groups' %}">
+					<i class="fa fa-object-group menu-icon"></i>
+					<span class="menu-title" data-hover="Groups">Groups</span>
+				</a>
+			</li>
+		</ul>
+	</div>
+</li>
+<li class="nav-item side-menu-e">
+	<a class="nav-link" data-toggle="collapse" href="#campaign-layouts" aria-expanded="false" aria-controls="campaign-layouts">
+		<i class="fa fa-flag menu-icon"></i>
+		<span class="menu-title" data-hover="Campaign Management">Campaign Management</span>
+		<i class="menu-arrow"></i>
+	</a>
+	<div class="collapse" id="campaign-layouts">
+		<ul class="nav flex-column sub-menu list-unstyled">
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'campaigns' %}">
+					<i class="fa fa-flag menu-icon"></i>
+					<span class="menu-title" data-hover="Campaigns">Campaigns</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'ingroup_campaign' %}">
+					<i class="fa fa-object-group menu-icon"></i>
+					<span class="menu-title" data-hover="InGroup">InGroup</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'css' %}">
+					<i class="fa fa-search menu-icon"></i>
+					<span class="menu-title" data-hover="CSS">CSS</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'skilledrouting' %}">
+					<i class="fa fa-cogs menu-icon"></i>
+					<span class="menu-title" data-hover="Skill Routing">Skill Routing</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'switch' %}">
+					<i class="fa fa-server menu-icon"></i>
+					<span class="menu-title" data-hover="Switch">Switch</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'dialtrunks' %}">
+					<i class="fa fa-signal menu-icon"></i>
+					<span class="menu-title" data-hover="Dial Trunk">Dial Trunk</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'dialtrunk_group' %}">
+					<i class="fa fa-signal menu-icon"></i>
+					<span class="menu-title" data-hover="Dial Trunk Group">Dial Trunk Group</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'dispositions' %}">
+					<i class="fa fa-tty menu-icon"></i>
+					<span class="menu-title" data-hover="Dispositions">Dispositions</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'relationtags' %}">
+					<i class="fa fa-tty menu-icon"></i>
+					<span class="menu-title" data-hover="Relationship Tag">Relationship Tag</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'pause_breaks' %}">
+					<i class="fa fa-pause menu-icon"></i>
+					<span class="menu-title" data-hover="Pause Breaks">Pause Breaks</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'campaign_schedules' %}">
+					<i class="fa fa-list-ol menu-icon"></i>
+					<span class="menu-title" data-hover="Shift Timing">Shift Timing</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'scripts' %}">
+					<i class="fa fa-comment menu-icon"></i>
+					<span class="menu-title" data-hover="Scripts">Scripts</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'audio_files' %}">
+					<i class="fa fa-music menu-icon"></i>
+					<span class="menu-title" data-hover="Audio Files">Audio Files</span>
+				</a>
+			</li>
+		</ul>
+	</div>
+</li>
+<li class="nav-item side-menu-e">
+	<a class="nav-link" data-toggle="collapse" href="#crm-layouts" aria-expanded="false" aria-controls="crm-layouts">
+		<i class="fas fa-file-contract menu-icon"></i>
+		<span class="menu-title" data-hover="CRM">CRM</span>
+		<i class="menu-arrow"></i>
+	</a>
+	<div class="collapse" id="crm-layouts">
+		<ul class="nav flex-column sub-menu list-unstyled">
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'crm_fields' %}">
+					<i class="fa fa-list menu-icon"></i>
+					<span class="menu-title" data-hover="CRM Field">CRM Field</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'phonebook' %}">
+					<i class="fa fa-address-book menu-icon"></i>
+					<span class="menu-title" data-hover="Lead List">Lead List </span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'lead_priority' %}">
+					<i class="fa fa-address-book menu-icon"></i>
+					<span class="menu-title" data-hover="Lead Priority">Lead Priority</span>
+				</a>
+			</li>
+		</ul>
+	</div>
+</li>
+<li class="nav-item side-menu-e">
+	<a class="nav-link" data-toggle="collapse" href="#report-layouts" aria-expanded="false" aria-controls="page-layouts">
+		<i class="fas fa-chart-bar menu-icon"></i>
+		<span class="menu-title" data-hover="Call Reports">Call Reports</span>
+		<i class="menu-arrow"></i>
+	</a>
+	<div class="collapse" id="report-layouts">
+		<ul class="nav flex-column sub-menu list-unstyled">
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'report-call_detail' %}">
+					<i class="fa fa-phone-square fa-rotate-90 menu-icon"></i>
+					<span class="menu-title" data-hover="Call Details">Call Details</span>
+				</a>
+			</li>
+
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'report-lan' %}">
+					<i class="fa fa-phone-square fa-rotate-90 menu-icon"></i>
+					<span class="menu-title" data-hover="LAN Reports">LAN Report</span>
+				</a>
+			</li>
+
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'report-call_recordings' %}">
+					<i class="fas fa-microphone-alt menu-icon"></i>
+					<span class="menu-title" data-hover="Call Recordings">Call Recordings</span>
+				</a>
+			</li>
+
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'report-agent_performance' %}">
+					<i class="fas fa-chart-line menu-icon"></i>
+					<span class="menu-title" data-hover="Agent Performance ">Agent Performance</span>
+				</a>
+			</li>
+
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'report-agent_mis' %}">
+					<i class="fa fa-phone-square fa-rotate-90 menu-icon"></i>
+					<span class="menu-title" data-hover="Agent MIS">Agent MIS </span>
+				</a>
+			</li>
+
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'report-agent_activity' %}">
+					<i class="fas fa-file-contract menu-icon"></i>
+					<span class="menu-title" data-hover="Agent Activity">Agent Activity</span>
+				</a>
+			</li>
+
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'report-campaign_mis' %}">
+					<i class="fa fa-phone-square fa-rotate-90 menu-icon"></i>
+					<span class="menu-title" data-hover="Campaign MIS">Campaign MIS </span>
+				</a>
+			</li>
+		
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'report-campaign_performance' %}">
+					<i class="fas fa-chart-line menu-icon"></i>
+					<span class="menu-title" data-hover="Campaign Performance ">Campaign Performance</span>
+				</a>
+			</li>
+
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'report-reschedule_callbacks' %}">
+					<i class="fas fa-file-contract menu-icon"></i>
+					<span class="menu-title" data-hover="Callback Call">Callback Call</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'report-reschedule_abandoned_call' %}">
+					<i class="fas fa-file-contract menu-icon"></i>
+					<span class="menu-title" data-hover="Abandoned Call">Abandoned Call</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'report-contact_info' %}">
+					<i class="fas fa-user-tie menu-icon"></i>
+					<span class="menu-title" data-hover="Contact Info">Contact Info</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'alternate_number' %}">
+					<i class="fas fa-phone menu-icon"></i>
+					<span class="menu-title" data-hover="Alternate Contact">Alternate Contact</span>
+				</a>
+			</li>
+			<li class="nav-item ">
+				<a class="nav-link" href="{% url 'report-billing' %}">
+					<i class="fas fa-money-bill-alt menu-icon"></i>
+					<span class="menu-title" data-hover="Billing">Billing</span>
+				</a>
+			</li>
+			<li class="nav-item ">
+				<a class="nav-link" href="{% url 'charts' %}">
+					<i class="fa fa-chart-bar  menu-icon"></i>
+					<span class="menu-title" data-hover="Charts">Charts</span>
+				</a>
+			</li>
+			<li class="nav-item "> 				
+				<a class="nav-link" href="{% url 'report-call_recording_feedback' %}"> 					
+					<i class="fas fa-microphone-alt menu-icon"></i> 					
+					<span class="menu-title" data-hover="QC Feedback">QC Feedback</span> 				
+				</a> 			
+			</li>		
+			<li class="nav-item "> 				
+				<a class="nav-link" href="{% url 'admin_log' %}"> 					
+					<i class="fas fa-money-bill-alt menu-icon"></i> 					
+					<span class="menu-title" data-hover="Admin Log">Admin Log</span> 				
+				</a> 			
+			</li>
+			<li class="nav-item "> 				
+				<a class="nav-link" href="{% url 'management_performance' %}"> 					
+					<i class="fas fa-chart-line menu-icon"></i> 					
+					<span class="menu-title" data-hover="Admin Performance">Admin Performance</span> 				
+				</a> 			
+			</li>		
+		</ul>
+	</div>
+</li>
+<li class="nav-item side-menu-e">
+	<a class="nav-link" data-toggle="collapse" href="#sms-layouts" aria-expanded="false" aria-controls="sms-layouts">
+		<i class="fas fa-file-contract menu-icon"></i>
+		<span class="menu-title" data-hover="Modules">Modules</span>
+		<i class="menu-arrow"></i>
+	</a>
+	<div class="collapse" id="sms-layouts">
+		<ul class="nav flex-column sub-menu list-unstyled">
+			{% if request.session.sms_template %}
+				<li class="nav-item">
+					<a class="nav-link" href="{% url 'sms_template' %}">
+						<i class="fa fa-list menu-icon"></i>
+						<span class="menu-title" data-hover="SMS Template">SMS Template</span>
+					</a>
+				</li>
+			{% endif %}
+			{% if request.session.gateway_settings %}
+				<li class="nav-item">
+					<a class="nav-link" href="{% url 'gateway_settings' %}">
+						<i class="fa fa-list menu-icon"></i>
+						<span class="menu-title" data-hover="SMS Gateway Setting">SMS Gateway Setting</span>
+					</a>
+				</li>
+			{% endif %}
+			{% if request.session.thirdpartyapi %}
+				<li class="nav-item">
+					<a class="nav-link" href="{% url 'thirdpartyapi' %}">
+						<i class="fa fa-window-restore  menu-icon"></i>
+						<span class="menu-title" data-hover="ThirdParty CRM">ThirdParty CRM</span>
+					</a>
+				</li>
+			{% endif %}
+			{% if request.session.third_party_user_campaign %}
+				<li class="nav-item">
+					<a class="nav-link" href="{% url 'third_party_user_campaign' %}">
+						<i class="fa fa-flag menu-icon"></i>
+						<span class="menu-title" data-hover="Click To Contact">Click To Contact</span>
+					</a>
+				</li>
+			{% endif %}
+			{% if request.session.voiceblaster %}
+			<li class="nav-item">
+					<a class="nav-link" href="{% url 'voiceblaster' %}">
+						<i class="fa fa-flag menu-icon"></i>
+						<span class="menu-title" data-hover="Voice Blaster">Voice Blaster</span>
+					</a>
+				</li>
+			{% endif %}
+			{% if request.session.email_scheduler %}
+			<li class="nav-item">
+					<a class="nav-link" href="{% url 'report-email_scheduler' %}">
+						<i class="fa fa-envelope menu-icon"></i>
+						<span class="menu-title" data-hover="Reports Email Schedualer">Reports Email Schedualer</span>
+					</a>
+				</li>
+			{% endif %}
+			{% if request.session.emaillog %}
+				<li class="nav-item">
+					<a class="nav-link" href="{% url 'report-email_log' %}">
+						<i class="fa fa-envelope menu-icon"></i>
+						<span class="menu-title" data-hover="Email Log">Email Log</span>
+					</a>
+				</li>
+			{% endif %}
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'email_gateway' %}">
+					<i class="fa fa-list menu-icon"></i>
+					<span class="menu-title" data-hover="Email Gateway">Email Gateway</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'email_template' %}">
+					<i class="fa fa-list menu-icon"></i>
+					<span class="menu-title" data-hover="Email Template">Email Template</span>
+				</a>
+			</li>
+		</ul>
+	</div>
+</li>
+<li class="nav-item side-menu-e">
+	<a class="nav-link" data-toggle="collapse" href="#administration-layouts" aria-expanded="false" aria-controls="page-layouts">
+		<i class="fas fa-tachometer-alt menu-icon"></i>
+		<span class="menu-title" data-hover="Administration">Administration</span>
+		<i class="menu-arrow"></i>
+	</a>
+	<div class="collapse" id="administration-layouts">
+		<ul class="nav flex-column sub-menu list-unstyled">
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'dnc' %}">
+					<i class="fas fa-file-contract menu-icon"></i>
+					<span class="menu-title" data-hover="DNC">DNC</span>
+				</a>
+			</li>		
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'ndnc' %}">
+					<i class="fa fa-envelope-square menu-icon"></i>
+					<span class="menu-title" data-hover="NDNC">NDNC</span>
+				</a>
+			</li>				
+			<li class="nav-item d-none">
+				<a class="nav-link" href="#">
+					<i class="fa fa-archive menu-icon"></i>
+					<span class="menu-title" data-hover="Modules">Modules</span>
+				</a>
+			</li>
+			<li class="nav-item d-none">
+				<a class="nav-link" href="#">
+					<i class="fa fa-phone-square fa-rotate-90 menu-icon"></i>
+					<span class="menu-title" data-hover="WebRTC Settings">WebRTC Settings</span>
+				</a>
+			</li>
+			<li class="nav-item d-none">
+				<a class="nav-link" href="#">
+					<i class="fa fa-envelope-square menu-icon"></i>
+					<span class="menu-title" data-hover="SMTP Settings">SMTP Settings</span>
+				</a>
+			</li>
+
+		</ul>
+	</div>
+</li>
+<li class="nav-item side-menu-e d-none">
+	<a class="nav-link" data-toggle="collapse" href="#setting-layouts" aria-expanded="false" aria-controls="page-layouts">
+		<i class="fa fa-cog menu-icon"></i>
+		<span class="menu-title" data-hover="Settings">Settings</span>
+		<i class="menu-arrow"></i>
+	</a>
+	<div class="collapse" id="setting-layouts">
+		<ul class="nav flex-column sub-menu list-unstyled">
+			<li class="nav-item">
+				<a class="nav-link" href="#">
+					<i class="fa fa-envelope menu-icon"></i>
+					<span class="menu-title" data-hover="Voice Mail">Voice Mail</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="#">
+					<i class="fa fa-book menu-icon"></i>
+					<span class="menu-title" data-hover="Admin Logs">Admin Logs</span>
+				</a>
+			</li>
+		</ul>
+	</div>
+</li>
+
+{% comment %}
+<li class="nav-item side-menu-e">
+	<a class="nav-link" data-toggle="collapse" href="#contact-layouts" aria-expanded="false" aria-controls="contact-layouts">
+		<i class="fa fa-users menu-icon"></i>
+		<span class="menu-title" data-hover="Contacts">Contacts</span>
+		<i class="menu-arrow"></i>
+	</a>
+	<div class="collapse" id="contact-layouts">
+		<ul class="nav flex-column sub-menu list-unstyled">
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'connected_contact_info' %}">
+					<i class="fas fa-users-cog menu-icon"></i>
+					<span class="menu-title" data-hover="Call Contacts">Call Contacts</span>
+				</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="{% url 'contact_info' %}">
+					<i class="fas fa-user-tie menu-icon"></i>
+					<span class="menu-title" data-hover="Contact Info">Contact Info</span>
+				</a>
+			</li>
+		</ul>
+	</div>
+</li>
+{% endcomment %}
+{% comment %}
+<li class="nav-item side-menu-e d-none">
+	<a class="nav-link" href="#">
+		<i class="far fa-calendar menu-icon"></i>
+		<span class="menu-title" data-hover="Events">Events</span>
+	</a>
+</li>
+<li class="nav-item side-menu-e d-none">
+	<a class="nav-link"  href="#">
+		<i class="fa fa-envelope menu-icon"></i>
+		<span class="menu-title" data-hover="Messages">Messages</span>
+	</a>
+</li>
+<li class="nav-item side-menu-e d-none">
+	<a class="nav-link"  href="#">
+		<i class="fa fa-exclamation menu-icon"></i>
+		<span class="menu-title" data-hover="Notifications">Notifications</span>
+	</a>
+</li>
+<li class="nav-item side-menu-e d-none">
+	<a class="nav-link"  href="#">
+		<i class="fa fa-tasks menu-icon"></i>
+		<span class="menu-title" data-hover="Task">Task</span>
+	</a>
+</li>
+{% endcomment %}

@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getcrmdata %}
+
+{% block title %}Contacts{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+
+{% endblock extra-stylesheets %}
+
+{% block header %}Contacts<small>Connected Call Status</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Connected Call Status</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Connected Call Status</legend>
+				{% csrf_token %}
+				<!-- crm list tab and table -->
+				<form method="get" id="{% url 'connected_contact_info' %}">
+					<div class="row">
+						<div class="col-md-3">
+							<div class="form-group row">
+								<label for="extension" class="col-sm-4 col-form-label">Campaign:</label>
+								<div class="col-sm-8">
+									<select class="form-control"  id="contact_campaign_select" name="campaign">
+										<option value="">Select Campaign</option>
+										{% for campaign in campaign_list %}
+											{% if campaign.id|slugify == selected_campaign %}
+												<option value="{{ campaign.id}}" selected>{{ campaign.name }}</option>
+											{% else %}
+												<option value="{{ campaign.id}}">{{ campaign.name }}</option>
+											{% endif %}
+											
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+						</div>
+						{% if selected_campaign %}
+						<div class="col-md-3 " id="phonebook-div">
+						{% else %}
+						<div class="col-md-3 d-none" id="phonebook-div">
+						{% endif %}
+							<div class="form-group row">
+								<label for="username" class="col-sm-4 col-form-label">Phonebook:</label>
+								<div class="col-sm-8">
+									<select class="form-control"  id="contact_phonebook_select" name="phonebook">
+										<option value="">Select Phonebook</option>
+										{% comment %}
+										{% for phonebook in phonebook_list %}
+											{% if phonebook.id|slugify == selected_phonebook %}
+												<option value="{{ phonebook.id}}" data-campaign="{{ phonebook.campaign }}" selected>{{ phonebook.name }}</option>
+											{% else %}
+												<option value="{{ phonebook.id}}" data-campaign="{{ phonebook.campaign }}">{{ phonebook.name }}</option>
+											{% endif %}
+										{% endfor %}
+										{% endcomment %}
+									</select>
+								</div>
+							</div>
+						</div>
+						{% if selected_campaign %}
+						<div class="col-md-5" id="column-div">
+						{% else %}
+						<div class="col-md-5 d-none" id="column-div">
+						{% endif %}
+							<div class="form-group row">
+								<label for="extension" class="col-sm-4 col-form-label">Select Columns :</label>
+								<div class="col-sm-8 mb-3">
+									<select class="form-control"  id="contact_column_select" name="selected_columns" multiple>
+										<option>Select Columns</option>
+										{% for field in columns_list %}
+											{% if field in selected_columns %}
+												<option value="{{ field }}" selected>{{ field }}</option>
+											{% else %}
+												<option value="{{ field }}">{{ field }}</option>
+											{% endif %}
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-1">
+							{% if selected_campaign %}
+								<button type="submit" class="btn btn-success mr-sm-2" id="filter_contacts_info">Filter</button>
+							{% else %}
+								<button type="submit" class="btn btn-success mr-sm-2 d-none" id="filter_contacts_info">Filter</button>
+							{% endif %}
+							
+						</div>
+					</div>
+				</form>
+				<div class="row">
+					<div class="col-12">
+						{% if contacts %}
+							<table id="contact-info-table" class="table display table-striped nowrap" style="width: 100%">
+						{% else %}
+							<table id="contact-info-table" class="table display table-striped nowrap d-none" style="width: 100%">
+						{% endif %}
+							<thead>
+								<tr>
+									<th></th>
+									{% for field in fields %}
+					                	<th>{{ field.verbose_name.title }}</th>
+					                {% endfor %}	
+					                {% if campaign_column %}
+					                	<th>Campaign</th>
+					                {% endif %}	
+									<th>
+										<div class="btn-group select-all-div">
+											<div class="form-check">
+												<label class="form-check-label ml-3">
+													<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+												</label>
+											</div>
+											<div class="dropdown">
+												<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+													<span class="caret"></span></button>
+												{% if can_delete %}
+												<ul class="dropdown-menu">
+													<li class="dropdown-item text-center" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">Delete Selected</li>											
+												</ul>
+												{% endif %}
+											</div>
+										</div>
+									</th>
+									<th>Action</th>
+								</tr>
+							</thead>
+							<tbody class="data-body-div">
+								{% for contact in contacts.all %}
+					                <tr id="{{ contact.id }}">
+					                	<td>
+					                		{% if fields %}
+					                			<avatar username="{{ contact|getattribute:fields.0.name }}" :size="36"></avatar>
+					                		{% else %}
+					                			{% if campaign_column %}
+					                			<avatar username="contact.phonebook.campaign_name" :size="36"></avatar>
+					                			{% endif %}
+					                		{% endif %}
+					                	</td>
+					                    {% for field in fields %}
+					                    	
+					                    <td>{{ contact|getattribute:field.name }}</td>
+					                    {% endfor %}
+					                    {% if campaign_column %}
+					                    	<td>{{ contact.phonebook.campaign_name }}</td>
+					                    {% endif %}
+					                    <td>
+											<div class="form-check">
+												<label class="form-check-label">
+													<input type="checkbox" class="form-check-input"><i class="input-helper"></i>
+												</label>
+											</div>
+										</td>
+										<td><div class="dropdown show">
+											<button class="btn btn-secondary dropdown-toggle table-dropdown" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+												Choose Action
+											</button>
+											<div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+												{% if can_delete %}
+												<a class="dropdown-item"  onclick="confirmDelete('delete_one', 'Ok','particular_entry-{{ contact.id}}')">Delete</a>
+												{% endif %}
+
+											</div>
+											</div>
+										</td>
+					                </tr>
+					            {% endfor %}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="crm">
+	<input type="hidden" id="model_name" value="Contact">
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/form-validator.min.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		{% if can_read %}
+			{% if contacts %}
+				selective_datatable($('#contact-info-table'));  //datatbale jquery
+			{% endif %}
+			phonebook_list = {{phonebook_list|safe}}
+			phonebook = "{{selected_phonebook}}"
+			{% if selected_campaign %}
+				dynamic_phonebook(phonebook)
+			{% endif %}
+		{% else %}
+				PermissionDeny();
+		{% endif %}
+	});
+
+</script>
+
+{% endblock extra-js %}

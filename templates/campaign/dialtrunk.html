@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Dial Trunk{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+<style>
+	.tooltip{
+		z-index:10000000;
+	}
+</style>
+
+{% endblock extra-stylesheets %}
+
+{% block header %}Campaign Management<small>Trunk</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Trunk</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row ">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Trunk</legend>
+				{% csrf_token %}
+				<!-- trunk tab and table -->
+				<div class="append_table">
+					<div class="col-12">
+						{% include "search.html" %}    
+					</div>
+					<div class="row">
+						<div class="col-12">
+							<table id="trunk-list-table" class="table display table-striped nowrap avatar-table" style="width: 100%">
+								<thead>
+									<tr>
+										<th class="avatar"></th>
+										<th data-data="name" class="modal_name">Name</th>
+										<th data-data="dial_string">Dial String</th>
+										<th data-data="trunk_type">Type</th>
+										<th data-data="switch_name">Switch</th>
+										<th data-data="created_by_user">Created By</th>
+										<th data-data="status">Status</th>
+										<th data-data="created_date" class="list_date">created date</th>
+										<th data-data="modified_date" class="list_date">modified date</th>
+										{% if can_update or can_delete %}
+											<th data-data="checkbox_col" class="checkbox_col">
+												<div class="btn-group select-all-div">
+													<div class="form-check">
+														<label class="form-check-label ml-3">
+															<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+															<i class="input-helper"></i>
+														</label>
+													</div>
+													<div class="dropdown">
+														<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+															<span class="caret"></span></button>
+														<ul class="dropdown-menu">
+															{% if can_update %}
+															<li class="dropdown-item" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make Active')">
+																Active Selected
+															</li>
+															<li class="dropdown-item" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make InActive')">
+																Inactive Selected
+															</li>
+															{% endif %}
+															{% if can_delete %}
+																<li class="dropdown-item" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">
+																	Delete Selected
+																</li>
+															{% endif %}
+														</ul>
+													</div>
+												</div>
+											</th>
+											<th data-data="action" class="action">Action</th>
+										{% endif %}
+									</tr>
+								</thead>
+							</table>
+							{% include "vue_pagination.html" %} 
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% if can_create %}
+<!-- action buttons -->
+<div class="bottom-menu">
+	<div class="action-button-circle" data-toggle="modal">
+		<a data-toggle="modal" data-target="#modal_add_trunk" title="Add trunk">
+			<div class="circle-button skin-black">
+				<i class="fa fa-plus button-area add-trunk"></i>
+			</div>
+		</a>
+	</div>
+</div>
+<!-- model forms -->
+<div class="modal fade" id="modal_add_trunk"  role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to create trunk details."></i>
+					<b>Dial Trunk Wizard » Add New Dial Trunk</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body">
+				<form id="trunk-form" class="wizard-form" action="#">
+					{% csrf_token %}
+					<div>
+						<h3>Add Dial Trunk <br> <small>Set detail for Dial Trunk</small></h3>
+						<section>
+							<div class="form-group row">
+								<label for="trunk_name" class="col-sm-4 col-form-label">Name<span class="star">*</span> :</label>
+								<div class="col-sm-8">
+									<input type="text" name ="name" data-toggle="tooltip" data-original-title="Enter Dial-Trunk Name" class="form-control" id="trunk_name" placeholder="Enter the trunk name" data-validation="length alphanumeric" data-validation-length="min4" data-validation-allowing="_ " data-validation-error-msg-container="#trunk_name_msg">
+									<span id="trunk_name_msg"></span>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="dial_string" class="col-sm-4 col-form-label">Dial String<span class="star">*</span> :</label>
+								<div class="col-sm-8">
+									<input type="text" name="dial_string" class="form-control" id="dial_string" placeholder="Enter dial string to the server" data-toggle="tooltip" data-original-title="Enter Dial-Trunk String" data-validation="required" data-validation-error-msg-container="#trunk_dial_string_msg">
+									<span id="trunk_dial_string_msg"></span>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="dial_string" class="col-sm-4 col-form-label">DID Range<span class="star">*</span> :</label>
+								<div class="col-sm-3 pr-0">
+									<input type="text" class="form-control" id="start_did" placeholder="start" data-toggle="tooltip"  data-validation="required" data-validation-error-msg-container="#did_range_container">
+									<span id="did_range_container"></span>
+								</div>
+								<label for="dial_string" class="col-sm-1 col-form-label">To</label>
+								<div class="col-sm-3 pl-0">
+									<input type="text" class="form-control" id="end_did" placeholder="end" data-validation="required" data-validation-error-msg-container="#end_range_container">
+									<span id="end_range_container"></span>
+								</div>
+							</div>
+							<div class="form-group row d-none trunk_range_msg">
+								<label for="dial_string" class="col-sm-4 col-form-label">&nbsp;</label>
+								<div class="col-sm-8">
+									<span class="text-danger">Start Value should be less than end value/More than 100 DID's Given</span>
+								</div>
+							</div>
+							
+
+
+
+							<div class="form-group row">
+								<label for="channel_count" class="col-sm-4 col-form-label">Channel Count :</label>
+								<div class="col-sm-8">
+									<input type="number" name="channel_count" class="form-control" id="channel_count" placeholder="Enter channel count" value="0" onkeypress="return isNumber(event)" min="0" onpaste="pasteNumber(event)">
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="" class="col-sm-4 col-form-label">Trunk Type :</label>
+								<div class="col-sm-8 form-inline">
+									<div class="form-check mr-sm-2">
+										<label class="form-check-label">
+											<input type="radio" class="form-check-input" name="trunk_type" id="trunk_type" value="domestic" checked="true">Domestic
+										</label>
+									</div>
+									<div class="form-check">
+										<label class="form-check-label">
+											<input type="radio" class="form-check-input" name="trunk_type" id="trunk_type" value="international">International
+										</label>
+									</div>
+								</div>
+							</div>
+							<!--create -->
+							<div class="form-group row trunk_prefix" id="trunk_prefix" >
+								<label for="" class="col-sm-5 col-form-label">Prefix :</label>
+								<div class="col-sm-7 form-inline">
+									<div class="form-check">
+										<label class="form-check-label">
+											<input type="checkbox" class="form-check-input prefix" name="prefix" id="prefix"><i class="input-helper"></i>
+										</label>
+									</div>
+								</div>
+							</div>
+							<div class="form-group row county_code_div d-none" id="county_code_div">
+								<label for="" class="col-sm-4 col-form-label">Country Code :</label>
+								<div class="col-sm-5">
+									<select class="form-control select2-class create_country_code" name="country_code_select" id="country_code_select">
+										<option value="">Select Country Code</option>
+										{% for county in country_codes %}
+											{% if county.0 != '0' and county.0 != '91' %}
+											<option value="{{county.0}}">{{ county.1 }}</option>
+											{% endif %}
+										{% endfor %}
+									</select>
+								</div>
+								<div class="col-sm-3">
+									<input type="text" name="" id="selected_county_code" class="form-control" readonly="">
+								</div>
+							</div>
+							<div class="form-group row domestic_code d-none" id="domestic_code">
+								<label for="" class="col-sm-4 col-form-label">Country Code :</label>
+									<div class="col-md-3">
+										<input type="text" name="" class=" form-check-label form-control" readonly="" value="INDIA">
+									</div>
+									<div class="col-sm-5 form-inline">
+									<div class="form-check mr-sm-2">
+										<label class="form-check-label">
+											<input type="radio" class="country_code_radio form-check-input " name="country_code_radio" id="country_code_radio" value="0">
+											Add 0
+										</label>
+									</div>
+									<div class="form-check mr-sm-2">
+										<label class="form-check-label">
+											<input type="radio" class="country_code_radio form-check-input" name="country_code_radio" id="country_code_radio" value="91">
+											Add 91
+										</label>
+									</div>
+								</div>
+							</div>
+							<input type="hidden" value="" id="create_county_code" name="country_code">
+							<div class="form-group row">
+								<label for="" class="col-sm-4 col-form-label">Switch :</label>
+								<div class="col-sm-8">
+									<select class="form-control" name="switch">
+										<option value="">Select the Trunk Switch</option>
+										{% for switch in switches %}
+										<option value="{{ switch.id }}">{{ switch.name }}</option>
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="status"  class="col-sm-4 col-form-label">Status :</label>
+								<div class="col-sm-8">
+									<select class="form-control" name ="status">
+										{% for status in trunk_status  %}
+											<option value="{{ status.0 }}">{{ status.1 }}</option>
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+						</section>
+					</div>
+					<input type="hidden" name="created_by" value="{{user.id}}">
+					<input type="hidden" name="did_range" id="hidden_did_range">
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% if can_update %}
+<!-- modal form for updatng the form data ----------------->
+<div class="modal fade" id="modal_update_trunk"  role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to update trunk details."></i>
+					<b>Dial Trunks Wizard » Update Dial Trunk</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body">
+				<form id="update-trunk-form" class="wizard-form" action="#">
+					{% csrf_token %}
+					<div>
+						<h3>Update Dial Trunk  <br> <small>Update the detail of Dial Trunk</small></h3>
+						<section>
+							<input type="text" name ="name" class="form-control d-none" id="update_trunk_pk">
+							<div class="form-group row">
+								<label for="trunk_name" class="col-sm-4 col-form-label">Name<span class="star">*</span> :</label>
+								<div class="col-sm-8">
+									<input type="text" name ="name" data-toggle="tooltip" data-original-title="Update Dial-Trunk Name" class="form-control" id="update_trunk_name" placeholder="Update the trunk name" data-validation="length alphanumeric" data-validation-length="min4" data-validation="alphanumeric" data-validation-allowing="_ " data-validation-error-msg-container="#update_trunk_name_msg">
+									<span id="update_trunk_name_msg"></span>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="dial_string" class=" col-sm-4 col-form-label">Dial String<span class="star">*</span> :</label>
+								<div class="col-sm-8">
+									<input type="text" name="dial_string" class="form-control" id="update_dial_string" placeholder="Update dial string to the server" data-toggle="tooltip" data-original-title="Update Dial-Trunk String" data-validation="required" data-validation-error-msg-container="#update_trunk_dial_string_msg">
+									<span id="update_dial_string_msg"></span>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="dial_string" class="col-sm-4 col-form-label">DID Range<span class="star">*</span> :</label>
+								<div class="col-sm-3 pr-0">
+									<input type="text" class="form-control" id="update_start_did" placeholder="start" data-toggle="tooltip"  data-validation="required" data-validation-error-msg-container="#update_did_range_container">
+									<span id="update_did_range_container"></span>
+								</div>
+								<label for="dial_string" class="col-sm-1 col-form-label">To</label>
+								<div class="col-sm-3 pl-0">
+									<input type="text" class="form-control" id="update_end_did" placeholder="end" data-validation="required" data-validation-error-msg-container="#update_end_range_container">
+									<span id="update_end_range_container"></span>
+								</div>
+							</div>
+							<div class="form-group row d-none trunk_range_msg">
+								<label for="dial_string" class="col-sm-4 col-form-label">&nbsp;</label>
+								<div class="col-sm-8">
+									<span class="text-danger">Start Value should be less than end value</span>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="channel_count" class="col-sm-4 col-form-label">Channel Count :</label>
+								<div class="col-sm-8">
+									<input type="number" name="channel_count" class="form-control" id="update_channel_count" placeholder="Enter channel count" onkeypress="return isNumber(event)" min="0" onpaste="pasteNumber(event)">
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="" class="col-sm-4 col-form-label">Trunk Type :</label>
+								<div class="col-sm-8 form-inline">
+									<div class="form-check mr-sm-2">
+										<label class="form-check-label">
+											<input type="radio" class="form-check-input update_trunk_type" name="trunk_type" id="update_trunk_type" value="domestic">Domestic
+										</label>
+									</div>
+									<div class="form-check mr-sm-2">
+										<label class="form-check-label">
+											<input type="radio" class="form-check-input update_trunk_type" name="trunk_type" id="update_trunk_type" value="international">International
+										</label>
+									</div>
+								</div>
+							</div>
+							<div class="form-group row trunk_prefix" id="update_trunk_prefix">
+								<label for="" class="col-sm-5 col-form-label">Prefix :</label>
+								<div class="col-sm-7 form-inline">
+									<div class="form-check">
+										<label class="form-check-label">
+											<input type="checkbox" class="form-check-input update_prefix" name="prefix" id="update_prefix"><i class="input-helper"></i>
+										</label>
+									</div>
+								</div>
+							</div>
+							<div class="form-group row update_country_code_div d-none" id="update_country_code_div">
+								<label for="" class="col-sm-4 col-form-label">Country Code :</label>
+								<div class="col-sm-5">
+									<select class="form-control select2-class" name="udpate_country_code_select" id="update_country_code_select">
+										<option value="">Select Country Code</option>
+										{% for county in country_codes %}
+											{% if county.0 != '0' and county.0 != '91' %}
+											<option value="{{county.0}}">{{ county.1 }}</option>
+											{% endif %}
+										{% endfor %}
+									</select>
+								</div>
+								<div class="col-sm-3">
+									<input type="text" name="" id="updated_selected_county_code" class="form-control" readonly="">
+								</div>
+							</div>
+							<div class="form-group row update_domestic_code d-none" id="update_domestic_code">
+								<label for="" class="col-sm-4 col-form-label">Country Code :</label>
+									<div class="col-md-3">
+										<input type="text" name="" class=" form-check-label form-control" readonly="" value="INDIA">
+									</div>
+									<div class="col-sm-5 form-inline">
+									<div class="form-check mr-sm-2">
+										<label class="form-check-label">
+											<input type="radio" class="update_country_code_radio form-check-input " name="update_country_code_radio" id="update_country_code_radio" value="0">
+											Add 0
+										</label>
+									</div>
+									<div class="form-check mr-sm-2">
+										<label class="form-check-label">
+											<input type="radio" class="update_country_code_radio form-check-input" name="update_country_code_radio" id="update_country_code_radio" value="91">
+											Add 91
+										</label>
+									</div>
+								</div>
+							</div>
+							<input type="hidden" value="" id="update_county_code" name="country_code">
+							<div class="form-group row">
+								<label for="" class="col-sm-4 col-form-label">Switches:</label>
+								<div class="col-sm-8">
+									<select class="form-control" id="update_trunk_switch" name="switch">
+										<option value="">Select the Trunk server</option>
+										{% for switch in switches %}
+										<option value="{{ switch.id }}">{{ switch.name }}</option>
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="status" class="col-sm-4 col-form-label">Status :</label>
+								<div class="col-sm-8">
+									<select class="form-control" id="update_trunk_status" name="status">
+										{% for status in trunk_status  %}
+											<!-- <option value="{{ status.0 }}" selected>{{ status.1 }}</option> -->
+											<option value="{{ status.0 }}">{{ status.1 }}</option>
+										{% endfor %}
+									</select>
+								</div>
+							</div>
+							<div class="form-group row d-none" id="module_status">
+								<div class="col-md-4 "></div>
+							    <div class="col-md-8">
+									<p class="text-danger text-center">If agent is active then status can not be change</p>
+								</div>
+							</div>
+
+						</section>
+					</div>
+					<input type="hidden" name="created_by" value="{{user.id}}">
+					<input type="hidden" name="did_range" id="update_hidden_did_range">
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+<input type="hidden" id="app_name" value="callcenter">
+<input type="hidden" id="model_name" value="DialTrunk">
+<!-- update modal form ends here ---------------->
+{% endblock content %}
+
+{% block extra-js %}
+<script src="{% static 'js/form-validator.min.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		$('#country_code_select,#update_country_code_select').select2()
+  		{% if can_read %}
+			var trunk_table = $('#trunk-list-table')
+			modal_url = '<a class="trunk-modify name-el" data-trunk="***">link_name</a>'
+			option_url = '<a class="dropdown-item trunk-modify"  id="trunk-modify" data-trunk="***">Modify</a>'
+			selective_datatable(trunk_table);  //datatbale jquery
+			$.validate();
+			$(".wizard li a[href='#previous']").addClass("d-none");
+			$(".wizard li a[href='#finish']").text('Submit');
+			edit_url = ""
+			get_pagination_data(1, true)
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+	});
+</script>
+
+{% endblock extra-js %}

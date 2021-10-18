@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Access Management{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+{% endblock extra-stylesheets %}
+
+{% block header %}User<small>Access Management</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Access Management</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Access Management</legend>
+				{% csrf_token %}
+				<!-- department tab and table -->
+				<div class="row append_table">
+					<div class="col-12">
+						{% include "search.html" %}
+						<table id="user-role-list" class="table display table-striped nowrap avatar-table" style="width: 100%">
+							<thead>
+								<tr>
+									<th class="avatar"></th>
+									<th data-data="name" class="name">Access Role</th>
+									<th data-data="access_level">Access Level</th>
+									<th data-data="created_by_user">Created By</th>
+									<th data-data="status">Status</th>
+									<th data-data="created_date" class="list_date">created date</th>
+									<th data-data="modified_date" class="list_date">modified date</th>
+									{% if can_update or can_delete %}
+										<th data-data="checkbox_col" class="checkbox_col">
+											<div class="btn-group select-all-div">
+												<div class="form-check">
+													<label class="form-check-label ml-3">
+														<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+														<i class="input-helper"></i>
+													</label>
+												</div>
+												<div class="dropdown">
+													<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+														<span class="caret"></span></button>
+													<ul class="dropdown-menu">
+														{% if can_update %}
+														<li class="dropdown-item text-center" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make Active')">Active Selected</li>
+														<li class="dropdown-item text-center" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make InActive')">Inactive Selected</li>
+														{% endif %}
+														{% if can_delete %}
+														<li class="dropdown-item text-center" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">Delete</li>  
+														{% endif %}
+													</ul>
+												</div>
+											</div>
+										</th>
+										<th data-data="action" class="action">Action</th>
+									{% endif %}
+								</tr>
+							</thead>
+						</table>
+						{% include "vue_pagination.html" %} 
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="callcenter">
+	<input type="hidden" id="model_name" value="UserRole">
+</div>
+{% endif %}
+{% if can_create %}
+<!-- action buttons -->
+<div class="bottom-menu">
+	<div class="action-button-circle">
+		<a href="{% url 'create-user_roles' %}" title="Add User Role">
+			<div class="circle-button skin-black">
+				<i class="fa fa-plus button-area add-user-group"></i>
+			</div>
+		</a>
+	</div>
+</div>
+{% endif %}
+{% endblock content %}
+
+{% block extra-js %}
+
+<script src="{% static 'js/mustache.js' %}"></script>
+<script src="{% static 'js/form-validator.min.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	console.log({{role_list|safe}})
+		query_set_list = []
+	$(document).ready(function() {
+		query_set_list = {{id_list|safe}}
+		{% if can_read %}
+			var user_role_table = $('#user-role-list')
+			selective_datatable(user_role_table);  //datatbale jquery
+			can_update = {{can_update|lower}}
+			can_delete = {{can_delete|lower}}
+			total_records = {{total_records}}
+			total_pages = {{total_pages}}
+			page = {{page}}
+			has_next={{has_next}}
+			has_prev = {{has_prev}}
+			edit_url = "{% url 'modify-user_roles' 123 %}"
+			$.validate();
+			get_pagination_data(1, true)
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+	});		
+</script>
+
+{% endblock extra-js %}

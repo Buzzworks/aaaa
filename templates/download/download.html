@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Download{% endblock title %}
+{% block extra-stylesheets %}
+<style type="text/css">
+	.report,.id,.file{
+		width: 30% !important;
+	}
+</style>
+{% endblock extra-stylesheets %}
+
+{% block header %}Download{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Download</li>
+{% endblock breadcrumb %}
+{% block content %}
+<div class="card">
+	<div class="card-body">
+		<legend>Download</legend>
+		{% include "search.html" %}    
+		<div class="">
+			<table id="download-report-table" class="table display table-striped nowrap" style="width:100%">
+				<thead>
+					<tr>
+						<th data-data="report" class="report">Report Name</th>
+						<th data-data="reportstart_date" class="reportstart_date">Filter Start Date</th>
+						<th data-data="reportend_date" class="reportend_date">Filter End Date</th>
+						<th data-data="percentage" class="percentage">Download Status</th>
+						<th data-data="downloaded_file_name" class="all download_data"></th>
+						<th data-data="download_action" class="download_action">Action</th>
+					</tr>
+				</thead>
+			</table>
+		</div>
+		{% include "vue_pagination.html" %}
+	</div>
+</div>
+<input type="hidden" id="app_name" value="crm">
+<input type="hidden" id="model_name" value="DownloadReports">
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		edit_url = ""
+		option_url = ""
+		var download_report_table = $('#download-report-table')
+	  	selective_datatable(download_report_table);  //datatbale jquery
+	  	$.validate();
+	  	$(".wizard li a[href='#previous']").addClass("d-none").text('Cancel')
+		$(".wizard li a[href='#finish']").text('Validate')
+		get_pagination_data(1, true)
+		
+	});
+	$(".sch-download").click(function(evt){
+		console.log($(this).attr("id"))
+	});
+</script>
+{% endblock extra-js %}

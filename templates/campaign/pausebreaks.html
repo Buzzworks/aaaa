@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Pause Breaks{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+<style type="text/css">
+.asColorPicker-hex,.asColorPicker-alpha-vertical,
+.asColorPicker-alpha, .asColorPicker-preview,
+.asColorPicker-palettes{
+	display:none;
+}
+.asColorPicker-trigger{
+	margin: 0 18px 0 0;
+}
+.tooltip{
+	z-index:1000000;
+}
+.wizard > .content > .body ul li{
+	display:unset;
+}
+ul li, ol li, dl li{
+	line-height:unset !important;
+}
+</style>
+
+{% endblock extra-stylesheets %}
+
+{% block header %}Campaign Management<small>Pause Breaks</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Pause Breaks</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Pause Breaks</legend>
+				<!-- Pause Breaks tab and table -->
+				<div class="col-12">
+					{% include "search.html" %}
+				</div>
+				<div class="row">
+					<div class="col-12">
+						<table id="pausebreaks-list-table" class="table display table-striped nowrap avatar-table" style="width: 100%">
+							<thead>
+								<tr>
+									<th class="avatar"></th>
+									<th data-data="name" class="modal_name">Name</th>
+									<th data-data="created_by_user">Created By</th>
+									<th data-data="status">Status</th>
+									<th data-data="created_date" class="list_date">created date</th>
+									<th data-data="modified_date" class="list_date">modified date</th>
+									{% if can_update or can_delete %}
+										<th data-data="checkbox_col" class="checkbox_col">
+											<div class="btn-group select-all-div">
+												<div class="form-check">
+													<label class="form-check-label ml-3">
+														<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+														<i class="input-helper"></i>
+													</label>
+												</div>
+												<div class="dropdown">
+													<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+														<span class="caret"></span></button>
+													<ul class="dropdown-menu">
+														{% if can_update %}
+															<li class="dropdown-item" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make Active')">
+																Active Selected
+															</li>
+															<li class="dropdown-item" onclick="confirmActiveStatus('warning-message-and-cancel', 'Ok','Make InActive')">
+																Inactive Selected
+															</li>
+														{% endif %}
+														{% if can_delete %}
+															<li class="dropdown-item" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">
+																Delete Selected
+															</li>
+														{% endif %}
+													</ul>
+												</div>
+											</div>
+										</th>
+										<th data-data="action" class="action">Action</th>
+									{% endif %}
+								</tr>
+							</thead>
+						</table>
+						{% include "vue_pagination.html" %} 
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% if can_create %}
+<!-- action buttons -->
+<div class="bottom-menu">
+	<div class="action-button-circle" data-toggle="modal">
+		<a data-toggle="modal" data-target="#modal_add_pausebreak" title="Add Pausebreaks">
+			<div class="circle-button skin-black">
+				<i class="fa fa-plus button-area add-pausebreak"></i>
+			</div>
+		</a>
+	</div>
+</div>
+<!-- model forms -->
+<div class="modal fade" id="modal_add_pausebreak" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to create pausebreaks."></i>
+					<b>Pause Breaks Wizard » Add New Pause Break</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body">
+				<form id="pausebreak-form" class="wizard-form" >
+					{% csrf_token %}
+					<div>
+						<h3>Add Pause Break <br> <small>Set Pause Breaks name and status</small></h3>
+						<section>
+							<div class="form-group row">
+								<label for="name" class="col-sm-3 col-form-label">Name<span class="star">*</span> :</label>
+								<div class="col-sm-9">
+									<input type="text" data-toggle="tooltip" data-original-title="Enter Pausebreak Name" class="form-control" id="pausebreak_name" name = "name" placeholder="Enter the name for Pausebreaks" data-validation="required" data-validation-error-msg-container="#pausebreak-name-msg">
+									<span id="pausebreak-name-msg"></span>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="name" class="col-sm-5 col-form-label">Inactive On Time Exceed:</label>
+								<div class="col-sm-3">
+									<div class="form-check">
+										<label class="form-check-label">
+											<input type="checkbox" class="form-check-input" name="inactive_on_exceed" id="inactive_on_exceed" checked>
+											<i class="input-helper"></i>
+										</label>
+									</div>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="name" class="col-sm-3 col-form-label">Wrap Time<span class="star">*</span> :</label>
+								<div class="col-sm-9">
+									<div class="input-group date  start_timer" id="pausebreak-time" data-target-input="nearest">
+										<div class="input-group" data-target="#pausebreak-time" data-toggle="datetimepicker">
+											<input type="text" class="form-control datetimepicker-input" data-target="#pausebreak-time" data-validation="required" data-toggle="tooltip" data-validation-error-msg-container="#time_err_msg" id="pausebreak-time-input" data-validation="time" name="break_time" title="Enter Hours:Minutes ">
+											<div class="input-group-addon input-group-append" ><i class="far fa-clock input-group-text" style="padding:9px; height: 38px;"></i></div>
+										</div>
+										<div id="err_msg" class="alert alert-danger d-none ">
+											 Break time should not be zero
+										</div>
+										<div id="time_err_msg" ></div>
+									</div>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="group_name" class="col-sm-3 col-form-label">Group Color :</label>
+								<div class="col-sm-9">
+									<div class="asColorPicker-wrap">
+										<input type="text"  id="break-pick-color" class="color-picker form-control pick-break-color asColorPicker-hex" data-mode="complex" value="#392C70" name="break_color_code">
+									</div>
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="status" class="col-sm-3 col-form-label">Status :</label>
+								<div class="col-sm-9">
+									<select class="form-control" name="status">
+										<option>Active</option>
+										<option>Inactive</option>
+									</select>
+								</div>
+							</div>
+							<div class="form-group row d-none" id="module_status">
+							    <div class="col-md-4 "></div>
+							    <div class="col-md-8">
+									<p class="text-danger text-center">If agent is active then status can not be change</p>
+								</div>
+							</div>
+						</section>
+					</div>
+					<input type="hidden" name="created_by" value="{{ user.id }}">
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+<!--- modal form ends here ---------->
+{% endif %}
+{% if can_update %}
+<!-- modal form for updatng the form data ----------------->
+<div class="modal fade" id="modal_update_pausebreak" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+
+		<div class="modal-dialog" role="document">
+				<div class="modal-content">
+						<div class="modal-header">
+								<h5 class="modal-title" id="ModalLabel">
+									<i class="fa fa-info-circle" title="A step by step wizard that allows you to update pausebreak."></i>
+									<b>Pause Breaks Wizard » Update Pause Break</b>
+								</h5>
+								<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+										<span aria-hidden="true">×</span>
+								</button>
+						</div>
+						<div class="modal-body">
+							<form id="update-pausebreak-form" class="wizard-form" action="#">
+								{% csrf_token %}
+								<div>
+									<h3>Update Pause Break <br> <small>update name and status of Pause Break</small></h3>
+									<section>
+										<input type="text" name ="id" class="form-control d-none" id="update_pausebreak_pk">
+										<div class="form-group row">
+											<label for="name" class=" col-sm-3 col-form-label">Name<span class="star">*</span> :</label>
+											<div class="col-sm-9">
+												<input type="text" data-toggle="tooltip" data-original-title="Enter Pausebreak Name" name ="name" class="form-control"  id="update_pausebreak_name" placeholder="Update the Pausebreak name" data-validation="required" data-validation-error-msg-container="#pausebreak-msg">
+												<span id="pausebreak-msg"></span>
+											</div>
+										</div>
+										<div class="form-group row">
+											<label for="name" class="col-sm-5 col-form-label">Inactive On Time Exceed:</label>
+											<div class="col-sm-3">
+												<div class="form-check">
+													<label class="form-check-label">
+														<input type="checkbox" class="form-check-input" name="inactive_on_exceed" id="update_inactive_on_exceed" >
+														<i class="input-helper"></i>
+													</label>
+												</div>
+											</div>
+										</div>
+										<div class="form-group row">
+											<label for="name" class="col-sm-3 col-form-label">Wrap Time<span class="star">*</span> :</label>
+												<div class="col-sm-9">
+												<div class="input-group date start_timer" id="update_pausebreak-time" data-target-input="nearest">
+													<div class="input-group" data-target="#update_pausebreak-time" data-toggle="datetimepicker">
+														<input type="text" class="form-control datetimepicker-input" data-target="#update_pausebreak-time" data-toggle="tooltip" title="Update Hours:Minutes" data-validation="required" id="update_pausebreak-time-input" name="break_time">
+														<div  class="input-group-addon input-group-append"><i class="far fa-clock input-group-text" style="padding:9px; height: 38px;"></i></div>
+													</div>
+													<div id="up_err_msg" class="alert alert-danger d-none ">
+											 				Break time should not be zero
+													</div>
+													<div id="time_err_msg"></div>
+												</div>
+											</div>
+										</div>
+									<div class="form-group row">
+										<label for="group_name" class="col-sm-3 col-form-label">Group Color :</label>
+										<div class="col-sm-9">
+											<div class="asColorPicker-wrap">
+												<input type="text"  id="update-break-pick-color" class="color-picker pick-break-color asColorPicker-hex form-control" data-mode="complex"  name="break_color_code" ></div>
+											</div>
+									</div>
+									<div class="form-group row">
+										<label for="status" class="col-sm-3 col-form-label">Status</label>
+										<div class="col-sm-9">
+											<select class="form-control" id="update_status" name="status">
+												<option>Active</option>
+												<option>Inactive</option>
+											</select>
+										</div>
+									</div>
+								</section>
+							</div>
+							<input type="hidden" name="created_by" value="{{ user.id }}">
+						</form>
+					</div>
+			</div>
+	</div>
+</div>
+{% endif %}
+<input type="hidden" id="app_name" value="callcenter">
+<input type="hidden" id="model_name" value="PauseBreak">
+
+<!-- update modal form ends here ---------------->
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/vendor.bundle.color.js' %}"></script>
+
+<script src="{% static 'js/form-validator.min.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{%static 'melody/js/form-addons.js'%}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		{% if can_read %}
+			$("#pausebreak-time-input").val("02:00");
+			modal_url = '<a data-pbid="***" class="pausebreak-modify name-el">link_name</a>'
+			option_url = '<a id="pausebreak-modify" data-pbid="***" class="dropdown-item">Modify</a>'
+			var pausebreak_table = $('#pausebreaks-list-table')
+			selective_datatable(pausebreak_table);  //datatbale jquery
+			$.validate();
+			$(".wizard li a[href='#previous']").addClass("d-none");
+			$(".wizard li a[href='#finish']").text('Submit');
+			$("#pausebreak-time").datetimepicker({
+					format: 'HH:mm',
+					useCurrent : 'day',
+					pickerPosition: "top-left",
+				});
+			edit_url = ""
+			get_pagination_data(1, true)
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+	});
+</script>
+<script>
+   if ($(".color-picker").length) {
+    $('#break-pick-color, #update-break-pick-color').asColorPicker();
+  }
+ $('#inactive_on_exceed').click(function(){
+ 	 if($('#inactive_on_exceed').prop('checked')){
+	  	$('#pausebreak-time-input').prop('readonly',false)
+	}else{
+		$('#pausebreak-time-input').prop('readonly',true)
+	}
+ })
+  $('#update_inactive_on_exceed').click(function(){
+ 	 if($('#update_inactive_on_exceed').prop('checked')){
+	  	$('#update_pausebreak-time-input').prop('readonly',false)
+	}else{
+		$('#update_pausebreak-time-input').prop('readonly',true)
+	}
+ })
+</script>
+
+{% endblock extra-js %}

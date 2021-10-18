@@ -1,0 +1,503 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Create Shift Timing{% endblock title %}
+
+{% block extra-stylesheets %}
+{% endblock extra-stylesheets %}
+
+{% block header %}Campaign Management<small>{% if campaign_schedule.id %}Edit{% else %}Create{% endif %} Shif Timing</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'campaign_schedules' %}">Shift Timing</a></li>
+<li class="breadcrumb-item active" aria-current="page">{% if campaign_schedule.id %}Modify{% else %}Create{% endif %}</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_create or can_update %}
+<div class="row" id="campaign_schedule_div">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>{% if campaign_schedule.id %}
+					Edit Shift Timing: {{campaign_schedule.name}}
+					{% else %}
+					Create Shift Timing
+					{% endif %}
+				</legend>
+				{% if not campaign_schedule.id %}
+				<div class="row">
+					<div class="col-md-5">
+						<div class="form-group row">
+							<label for="" class="col-sm-4 col-form-label">Template Type<span class="star">*</span> :</label>
+							<div class="col-sm-8">
+								<select class="form-control" id="template_type" v-model="template_type">
+									<option value="default">Default</option>
+									<option value="ext_camp_schedule">Existing Shift Timing</option>
+								</select>
+							</div>
+						</div>
+					</div>
+					<div v-show="showExist_schedule" class="col-md-7">
+						<div class="form-group row">
+							<label for="" class="col-sm-4 col-form-label">Select Shift Timing:</label>
+							<div class="col-sm-8">
+								<select class="form-control select2-class" id="select_schedule">
+									<option value="">Select Campaign</option>
+									{% for schedule in campaign_schedule_list %}
+									<option value="{{ schedule.id }}">{{ schedule.name }}</option>
+									{% endfor %}
+								</select>
+							</div>
+						</div>
+					</div>
+				</div>
+				{% endif %}
+				<div class="row">
+					<div class="col-12 grid-margin stretch-card">
+						<div class="card">
+							<div class="card-body">
+								<form class="forms-sample" id="calltime-create-form">
+									{% csrf_token %}
+									<div class="row">
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="calltime-name" class="col-sm-4 col-form-label">Name<span class="star">*</span> :</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control" data-toggle="tooltip" data-original-title="Enter Schedular Name" id="calltime-name" placeholder="Enter name of the campaign schedule" name="name" data-validation="required" data-validation-error-msg-container="#calltime-name-error" value='{{ campaign_schedule.name }}'>
+													<span id="calltime-name-error"></span>
+												</div>
+											</div>
+											<div class="form-group row">
+												<label for="schedule_days" class="col-sm-4 col-form-label">Schedule Days<span class="star">*</span> :</label>
+												<div class="col-sm-8">
+													<select class="form-control" id="schedule_days" name="schedule_days" v-model="schedule_days">
+														<option value="">Schedule Days</option>
+														<option value ="all_days">All Days</option>
+														<option value="mon_to_fri">Mon to Fri</option>
+														<option value="custom">Custom</option>
+													</select>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="disposition" class="col-sm-4 col-form-label">Description :</label>
+												<div class="col-sm-8 mb-3">
+													<textarea class="form-control" data-toggle="tooltip" data-original-title="Enter Schedular Description" name="description" id="commite" rows="4" >{{ campaign_schedule.description }}</textarea>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div v-show="showAllday_div" class="col-md-6">
+											<div class="form-group row">
+												<label for="" class="col-sm-4 col-form-label">Start Time:</label>
+												<div class="col-sm-8">
+													<timepicker :target="'#all_start_time'"
+																id="all_start_time"
+																:value = "all_start_time"
+																v-on:set-time="all_start_time = $event"
+													></timepicker>
+												</div>
+											</div>
+										</div>
+										<div v-show="showAllday_div" class="col-md-6">
+											<div class="form-group row">
+												<label for="" class="col-sm-4 col-form-label">Stop Time:</label>
+												<div class="col-sm-8">
+													<timepicker :target="'#all_stop_time'"
+																id="all_stop_time"
+																:value="all_stop_time"
+																v-on:set-time="all_stop_time = $event"
+													></timepicker>
+												</div>
+											</div>
+										</div>
+										<div v-show="showAllday_div" class="col-md-6">
+											<div class="form-group row">
+												<label for="audio_file" class="col-sm-4 col-form-label">Audio File:</label>
+												<div class="col-sm-8">
+													<select class="form-control" id="audio_file" v-model="all_audio_file">
+														<option value="">Select the audio file </option>
+														{% for audio in audio_files %}
+														<option>{{ audio.name }}</option>
+														{% endfor %}
+													</select>
+													<div class="alert alert-danger d-none" role="alert" id="audio_err_msg" style="margin-top: 5px; ">
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-6">
+											<div class="form-group row">
+												<label for="status" name ="status" class="col-sm-4 col-form-label">Status :</label>
+												<div class="col-sm-8">
+													<select class="form-control" name="status" id="calltime_status">
+														<option>Active</option>
+														<option>Inactive</option>
+													</select>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div v-show="showCustomday_div" class="card">
+										<div class="card-body">
+											<h4 class="card-title">Add the Shift time and Voice File</h4>
+											<p class="card-description">Add the Shift time and voice file in a specific day.</p>
+											<div class="mt-4">
+												<div class="accordion accordion-bordered" id="accordion-2" role="tablist">
+													<div class="card  mx-0 mx-sm-4">
+														<div class="card-header" role="tab" id="heading-4">
+															<h6 class="mb-0">
+																<a data-toggle="collapse" href="#collapse-4" aria-expanded="false" aria-controls="collapse-4">
+																	<button data-repeater-create="" type="button" class="btn btn-info btn-sm icon-btn ml-2 mb-2">
+																		<i class="fa fa-plus"> Schedule</i>
+																	</button>
+																</a>
+															</h6>
+														</div>
+														<div id="collapse-4" class="collapse" role="tabpanel" aria-labelledby="heading-4" data-parent="#accordion-2">
+															<div class="card-body">
+																<div class="form-group row">
+																	<div class="col-md-3">
+																		<label for="day" class="col-form-label"><b>Day</b></label>
+																	</div>
+																	<div class="col-6 col-md-3">
+																		<label for="start" class="col-form-label"><b>Start</b></label>
+																	</div>
+																	<div class="col-6 col-md-3">
+																		<label for="stop" class="col-form-label"><b>Stop</b></label>
+																	</div>
+																	<div class="col-md-3">
+																		<label for="audio" class="col-form-label"><b>After Hours Audio</b></label>
+																	</div>                                  
+																</div>
+																<div id="parent-call-time" v-for="(schedule, name, index) in campaign_schedule">
+																	<div class="form-group row child-call-time">
+																		<div class="col-md-3">
+																			<label for="day" class="col-form-label" id="day_name">${name}</label>
+																		</div>                                  
+																		<div class="col-md-3">
+																			<timepicker :target="'#start_time_'+name" 
+																						:id="'start_time_'+name"
+																						:value="schedule.start_time"
+																						v-bind:key="name"
+																						v-on:set-time="schedule.start_time = $event"
+																			></timepicker>
+																			<div class="alert alert-danger d-none" role="alert" id="start_err_msg" style="margin-top: 5px; ">
+																			</div>
+																		</div>
+																		<div class="col-md-3">
+																			<timepicker :target="'#end_time_'+name" 
+																						:id="'end_time_'+name"
+																						:value="schedule.stop_time"
+																						v-bind:key="name"
+																						v-on:set-time="schedule.stop_time=$event"
+																			></timepicker>
+																			<div class="alert alert-danger d-none" role="alert" id="stop_err_msg" style="margin-top: 5px; ">
+																			</div>
+																		</div>
+																		<div class="col-md-3">
+																			<select class="form-control" v-model="schedule.audio_file_name">
+																				<option value="">select the audio file </option>
+																				{% for audio in audio_files %}
+																				<option v-if="schedule.audio_file_name == '{{ audio.name}}'" selected>{{ audio.name }}</option>
+																				<option v-else>{{ audio.name }}</option>
+																				{% endfor %}
+																			</select>
+																			<div class="alert alert-danger d-none" role="alert" id="audio_err_msg" style="margin-top: 5px; ">
+																			</div>
+																		</div>
+																	</div>
+																</div>                          
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-6">
+											<div class="alert alert-danger d-none" id="calltime-err-msg">
+											</div>
+										</div>
+										<div class="col-md-6" style="margin-top: 10px;">
+											<div class="float-right">
+												<button type="button" class="btn btn-success mr-2" v-on:click="submitCampaignSchedule" id="create-calltime-btn">Submit</button>
+												<button type="button" class="btn btn-light" id="" onclick="showSwal('warning-message-and-cancel','OK', '/CampaignManagement/CampaignSchedule/')">Cancel</button>
+											</div>
+										</div>
+									</div>
+									<input type="text" class="d-none" name="schedule" id="schedule_time">
+								</form>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% endblock content %}
+
+{% block extra-js %}
+
+<script src="{% static 'melody/js/settings.js' %}"></script>
+<script src="{% static 'melody/js/dragula.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	{% if can_create or can_update %}
+	$.validate({
+		form:'#calltime-create-form',
+	});
+	$(document).ready(function(){
+		$('#select_schedule').change(function(){
+			campaign_schedule_vue.selectedExist_schedule = $(this).val()
+		})
+		{% if can_update%}
+		campaign_schedule_vue.schedule_days = '{{campaign_schedule.schedule_days}}'
+		var schedule_time_data =JSON.parse('{{ campaign_schedule.schedule|safe }}');
+			{% if campaign_schedule.schedule_days == 'all_days' %}
+				campaign_schedule_vue.all_start_time = schedule_time_data['Monday']['start_time']
+				campaign_schedule_vue.all_stop_time = schedule_time_data['Monday']['stop_time']
+			{% endif%}
+		{% endif %}
+	})
+	Vue.config.devtools = true
+	Vue.component('timepicker',{
+		props: ['name','target', 'value'],
+		template: `<div class="input-group date timefield" data-target-input="nearest" >
+			<div class="input-group" :data-target=this.target data-toggle="datetimepicker">
+			<input type="text" :name=this.name placeholder="HH:mm" :data-target="this.target" class="form-control crm-form-control datetimepicker-input" v-bind="value"/> 
+			<div class="input-group-addon input-group-append"><i class="far fa-clock input-group-text" style="padding: 9px; height: 38px;"></i>
+			</div></div></div>`,
+
+		mounted: function(){
+			var vm = this;
+			this.$nextTick(function () {
+				$(vm.$el)
+				.datetimepicker({
+					format: 'LT'
+				});
+				$(vm.$el).on('change.datetimepicker' ,function(e){
+					 vm.$emit('set-time', e.date.format("hh:mm A"))
+				})
+			})
+		},
+		watch: {
+			value: function (value){
+				// update value
+				$(this.$el).find('input')
+				.val(value)
+			}
+		},
+	})
+
+	var campaign_schedule_vue = new Vue({
+		delimiters: ['${', '}'],
+		el: '#campaign_schedule_div',
+		data: {
+			template_type: "default",
+			showExist_schedule: false,
+			selectedExist_schedule : '',
+			campaign_schedule :{},
+			schedule_days:'',
+			showAllday_div:false,
+			showCustomday_div:false,
+			all_start_time:"",
+			all_stop_time:"",
+			all_audio_file:"",
+			weekDays :["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
+		},
+		created: function(){
+			this.campaign_schedule = {"Sunday":{"start_time":"","stop_time":"","audio_file_name":""},
+				"Monday":{"start_time":"","stop_time":"","audio_file_name":""},
+				"Tuesday":{"start_time":"","stop_time":"","audio_file_name":""},
+				"Wednesday":{"start_time":"","stop_time":"","audio_file_name":""},
+				"Thursday":{"start_time":"","stop_time":"","audio_file_name":""},
+				"Friday":{"start_time":"","stop_time":"","audio_file_name":""},
+				"Saturday":{"start_time":"","stop_time":"","audio_file_name":""}
+			}
+		},
+		methods: {
+			submitCampaignSchedule:function(){
+				var vm = this
+				if (vm.schedule_days === 'all_days'){
+					$.each(vm.weekDays, function(index,value){
+						vm.campaign_schedule[value]['start_time'] = vm.all_start_time
+						vm.campaign_schedule[value]['stop_time'] = vm.all_stop_time
+						vm.campaign_schedule[value]['audio_file_name'] = vm.all_audio_file
+					})
+				}
+				else if (vm.schedule_days === 'mon_to_fri'){
+					$.each(vm.weekDays, function(index,value){
+						if(value === 'Saturday' || value === 'Sunday'){
+							vm.campaign_schedule[value]['start_time'] = ""
+							vm.campaign_schedule[value]['stop_time'] = ""
+						}
+						else{
+							vm.campaign_schedule[value]['start_time'] = vm.all_start_time
+							vm.campaign_schedule[value]['stop_time'] = vm.all_stop_time
+						}
+						vm.campaign_schedule[value]['audio_file_name'] = vm.all_audio_file
+					})
+				}
+				$('#schedule_time').val(JSON.stringify(vm.campaign_schedule))
+				if ($("#calltime-create-form").isValid() == true ) {
+					$.ajax({
+						type: 'post',
+						headers: {"X-CSRFToken": csrf_token},
+						url: '/CampaignManagement/CampaignSchedule/create/',
+						data: $('#calltime-create-form').serialize(),
+						success: function (data) {
+							if ("msg" in data) {
+								$("#calltime-err-msg").text(data["msg"]).removeClass("d-none")
+								setTimeout(function(){ $("#calltime-err-msg").addClass("d-none") }, 3000);
+							}
+							else {
+								showSwal('success-message', data["success"],"/CampaignManagement/CampaignSchedule/")
+							}
+						},
+						error: function (data) {
+							$("#calltime-name").removeClass("valid").addClass("error")
+							$("#calltime-name-error").removeClass("has-success").addClass("has-error")
+							$("#calltime-name-error").html("<span class='help-block form-error'>"+data["responseJSON"]["name"]+"</span>")
+						// $("#calltime-name-error").text(data["responseJSON"]["errors"]["name"])
+						}
+					});
+				}
+			},
+			resetSchedule:function(){
+				this.schedule_days = '';
+				this.showAllday_div = false;
+				this.showCustomday_div = false;
+				this.all_start_time = "";
+				this.all_stop_time = "";
+				this.all_audio_file = "";
+				this.selectedExist_schedule = "";
+				this.campaign_schedule = {};
+				$('#select_schedule').prop('selectedIndex',0)
+			}
+		},
+		watch: {
+			template_type : function(value){
+				if (value === "default") {
+					this.showExist_schedule = false
+					this.resetSchedule()
+				}
+				else if (value == "ext_camp_schedule") {
+					this.all_start_time = "";
+					this.all_stop_time = "";
+					this.all_audio_file = "";
+					this.showExist_schedule = true
+				}
+			},
+			selectedExist_schedule: function(value){
+				if (value !==""){
+					$.ajax({
+						type: 'post',
+						headers: {"X-CSRFToken": csrf_token},
+						url: '/api/fetch-existing-data/',
+						data: {"instance_id": value, "app_label": "callcenter",
+							"model_name": "CampaignSchedule", "serializer":"CampaignScheduleSerializer"},
+						success: function (data) {
+							var schedule = data["instance_info"]["schedule"]
+							var schedule_days = data["instance_info"]["schedule_days"]
+							campaign_schedule_vue.campaign_schedule = schedule
+							campaign_schedule_vue.schedule_days = schedule_days
+							if (schedule_days ==='all_days' || schedule_days == 'mon_to_fri'){
+								campaign_schedule_vue.all_audio_file = schedule['Monday']['audio_file_name']
+								campaign_schedule_vue.all_start_time = schedule['Monday']['start_time']
+								campaign_schedule_vue.all_stop_time = schedule['Monday']['stop_time']
+							}
+						},
+						error: function (data) {
+							
+						}
+					});
+				}else{
+					this.resetSchedule()
+				}
+			},
+			campaign_schedule :{
+				handler(value){
+					var vm = this
+					if(Object.keys(value).length == 0){
+						vm.campaign_schedule = {
+							"Sunday":{"start_time":"","stop_time":"","audio_file_name":""},
+							"Monday":{"start_time":"","stop_time":"","audio_file_name":""},
+							"Tuesday":{"start_time":"","stop_time":"","audio_file_name":""},
+							"Wednesday":{"start_time":"","stop_time":"","audio_file_name":""},
+							"Thursday":{"start_time":"","stop_time":"","audio_file_name":""},
+							"Friday":{"start_time":"","stop_time":"","audio_file_name":""},
+							"Saturday":{"start_time":"","stop_time":"","audio_file_name":""}
+						}
+					}
+					if(vm.showCustomday_div){
+						$.each(value,function (schedule, key) {
+							if(value[schedule]['start_time'] !=="" && value[schedule]['stop_time'] ===""){
+								value[schedule]['stop_time'] = moment(value[schedule]['start_time'], 'hh:mm A').add('1', 'hours').format('hh:mm A');
+							}
+							else if(value[schedule]['start_time'] ==="" && value[schedule]['stop_time'] !==""){
+								value[schedule]['start_time'] = moment(value[schedule]['stop_time'],'hh:mm A').subtract('1','hours').format('hh:mm A')
+							}
+						})
+					}
+				},
+				deep: true
+			},
+			schedule_days: function(value){
+				if (value == 'all_days' || value == 'mon_to_fri'){
+					this.showAllday_div = true
+					this.showCustomday_div = false
+				}
+				else if (value == 'custom'){
+					this.showAllday_div = false
+					this.showCustomday_div = true
+				}
+				else{
+					this.showCustomday_div = false
+					this.showAllday_div = false
+				}
+				this.campaign_schedule = {}
+				this.all_start_time=""
+				this.all_stop_time=""
+				this.all_audio_file=""
+			},
+			all_start_time :function(value){
+				var vm = this
+				if (vm.showAllday_div){
+					if(vm.all_stop_time ==="" && value!==""){
+						vm.all_stop_time = moment(value, 'hh:mm A').add('1', 'hours').format('hh:mm A');
+						// moment(startTime, 'HH:mm:ss').add(durationInMinutes, 'minutes').format('HH:mm');
+					}
+					else if(value ==="" && vm.all_stop_time !==""){
+						value = moment(vm.all_stop_time,'hh:mm A').subtract('1','hours').format('hh:mm A')
+					}
+				}
+			},
+			all_stop_time :function(value){
+				var vm = this
+				if (vm.showAllday_div){
+					if(value !=="" && vm.all_start_time ===""){
+						vm.all_start_time = moment(value,'hh:mm A').subtract('1','hours').format('hh:mm A')
+					}
+					else if (value ==="" && vm.all_start_time !==""){
+						value = moment(all_start_time,'hh:mm A').add('1','hours').format('hh:mm A')
+					}
+				}
+			}
+		}
+	});
+
+
+		{% else %}
+		PermissionDeny();
+		{% endif %}
+	</script>
+
+	{% endblock extra-js %}

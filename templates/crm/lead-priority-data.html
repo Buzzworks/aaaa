@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Lead Priority{% endblock title %}
+
+{% block extra-stylesheets %}
+{% endblock extra-stylesheets %}
+
+{% block header %}Lead Priority{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Lead Priority</li>
+{% endblock breadcrumb %}
+{% block content %}
+{% if can_read %}
+<div class="card">
+	<div class="card-body">
+		<legend>Lead Priority</legend>
+		{% include "search.html" %}    
+		<div class="">
+			<table id="lead-list-priority-table" class="table display table-striped nowrap" style="width:100%">
+				<thead>
+					<tr>
+						<th class="avatar"></th>
+						<th data-data="uniqueid" class="uniqueid">
+							Uniqueid
+						</th>
+						<th data-data="priority" class="priority">
+							Priority
+						</th>
+						<th data-data="campaign" class="campaign">
+							Campaign Name
+						</th>
+						<th data-data="date" class="created_date">
+							Created Date
+						</th>
+						{% if can_update or can_delete %}
+						<th data-data="checkbox_col" class="checkbox_col">
+							<div class="btn-group select-all-div">
+								<div class="form-check">
+									<label class="form-check-label ml-3">
+										<input name="select_all" value="1" id="example-select-all" type="checkbox" class="form-check-input" />
+										<i class="input-helper"></i>
+									</label>
+								</div>
+								<div class="dropdown">
+									<button class="btn dropdown-toggle" type="button" data-toggle="dropdown">
+										<span class="caret"></span></button>
+									<ul class="dropdown-menu">
+										{% if can_delete %}
+										<li class="dropdown-item" onclick="confirmDelete('warning-message-and-cancel', 'Ok','delete')">Delete</li>
+										{% endif %}
+									</ul>
+								</div>
+							</div>
+						</th>
+						<th data-data="action" class="action">Action</th>
+						{% endif %}
+					</tr>
+				</thead>
+			</table>
+		</div>
+		{% include "vue_pagination.html" %}  	
+	</div>
+</div>
+{% if can_create %}
+
+<div class="bottom-menu">
+	<div class="action-button-circle">
+		<a><div class="circle-button skin-black"><i class="fa fa-plus"></i></div></a>
+	</div>
+	<div class="fab-div-area" id="fab-div-area" style=" height: 100px; padding-top: 0px; margin-top: 0px; padding-bottom: 0px; margin-bottom: 0px;">
+		<ul class="fab-ul" style="height: 170px;">
+			<li class="li-style"><a class="fas fa-cloud-upload-alt fab-div-item" data-toggle="modal" data-target="#lead-priority-upload-wizard-modal" title="Upload Lead List Priority"></a></li><br>
+		</ul>
+	</div>
+</div>
+
+<!-- model forms  -->
+<div class="modal fade" id="lead-priority-upload-wizard-modal" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to create users."></i>
+					<b>Lead Prioritize » Upload</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body pt-3">
+				<form id="ndnc-upload-form" class="wizard-validation-form" action="{% url 'lead_priority' %}" method="POST">
+					{% csrf_token %}
+					<div>
+						<div class="row">
+							<div class="col-6 mt-2">
+								<select class="form-control" name="campaign" id="lead_list_campaign">
+									<option value="">Select Campaign</option>
+									{% for campaign in campaign_list %}
+										<option value="{{ campaign.id}}">{{ campaign.name }}</option>
+									{% endfor %}
+								</select>
+							</div>
+							<div class="col-6 mt-2">
+								<button type="button" class="btn btn-dark btn-fw d-none" id="download-lead-sample">Sample CSV</button>
+							</div>
+							<div class="col-12 mt-2">
+								<span class="help-block form-error" id="csv-error">Please Select Campaign</span>
+								{{ msg }}
+							</div>
+						</div>
+						<a class="d-none" id="download-lead-priority" href="{% static 'csv_files/lead-list-priority.csv' %}">Download Sample From here</a>
+						<section>
+							<div class="row">
+								<div class="col-6 mt-2">
+									<input type="file" class="dropify" id="uploaded-file" name="delta_file"/>
+								</div>
+							</div>
+
+							<div class="row">
+								<a id="proper-data" class="d-none upload-css text-info" download>
+									<span class="fa fa-download download-file-css"></span>
+									<span class="msg"></span>
+								</a>
+							</div>
+							<div class="row">
+								<a id="improper-data" class="d-none upload-css text-danger" download>
+									<span class="fa fa-download download-file-css"></span>
+									<span class="msg"></span>
+								</a>
+							</div>
+							<div class="row pull-right">
+								<div class="upload-css">
+									<button type="button" class="btn btn-dark btn-fw d-none" id="upload-priority">Upload</button>
+									<button type="button" class="btn btn-light btn-fw" id="cancel-priority-upload">Cancel</button>
+
+								</div>
+							</div>
+							<div class="form-group">
+								<p id="upload-file-error" class="text-danger">{{ msg }}</p>
+							</div>
+						</section>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="crm">
+	<input type="hidden" id="model_name" value="LeadListPriority">
+</div>
+{% endif %}
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/dropify.js' %}"></script>
+<script type="text/javascript">
+	leadlistpriority_page = true
+	$('#lead-priority-upload-wizard-modal').on('hidden.bs.modal', function() {
+	    $('#ndnc-upload-form')[0].reset()
+	});
+	
+	$(document).ready(function() {
+	{% if can_read %}
+		edit_url = ""
+		option_url = ""
+		var lead_list_priority_table = $('#lead-list-priority-table')
+	  	selective_datatable(lead_list_priority_table);  //datatbale jquery
+	  	$.validate();
+	  	$(".wizard li a[href='#previous']").addClass("d-none").text('Cancel')
+		$(".wizard li a[href='#finish']").text('Validate')
+		get_pagination_data(1, true)
+	{% else %}
+		PermissionDeny();
+	{% endif %}
+	} );
+</script>
+{% endblock extra-js %}

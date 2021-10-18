@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+{% block title %}VoiceBlaster{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+<link rel="stylesheet" href="{% static 'melody/vendors/summernote/dist/summernote-bs4.css' %}">
+{% endblock extra-stylesheets %}
+
+{% block header %}Modules<small>VoiceBlaster</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'voiceblaster' %}">VoiceBlaster</a></li>
+<li class="breadcrumb-item active" aria-current="page">Edit</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_create %}
+<div class="card">
+	<div class="card-body">
+		<legend>Edit VoiceBlaster</legend>
+		<form class="forms-sample" id="edit-voiceblaster-form">
+			<input type="hidden" name="vb_data" id="vb_data">
+			{% csrf_token %}
+			<div class="row">
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="vb-name" class="col-sm-4 col-form-label">Name<span class="star">*</span> :</label>
+						<div class="col-sm-8">
+							<input type="text" data-toggle="tooltip" data-original-title="Enter Name" class="form-control" id="vb-name" placeholder="Name" name="name" data-validation="length alphanumeric" data-validation-length="max100" data-validation-allowing="_",data-validation-error-msg-container="#thirdparty_name_exist" value="{{vb_obj.name}}">
+							<span id="vb_name_exist"></span>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="status" class="col-sm-4 col-form-label">Status</label>
+						<div class="col-sm-8">
+							<select class="form-control" name="status" id="status">
+								{% for st_us in status %}
+								{% if st_us.0 == vb_obj.status %}
+									<option value="{{st_us.0}}" selected>{{ st_us.1 }}</option>
+								{% else %}
+									<option value="{{st_us.0}}">{{ st_us.1 }}</option>
+								{% endif %}
+							{% endfor %}
+							</select>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="form-group row">
+						<label for="api_campaign" class="col-sm-4 col-form-label">Campaign<span class="star">*</span> :</label>
+						<div class="col-sm-8">
+							<select class="form-control" name="campaign" id="api_campaign_vb" multiple  data-validation="required">
+									{% for vb in vb_obj.campaign.all %}
+									<option value={{vb.id}} class="common" selected>{{ vb.name}}</option>
+								{%endfor%}
+								{% for campaign in campaigns %}
+										<option value="{{ campaign.id }}" {% if campaign.id in crm_camp_ids %} class="common" {% endif %}>{{ campaign.name }}</option>
+								{% endfor %}
+							</select>
+						</div>
+					</div>
+					<span id="api-camp-error" class="alert alert-danger d-none"></span>
+					<span id="camp_exists"></span>
+				</div>
+			</div>
+			<fieldset id="voice_blaster_vue" class="mt-3 pt-3 " style="border-top: 1px dashed #ccc;">
+				<p class="card-description mb-0">Setup voice blaster for campaign</p>
+				<div class="row">
+					<div class="col-md-6">
+						<div class="form-group row">
+							<label for="voice_blaster" class="col-7 col-sm-5 col-form-label">Voice Blaster:</label>
+							<div class="col-5 col-sm-7 form-inline">
+								<div class="form-check">
+									<label class="form-check-label">
+										<input type="checkbox" class="form-check-input" name="voice_blaster" v-model="hasVoiceBlaster" id="voice_blaster">
+										<i class="input-helper"></i>
+									</label>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div v-show="hasVoiceBlaster" class="row">
+					<div class="col-md-6">
+						<div class="form-group row">
+							<label for="vb_mode" class="col-sm-4 col-form-label">Mode<span class="star">*</span> :</label>
+							<div class="col-sm-8 form-inline">
+								<div class="form-check mr-sm-3">
+									<label class="form-check-label has-success">
+										<input type="radio" class="form-check-input valid" name="vb_mode" value="0" data-validation="required" v-model="vb_mode">
+										Audio File
+										<i class="input-helper"></i>
+									</label>
+								</div>
+								<div class="form-check mx-sm-3">
+									<label class="form-check-label has-success">
+										<input type="radio" class="form-check-input valid" name="vb_mode" value="1" data-validation="required" v-model="vb_mode">
+										TTS (Text to speech)
+										<i class="input-helper"></i>
+									</label>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div v-show="vb_mode == '0'" class="row">
+					<div class="col-md-6">
+						<div class="form-group row">
+							<label for="vb_audio" class="col-sm-4 col-form-label">Audio File<span class="star">*</span> :</label>
+							<div class="col-sm-8">
+								<select class="form-control" name="vb_audio" v-model='vb_audio' data-validation="required">
+									<option value=''>Select audio file</option>
+									{% for st_us in audio_files %}
+									<option value="{{st_us.id}}">{{ st_us.name }}</option>
+									{% endfor %}
+								</select>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-6">
+						<div class="form-group row">
+							<label for="vb_audio" class="col-sm-4 col-form-label">Audio Duration<span class="star">*</span> :</label>
+							<div class="col-sm-8 form-inline align-items-baseline">
+								<input type="number" min="0" v-model:integer="vb_audio_duration" class="form-control w-75" data-validation="required" placeholder="Enter duration in seconds">
+								<span class="text-muted ml-2">seconds</span>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div v-show="vb_mode == '1'" class="row my-2">
+					<div class="col-12">
+						<div class='hint2mention'></div>
+						<span v-if="hasError" class="help-block form-error">Script should not be blank</span>
+						<p class="card-description mt-1 mb-0"><span class="text-danger">Hint: </span>Use <span class="font-weight-bold">$</span> to get crm field suggetions</p>
+					</div>
+				</div>
+				<div v-show="hasVoiceBlaster" class="row">
+					<div class="col-md-6 order-1 order-md-2">
+						<div class="form-group row">
+							<label for="vb_call_after" class="col-sm-4 col-form-label">Call After<span class="star">*</span> :</label>
+							<div class="col-sm-8 form-inline align-items-baseline">
+								<input type="number" min="0" v-model:integer="vb_call_after" class="form-control w-75" data-validation="required" placeholder="Enter number of days">
+								<span class="text-muted ml-2">days</span>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-6 order-2 order-md-1">
+						<div class="form-group row">
+							<label for="vb_dtmf" class="col-7 col-sm-5 col-form-label">Voice Blaster DTMF:</label>
+							<div class="col-5 col-sm-7 form-inline">
+								<div class="form-check">
+									<label class="form-check-label">
+										<input type="checkbox" class="form-check-input" id="vb_dtmf" v-model="hasDTMF">
+										<i class="input-helper"></i>
+									</label>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-6 order-last" v-for="(val,index) in vb_dtmf" v-bind:key="index">
+						<div class="form-group row">
+							<label v-if="index == 9" for="" class="col-1 col-form-label" >0. </label>
+							<label v-else for="" class="col-1 col-form-label" >${index+1}. </label>
+							<div class="col-11 form-inline align-items-baseline">
+								<input type="text" class="form-control w-75" v-model="val.dispo" placeholder="Enter voice blaster option">
+								<div class="form-check mx-sm-1">
+									<label class="form-check-label has-success">
+										<input type="checkbox" class="form-check-input" v-model="val.is_sms" >
+										SMS
+										<i class="input-helper"></i>
+									</label>
+								</div>
+								<span v-if="vb_dtmf.length > 1" @click="removeVBoptions(index)" class="fa fa-times-circle ml-1 ml-sm-2 text-danger" style="font-size: 20px; cursor: pointer;"></span>
+								<span v-if="index+1 === vb_dtmf.length && index < 9" @click="addVBoptions" class="fa fa-plus-circle text-success ml-1 ml-sm-2" style="font-size: 20px; cursor: pointer;"></span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</fieldset>
+			<div class="row">
+				<div class="col-sm-6">
+					<div class="alert alert-danger d-none thirdarty-err-msg" id="voiceblaster-err-msg"></div>
+				</div>
+				<div class="col-sm-6">
+					<div class="float-right">
+						<button type="button" class="btn btn-light btn-icon-text" onclick="showSwal('warning-message-and-cancel','OK', '/CampaignManagement/voiceblaster/')">
+							<i class="fas fa-arrow-left btn-icon-prepend"></i>Cancel
+						</button>
+						<button type="button" class="btn btn-success btn-icon-text ml-2 edit-voiceblaster-btn" id="edit-voiceblaster-btn">
+							<i class="far fa-check-square btn-icon-prepend"></i>Submit
+						</button>
+					</div>
+				</div>
+			</div>
+		</form>
+	</div>
+</div>
+<input type="hidden" id="app_name" value="callcenter">
+<input type="hidden" id="model_name" value="VoiceBlaster">
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script type="text/javascript">
+	var vb_id = "{{ vb_obj.id }}" 
+	vb_crm_fields = []
+	var vb_crm_data = {}
+</script>
+<script src="{% static 'melody/vendors/summernote/dist/summernote-bs4.min.js' %}"></script>
+<script src="{% static 'melody/vendors/tinymce/tinymce.min.js' %}"></script>
+<script src="{% static 'js/script_editor.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+<script type="text/javascript">
+	$('#api_parameters,#api_campaign_vb').select2()
+	$("input[name='vb_mode']").change(function(){
+    	if($(this).val() === '1'){
+    		addTTSEditior(vb_crm_data) 
+    	}
+    })
+    var itemsToKeep = {{non_user_campaign|safe}}
+	$('#api_campaign_vb').on('select2:unselecting', function(event) {
+		if (itemsToKeep.indexOf(event.params.args.data.text) > -1) {
+			event.preventDefault();
+			showDangerToast(`Opration can't perform`,`${event.params.args.data.text} campaign does not belong in your scope`,'top-right')
+		}
+	})
+$(document).ready(function(){
+addTTSEditior(vb_crm_data) 
+voice_blaster_vue.hasVoiceBlaster = {{vb_obj.voice_blaster|convert_in_json}}
+var vb_data = {{vb_obj.vb_data|convert_in_json|safe}}
+voice_blaster_vue.vb_mode = {{vb_obj.vb_mode|default:'null'}}
+{% if vb_obj.vb_audio %}
+voice_blaster_vue.vb_audio = {{vb_obj.vb_audio_id|default:''}}
+{% endif %}
+if(Object.keys(vb_data).length > 0){
+	voice_blaster_vue.hasDTMF = vb_data['hasDTMF'];
+	voice_blaster_vue.vb_call_after = vb_data['vb_call_after']
+	voice_blaster_vue.vb_audio_duration = vb_data['vb_audio_duration']
+	if('vb_crm_fields' in vb_data){
+		vb_crm_fields = vb_data['vb_crm_fields']
+	}
+	$(".hint2mention").summernote("code", `<p>${vb_data['vb_speech']}</p>`);
+	// $(".hint2mention").text(vb_data['vb_speech']);
+	var zeroth_val = ''
+	$.each(vb_data['vb_dtmf'],function(key,val){
+		if(key == 0){
+			zeroth_val = val
+		}else{
+			voice_blaster_vue.vb_dtmf.push(val)
+		}
+	})
+	if(zeroth_val != ''){
+		voice_blaster_vue.vb_dtmf.push(zeroth_val)
+	}
+}
+})
+</script>
+{% endblock extra-js %}

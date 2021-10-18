@@ -1,0 +1,515 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+
+{% block title %}{% if relationtag.id %}Edit{% else %}Create{% endif %} Relation Tag{% endblock title %}
+
+{% block extra-stylesheets %}
+
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+<style>
+.asColorPicker-preview, .asColorPicker-preview, .asColorPicker-alpha,
+.asColorPicker-alpha-vertical, .asColorPicker-palettes, .asColorPicker-hex{
+	display:none;
+}
+.asColorPicker-trigger{
+	margin: 0 18px 0 0;
+}
+	
+</style>
+{% endblock extra-stylesheets %}
+
+{% block header %}Campaign Management<small>Relation Tag</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'relationtags' %}">Relation Tag</a></li>
+<li class="breadcrumb-item active" aria-current="page">{% if relationtag.id %}Edit{% else %}Create{% endif %}</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_create or can_update %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card" id="relationTag_vue">
+			<div class="card-body">
+				<form id="relation-tagging-form">
+					<legend>{% if relationtag.id %} Edit {% else %}Create {% endif %}Realtion Tag</legend>
+					<div class="row">
+						<div class="col-12 grid-margin stretch-card">
+							<div class="card">
+								<div class="card-body">
+									{% csrf_token %}
+									<input type="hidden" name="relation_fields" id="relation_fields">
+									<div class="row mb-3 mb-sm-0">
+										<div class="col-md-4 pl-4">
+											<div class="form-group row">
+												<label for="tagging_name" class="col-sm-4 col-form-label">Tagging Name<span class="star">*</span>:</label>
+												<div class="col-sm-8">
+													<input type="text" class="form-control" id="tagging_name" placeholder="Enter Tagging Name" name="name" data-validation="required alphanumeric"  data-validation="alphanumeric" data-validation-allowing="_ " data-validation-error-msg-container="#tagging-name-error" value="{{relationtag.name}}" >
+													<span id="tagging-name-error"></span>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-4 pl-4">
+											<div class="form-group row">
+												<label for="relation_type" class="col-sm-4 col-form-label">Type <span class="star">*</span>:</label>
+												<div class="col-sm-8">
+													<select class="form-control" name="relation_type" id="relation_type" v-model="relation_type">
+														{% for type in dispo_field_type %}
+														<option value="{{type.0}}">{{type.1}}</option>
+														{% endfor %}
+													</select>
+												</div>
+											</div>
+										</div>
+										<div class="col-md-4 pl-2">
+											<div class="form-group row">
+												<label class="col-sm-3 col-form-label"> Status:</label>
+												<div class="col-sm-8">
+													<select class="form-control" name="status">
+													{% for status in relationtag_status %}
+														{% if status.0 == relationtag.status %}
+															<option value="{{status.1}}" selected>{{ status.0 }}</option>
+														{% else %}
+															<option value="{{status.1}}">{{ status.0 }}</option>
+														{% endif %}
+													{% endfor %}
+												</select>
+												</div>
+											</div>
+										</div>
+										<div v-if="rt_list.length == 0" class="col-md-2 mt-3 mt-sm-0 text-right text-md-left">
+											<button type="button" class="btn btn-info mr-2" @click="addSubRelation">Add</button>
+										</div>
+									</div>
+									<div v-show="rt_list.length" id="accordion" class="accordion pr-3" role="tablist">
+										<div v-for="item_list, index in rt_list" style="position: relative;">
+											<nested-field :key="index" 
+														:current_index="index"
+														:item="item_list" 
+														:item_index="index" 
+														:parent_div="'#accordion'"
+														:parent_dict="rt_list"
+														:parent_type = "relation_type"
+														:error_index = "showError"
+														:item_length="rt_list.length"
+														@add-child="addSubComponent"
+											></nested-field>
+											<i v-if="index+1 == rt_list.length" class="fa fa-plus-circle text-success" @click="addSubRelation" style="position:absolute;font-size: 18px;top:16px;right:-29px"></i>
+										</div>
+									</div>
+									<div class="row">
+<!-- 										<div class="col-md-6">
+											<div class="alert alert-danger d-none" id="rt-err-msg"></div>
+										</div> -->
+										<div class="col-md-6" style="margin-top: 10px;">
+											<div class="float-right">
+												<button type="button" class="btn btn-success mr-2" @click="submitRelationtag" data-operations="{{ relationtag.id }}">Submit</button>
+												<button type="button" class="btn btn-light" id="" onclick="showSwal('warning-message-and-cancel','OK', '/CampaignManagement/RelationTags/')">Cancel</button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+<template id="nestedFieldComponent">
+	<div class="card">
+		<div class="card-header py-3" role="tab" id="dispo-heading" style="position: relative;">
+			<h6 class="mb-0">
+				<a data-toggle="collapse" :href="'#dispo-collaps-'+item_index" aria-expanded="false" aria-controls="collapse-1" class="sub-dispo-heading collapsed">
+					<span v-if="item.name">${item.name}</span>
+					<span v-else>Sub Relation</span>
+				</a>
+			</h6>
+			<i class="fa fa-times-circle text-danger remove-sub-dispo" @click="remove_child(current_index)" style="position: absolute;right: 10px; bottom: 17px; font-size: 18px"></i>
+		</div>
+		<div :id="'dispo-collaps-'+item_index" :class="[current_index+1 == item_length ? 'show': '', 'collapse collapse-div']" role="tabpanel" aria-labelledby="lead-heading" :data-parent="parent_div">
+			<div class="card-body px-3">
+				<div class="row mb-md-2">
+					<div class="col-sm-6 col-md-3">
+						<div class="form-group row">
+							<div class="col-3">
+								<label for="lead_name" class="col-form-label ">Name:<span class="star">*</span></label>
+							</div>
+							<div class="col-9">
+								<input type="text" class="form-control" v-model="item.name" :data-value=item.name :data-parent=item_index @blur="nameChange" :data-parent_name=parent_div>
+								<span v-show="error_index.includes(item_index)" class="text-danger">This Field is required</span>
+							</div>
+						</div>
+					</div>
+					<div class="col-sm-6 col-md-3">
+						<div class="form-group row">
+							<div class="col-3">
+								<label for="count" class=" col-form-label">Type:</label>
+							</div>
+							<div class="col-9">
+								<select class="form-control field_type" id="" v-model="item.type" @change="type_change($event, current_index)">
+									<option v-if="item.children.length" value="" disabled>Select Type</option>
+									<option v-else value="">Select Type</option>
+									{% for type in field_types %}
+									<option v-if="parent_type == 'multifield' && '{{type.0}}' == 'multifield'" value="{{ type.0 }}" disabled>{{ type.1 }}</option>
+									<option v-else value="{{ type.0 }}">{{ type.1 }}</option>
+									{% endfor %}
+								</select>
+							</div>
+						</div>
+					</div>
+					<div class="col-sm-4 col-md-2 size-div" v-if="this.showSize">
+						<div class="form-group row">
+							<div class="col-3 size-div">
+								<label for="" class=" col-form-label">Size<span class="star">*</span>:</label>
+							</div>
+							<div class="col-9 size-div">
+								<input type="text" class="form-control select-size" id="select-size" placeholder="Size" data-validation="number" onkeypress="return isNumber(event)" onpaste="pasteNumber(event)" v-model="item.size" v-on:blur="setDefaultSize">
+							</div>
+						</div>
+						<div class="d-none alert  alert-danger size_msg_error"></div>
+					</div>
+					<div v-if="this.showRequired" class="col-11 col-sm-5 col-md-2 option-div">
+						<div class="form-group row">
+							<div class="col-4 col-md-6">
+								<label for="" class=" col-form-label">Required:</label>
+							</div>
+							<div class="col-8 col-md-6 form-inline">
+								<div class="form-check">
+									<label class="form-check-label">
+										<input type="checkbox" name="" class="form-check-input" v-model="item.is_required">
+										<i class="input-helper"></i>
+									</label>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div v-show="showCallbackoption" class="col-11 col-sm-5 col-md-2 option-div">
+						<div class="form-group row">
+							<div class="col-4 col-md-8">
+								<label for="" class=" col-form-label">Callback Filed:</label>
+							</div>
+							<div class="col-8 col-md-4 form-inline">
+								<div class="form-check">
+									<label class="form-check-label">
+										<input type="checkbox" name="" class="form-check-input" v-model="item.is_callback">
+										<i class="input-helper"></i>
+									</label>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div v-if="item.children.length == 0" class="col-1 form-inline mb-3" v-show="showAddbtn">
+						<i class="fa fa-plus-circle text-success fa-5x add-sub-dispo-child" id="add-sub-dispo-child" @click="$emit('add-child', [item,item_index])"></i>
+					</div>
+				</div>
+				<div :id="'subdispo-'+item_index" class="subdispo-child pr-3" style="position: relative;">
+					<div v-for="(child, child_index) in item.children" style="position: relative;">
+						<input type="hidden" id="sub-dispo-child-count" value="0">
+						<nested-field v-show="item.children.length"
+										:key="child_index" 
+										:current_index="child_index"
+										:item="child" 
+										:item_index="item_index+'-'+child_index" 
+										:parent_div="'#subdispo-'+item_index"
+										:parent_dict="item.children"
+										:parent_type="item.type"
+										:error_index="error_index"
+										:item_length="item.children.length"
+										@add-child="$emit('add-child', $event)"
+						></nested-field>
+						<i v-if="child_index + 1 == item.children.length" v-show="showAddbtn" class="fa fa-plus-circle text-success fa-5x add-sub-dispo-child" id="add-sub-dispo-child" @click="$emit('add-child', [item,item_index])" style="position:absolute;font-size: 18px;top:15px;right:-25px"></i>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</template>
+<input type="hidden" id="count" value="0">
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/vendor.bundle.color.js' %}"></script>
+<script src="{% static 'js/form-validator.min.js' %}"></script>
+<script src="{%static 'melody/js/form-addons.js'%}"></script>
+<script src="{%static 'js/admin.js'%}"></script>
+<script type="text/javascript">
+	$(document).ready(function() {
+		{% if can_create or can_update %}
+			$.validate({
+				form:'#create-disposition-form',
+			});
+			$('[data-toggle="tooltip"]').tooltip();
+			{% if relation_field %}
+				relation_tagging_vue.rt_list =  {{relation_field|convert_in_json|safe}}
+				{% if relationtag.id %}
+				relation_tagging_vue.relation_type = '{{relationtag.relation_type}}'
+				{% endif %}
+			{% endif %}
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+
+	});
+	// vue component
+	Vue.component('nested-field', {
+		template: '#nestedFieldComponent',
+		delimiters: ["${","}"],
+		props:['item', 'item_index', 'parent_div','parent_dict',
+			'current_index','error_index','item_length','parent_type'],
+		data() {
+			return {
+				showSize:false,
+				collapseOn:false,
+				showAddbtn:false,
+				showCallbackoption:false,
+				showRequired: false,
+			}
+		},
+		methods: {
+			remove_child(index) {
+				this.parent_dict.splice(index, 1);
+			},
+			setDefaultSize(event) {
+				if (event.target.value == "") {
+						this.item.size=20
+				}
+			},
+			type_change(event, index) {
+				if($.inArray(event.target.value, ["text", "textarea", "integer",
+					"datefield", "timefield", "datetimefield"]) != -1) {
+					this.parent_dict[index]["children"] = []
+				}
+
+			},
+			nameChange(event) {
+				if ($.inArray( this.item_index, this.error_index) == -1) {
+					if (this.item.name == "") {
+							this.error_index.push(this.item_index)
+					}
+					else{
+						this.error_index.splice(this.error_index.indexOf(this.item_index),1);
+					}
+				}
+				$(event.target).attr("data-value",event.target.value.trim())
+				var data_parent = $(event.target).attr("data-parent_name")
+				this.item.name = this.item.name.trim()
+				var data_value = this.item.name.trim()
+				if (data_value !="" && $(data_parent).find(`input[data-value="${data_value}"]`).length >= 2)
+				{
+					this.item.name = ""
+					$(event.target).siblings('span').text("Relation Tag with this name already exist")
+					this.error_index.push(this.item_index)
+					// setTimeout(function(){ $(event.target).siblings('span').text(""); }, 3000);
+					if ($.inArray( this.item_index, this.error_index) == -1) {	
+					}
+				}else{
+					this.item.db_name = data_value.replace(/  +/g,' ').replace(/ /g,"_").toLowerCase()
+				}
+
+			}
+		},
+		watch:{
+			item:{
+				handler(value) {
+					if (value.type != "") {
+						if ($.inArray(value.type, ["text", "textarea", "integer"]) != -1) {
+							this.showSize = true
+							this.showAddbtn = false
+							this.showCallbackoption = false
+							this.showRequired = true
+						}
+						else if ($.inArray(value.type, ["datefield", "timefield", "datetimefield"]) != -1){
+							this.showSize = false
+							this.showAddbtn = false
+							this.showRequired = true
+							if(value.type == "datetimefield"){
+								this.showCallbackoption = false
+							}
+						}
+						else if ($.inArray(value.type, ["link","dropdown"]) != -1){
+							this.showAddbtn = true
+							this.showSize = false
+							this.showCallbackoption = false
+							this.showRequired = true
+						}
+						else {
+							this.showSize =false
+							this.showAddbtn = true
+							this.showCallbackoption = false
+							this.showRequired = false
+						}
+					}
+					else{
+						this.showSize = false
+						this.showAddbtn = false
+						this.showCallbackoption = false
+						this.showRequired = false
+					}
+				},
+				deep:true
+			},
+		},
+	});
+	//vue main component
+	relation_tagging_vue = new Vue({
+		el: '#relationTag_vue',
+		delimiters: ["${","}"],
+		data() { 
+			return {
+				rt_list: {{relation_field|convert_in_json|safe}},
+				dispoComponent: '',
+				showError:[],
+				relation_type: 'dropdown'
+			}
+		},
+	 methods: {
+			addSubRelation: function() {
+				var vm = this
+				var isEmpty= false
+				vm.$children.forEach(function(child, index) {
+					if ($.inArray( index, vm.showError) == -1) {
+						if (child.item.name =="") {
+								isEmpty = true
+								vm.showError.push(index)
+								$("a[href='dispo-collaps-"+index+"]").attr("aria-expanded", true)
+								$("disp-collaps-"+index).addClass("show")
+							}
+						else {
+							vm.showError.splice(vm.showError.indexOf(index),1);
+						}
+					}
+					
+				})
+				if(isEmpty == false) {
+					$(".sub-dispo-heading").attr("aria-expanded", false)
+					$(".collapse-div").removeClass("show")
+					vm.rt_list.push({
+						name:"",
+						db_name:"",
+						type:"",
+						size:"20",
+						is_required:false,
+						is_callback:false,
+						children: []
+					})
+				}
+			},
+			addSubComponent(item) {
+				this.addItem(item)
+			},
+			addItem: function (item) {
+					var vm = this
+					var isEmpty= false
+					if (item[0].name !="") {
+						if(item[0].children.length > 0){
+							item[0].children.filter(function(child, value) {
+								vm.showError = []
+								if ($.inArray(item[1]+"-"+value, vm.showError) == -1) {
+									if (child.name =="") {
+										isEmpty = true
+										vm.showError.push(item[1]+"-"+value)
+									}
+									else {
+										vm.showError.splice(vm.showError.indexOf(item[1]+"-"+value),1);
+									}
+								}
+							})
+						}
+					}
+					else {
+						isEmpty = true
+						if ($.inArray(item[1], vm.showError) == -1) { 
+							vm.showError.push(item[1])
+						}
+					}
+					if (isEmpty == false) {
+						$("#subdispo-"+item[1]).find(".sub-dispo-heading").attr("aria-expanded", false)
+						$("#subdispo-"+item[1]).find(".sub-dispo-heading").find(".collapse-div").removeClass("show");
+						item[0].children.push({
+							name:"",
+							db_name:"",
+							type:"",
+							size:"20",
+							is_callback:false,
+							is_required:false,
+							children:[]
+						})
+					}
+			},
+			validate_form(rt_list) {
+				var input_error = jQuery("#accordion input").filter(function() {
+					if (this.value == "") {
+						var parent_id = $(this).attr("data-parent")
+						if(parent_id.split("-").length >0) {
+							var temp_id = parent_id.split("-")[0]
+							if ($(`a[href="#dispo-collaps-${temp_id}"`).attr("aria-expanded") == "false"){
+								$(`a[href="#dispo-collaps-${temp_id}"`).click()
+							}
+						}
+							if ($(`a[href="#dispo-collaps-${parent_id}"`).attr("aria-expanded") == "false"){
+									$(`a[href="#dispo-collaps-${parent_id}"`).click()
+								}
+						return !this.value;
+						}
+				}).siblings("span").css('display','block');
+				return input_error
+			},
+			submitRelationtag(event) {
+				var is_error = this.validate_form(this.rt_list)
+				if (is_error.length == 0 && $("#relation-tagging-form").isValid()) {
+					var current_element = $(event.target)
+					form_name = $("#relation-tagging-form")
+					if(current_element.attr("data-operations")) {
+						form_url = '/CampaignManagement/RelationTags/'+current_element.attr("data-operations")+'/'
+					}
+					else {
+						form_url = '/CampaignManagement/RelationTags/create/'
+					}
+					$("#relation_fields").val(JSON.stringify(this.rt_list))
+					$.ajax({
+						type: 'POST',
+						headers: {"X-CSRFToken": csrf_token},
+						url: form_url,
+						data: form_name.serialize(),
+						success: function (data) {
+								if(current_element.attr("data-operations")) {
+									showSwal('success-message', 'Relation Tag Updated successfully', '/CampaignManagement/RelationTags/')
+								}
+								else {
+									showSwal('success-message', 'Relation Tag Created successfully', '/CampaignManagement/RelationTags/')
+								}
+						},
+						error: function (data) {
+							if (data["responseJSON"]["name"]) {
+								$("#tagging-name-error").parent().find('input').addClass('error').removeClass('valid')
+								$("#tagging-name-error").addClass("has-error").html('<span class="help-block form-error">' + data["responseJSON"]["name"] +'</span>').removeClass("d-none")
+								setTimeout(function(){ $("#rt-err-msg").addClass("d-none") }, 3000);
+							}		
+						}
+					});
+					
+				}
+			}
+		}
+	})
+</script>
+<script>
+	 if ($(".color-picker").length) {
+		$('#dispo_color_pick').asColorPicker();
+	}
+	$(document).on('keydown', '#sub-dispo-name', function(e) {
+		if (e.which === 32) {
+			return false;
+		}  
+	});
+	$(document).on('keypress', '#select-size, #select-subparent-size', function(evt){
+		 if (evt.which === 48 && evt.target.selectionStart === 0) {
+			return false;
+		}
+	})
+</script>
+{% endblock extra-js %}
