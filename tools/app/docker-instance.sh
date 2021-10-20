@@ -6,6 +6,7 @@
 # Supports : Ubuntu,CentOS, Redhat
 ###################################################################################
 
+docker login -u vedakatta ## Enter Personal Access Token at prompt
 docker pull vedakatta/flexydial-app
 
 cp flexydial-app-docker.service /etc/systemd/system/
@@ -42,3 +43,12 @@ docker exec -it flexydial-app python manage.py migrate auth
 docker exec -it flexydial-app python manage.py migrate sessions
 docker exec -it flexydial-app python manage.py migrate crm --fake
 docker exec -it flexydial-app python manage.py dummy_fixture
+
+cp flexydial-autodial-docker.service /etc/systemd/system/
+cp flexydial-cdrd-docker.service /etc/systemd/system/
+
+systemctl enable flexydial-autodial-docker
+systemctl start flexydial-autodial-docker
+
+systemctl enable flexydial-cdrd-docker
+systemctl start flexydial-cdrd-docker

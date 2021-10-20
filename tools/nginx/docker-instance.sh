@@ -12,9 +12,14 @@ mkdir -p /etc/nginx/conf.d
 mkdir -p /etc/ssl
 cp nginx.conf /etc/nginx/
 cp -r conf.d /etc/nginx/
-cp -r ssl /etc/
+
+##SSL Certificate Generation Script
+source flexycrt.sh
 
 mkdir -p /home/app/
+docker login -u vedakatta ## Enter Personal Access Token at prompt
+docker pull vedakatta/flexydial-static
+
 docker run -dit --rm --name flexy-static vedakatta/flexydial-static
 docker cp flexy-static:/home/app/static/ /home/app
 
