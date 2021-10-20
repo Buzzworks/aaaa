@@ -1,5 +1,5 @@
 var redis = require('redis');
-var redisClient = redis.createClient({host : 'localhost', port : 6379});
+var redisClient = redis.createClient({host : process.env.REDIS_URL, port : process.env.REDIS_PORT});
 module.exports = {
 	transfercall_route: function(data,callback) {
 		redisClient.exists('transfer_agents',function(err,reply) {
@@ -19,22 +19,22 @@ module.exports = {
 					        		throw error;
 					    		}else{
 									callback(err=null,data);
-			    				} 
-							});			
-				    	} 
+			    				}
+							});
+				    	}
 					})
 		 		} else {
 		 				var r_data ={}
 			    		r_data[data['transfer_from_agent_uuid']] = data['transfer_to_agent_number']
-						var agents = JSON.stringify(r_data)		
+						var agents = JSON.stringify(r_data)
 			    		redisClient.set('transfer_agents', agents, function (error, result) {
 				    		if (error) {
 				        		console.log(error);
 				        		throw error;
 				    		}else{
 								callback(err=null,data);
-		    				} 
-						});			
+		    				}
+						});
 		  			}
 		 	}
 		});
@@ -57,9 +57,9 @@ module.exports = {
 					        		throw error;
 					    		}else{
 									callback(err=null,data);
-			    				} 
-							});			
-				    	} 
+			    				}
+							});
+				    	}
 					})
 		 		}
 		 	}

@@ -90,19 +90,19 @@ WSGI_APPLICATION = 'flexydial.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'flexydial',
-        'USER': 'flexydial',
-        'PASSWORD': 'flexydial',
-        'HOST': '127.0.0.1',
-        'PORT': '5432',
+        'NAME': os.environ.get('FLEXYDIAL_DB_NAME'),
+        'USER': os.environ.get('FLEXYDIAL_DB_USER'),
+        'PASSWORD': os.environ.get('FLEXYDIAL_DB_PASS'),
+        'HOST': os.environ.get('FLEXYDIAL_DB_HOST'),
+        'PORT': os.environ.get('FLEXYDIAL_DB_PORT'),
     },
     'crm': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'crm',
-        'USER': 'flexydial',
-        'PASSWORD': 'flexydial',
-        'HOST': '127.0.0.1',
-        'PORT':'5432',
+        'NAME': os.environ.get('CRM_DB_NAME'),
+        'USER': os.environ.get('CRM_DB_USER'),
+        'PASSWORD': os.environ.get('CRM_DB_PASS'),
+        'HOST': os.environ.get('CRM_DB_HOST'),
+        'PORT': os.environ.get('CRM_DB_PORT'),
     },
 }
 DATABASE_ROUTERS = ['crm.router.DbRouter','callcenter.router.DbRouter']
@@ -120,7 +120,7 @@ DB_CSTRING = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
+        "LOCATION": "redis://%s:%s/1" % ( os.environ.get('REDIS_HOST'),os.environ.get('REDIS_PORT')),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient"
         },
@@ -192,7 +192,7 @@ RPC_USERNAME            = 'freeswitch'
 RPC_PASSWORD            = 'works'
 RPC_PORT                = '8080'
 R_SERVER                = redis.Redis(connection_pool=redis.ConnectionPool(
-                            host='localhost',port=6379,db=0))
+                            host=os.environ.get('REDIS_HOST'),port=os.environ.get('REDIS_PORT'),db=0))
 NDNC_URL                = 'http://127.0.0.1:5000/search/%s'
 FS_ORIGINATE            = \
         "expand originate "\
@@ -230,8 +230,8 @@ SESSION_COOKIE_AGE = 60
 # resetting the password url valid days
 PASSWORD_RESET_TIMEOUT_DAYS = 1
 
-WEB_SOCKET_HOST = IP_ADDRESS
-FREESWITCH_IP_ADDRESS = IP_ADDRESS
+WEB_SOCKET_HOST = os.environ.get('WEB_SOCKET_HOST')
+FREESWITCH_IP_ADDRESS = os.environ.get('FREESWITCH_HOST')
 SOURCE = 'SLI'
 LOCATION = 'Mumbai'
 
@@ -248,4 +248,4 @@ STATICFILES_FINDERS = (
     'compressor.finders.CompressorFinder',
 )
 
-SERVICES_LIST= ['freeswitch','flexydial-autodial','flexydial-cdrd','flexydial-fs-dialplan','postgresql']
+SERVICES_LIST= []

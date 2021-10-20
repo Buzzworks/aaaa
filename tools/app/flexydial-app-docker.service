@@ -1,0 +1,15 @@
+[Unit]
+Description=FlexyDial App V4 Container
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+#Restart=always
+ExecStartPre=-/usr/bin/docker stop flexydial-app
+#ExecStartPre=-/usr/bin/docker rm flexydial-app
+ExecStartPre=/usr/bin/docker pull vedakatta/flexydial-app
+ExecStart=/usr/bin/docker run -p 8001:8001 --rm --env-file /etc/default/flexydial-app --name flexydial-app vedakatta/flexydial-app uwsgi --ini uwsgi.ini
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,15 @@
+[Unit]
+Description=Flexydial Websocket Container
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+#Restart=always
+ExecStartPre=-/usr/bin/docker stop flexydial-websocket
+ExecStartPre=-/usr/bin/docker rm flexydial-websocket
+ExecStartPre=/usr/bin/docker pull flexydial-websocket
+ExecStart=/usr/bin/docker run --rm --network host -e REDIS_URL=idredis.buzzworks.com -e HOST_URL=idweb.buzzworks.com -v /var/lib/flexydial/media:/var/lib/flexydial/media -v /etc/ssl:/etc/ssl --name flexydial-websocket flexydial-websocket
+
+[Install]
+WantedBy=multi-user.target

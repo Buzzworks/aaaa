@@ -20,7 +20,7 @@ from . import views
 from callcenter import views as callcenter
 from crm import views as crm
 from django.conf import settings
-import debug_toolbar
+#import debug_toolbar
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from django.contrib.auth import views as auth_views
@@ -33,7 +33,7 @@ urlpatterns = [
     path(r'dashboard/',callcenter.DashBoardApiView.as_view(), name="dashboard" ),
     path(r'get_latest_notification/',callcenter.GetLatestNoificationView.as_view(),
         name="get-latest-notification" ),
-    
+
     path(r'change_password/',views.ChangePasswordApiView.as_view(), name="change_password"),
     path(r'logout/', callcenter.LogoutAPIView.as_view(), name='logout'),
     path(r'logout/<str:makeInactive>/', callcenter.LogoutAPIView.as_view(), name='logout'),
@@ -49,13 +49,13 @@ urlpatterns = [
          views.DownloadSampleContactApiView.as_view(), name="download-sample-contact-file"),
     path('api/charts/',TemplateView.as_view(template_name= 'reports/charts.html'),name='charts'),
     path('api/system-boot-action/', views.SystemBootAction.as_view(), name='system-boot-action'),
-    
+
     path("password-reset/", views.PasswordResetView.as_view(), name="password_reset"),
     path("password-reset-confirm/<uidb64>/<token>", views.CustomPasswordResetConfirmView.as_view( template_name="registration/password_reset_confirm.html",form_class=views.CustomPasswordResetForm), name="password_reset_confirm"),
     path("password-reset-complete/", auth_views.PasswordResetCompleteView.as_view(), name="password_reset_complete")
 
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-if settings.DEBUG:
-    urlpatterns.append(path('__debug__/', include(debug_toolbar.urls)))
+#if settings.DEBUG:
+#    urlpatterns.append(path('__debug__/', include(debug_toolbar.urls)))
 

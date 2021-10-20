@@ -1,11 +1,11 @@
 var fs = require('fs');
 var https = require('https');
 esl = require('esl')
-var ca = fs.readFileSync('/usr/local/freeswitch/certs/wss.pem'); 
+var ca = fs.readFileSync('/etc/ssl/wss.pem');
 var redis = require('redis');
-var redisClient = redis.createClient({host : 'localhost', port : 6379});
+var redisClient = redis.createClient({host : process.env.REDIS_URL, port : process.env.REDIS_PORT});
 var options = {
-  host: '127.0.0.1'
+  host: process.env.HOST_URL
 , port: 443
 , path: '/inbound_agents/'
 , ca: ca
@@ -52,9 +52,9 @@ module.exports = {
 					        		console.log(error);
 					        		throw error;
 					    		}
-							});			
-				    	} 
-					})				
+							});
+				    	}
+					})
 				}else{
 					  clearTimeout(rec_fun);
 					  // callback(err=null,data)
@@ -77,7 +77,7 @@ module.exports = {
 		res.on('data', function (data) {
 			data = JSON.parse(data)
 			// if(data['wfh']==true){
-			// 	callback(err=null,data);	
+			// 	callback(err=null,data);
 			// }else{
 				redisClient.exists('inbound_agents',function(err,reply) {
 					if(!err) {
@@ -98,9 +98,9 @@ module.exports = {
 									        		throw error;
 									    		}else{
 													callback(err=null,data);
-							    				} 
-											});			
-								    	} 
+							    				}
+											});
+								    	}
 									})
 						 		}else {
 							    		var r_data = {}
@@ -112,16 +112,16 @@ module.exports = {
 								        		throw error;
 								    		}else{
 												callback(err=null,data);
-						    				} 
-										});			
+						    				}
+										});
 						  		}
 						  	}else{
-					 			callback(err=null,data);	
+					 			callback(err=null,data);
 					 		}
-						}				
+						}
 				 	}
 				});
-			// }				
+			// }
       });
 	});
 	django_req.write(body)
@@ -133,7 +133,7 @@ module.exports = {
 		    if (error) {
 		        console.log(error);
 		        throw error;
-		    } 
+		    }
 		    var data = JSON.parse(result)
 		    var list_data = data[dialed_uuid]
 		    if(state=='answer'){
@@ -142,7 +142,7 @@ module.exports = {
 		    }else if(state=='hangup'){
 			    callback(err=null,list_data);
 		    }
-			});				
+			});
 	},
 
 	inboundcall_del_alert: function(dialed_uuid) {
@@ -158,9 +158,9 @@ module.exports = {
 			    if (error) {
 			        console.log(error);
 			        throw error;
-			    } 
-			});					    
-			});					
+			    }
+			});
+			});
 	},
 
 	wfh_client_hangup: function(dialed_uuid,action) {
@@ -177,7 +177,7 @@ module.exports = {
             	cmd = `uuid_audio ${uuid} start write mute -4`
             }else if(action == 'unmute'){
 				cmd = `uuid_audio ${uuid} start write mute 0`
-            }     
+            }
             call.api(cmd);
                         });
         });client.connect(8021, '0.0.0.0')
@@ -199,5 +199,5 @@ module.exports = {
 	});
 	w_django_req.write(w_body)
 	w_django_req.end()
-	},		
+	},
 }

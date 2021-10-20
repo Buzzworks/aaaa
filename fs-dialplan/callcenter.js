@@ -9,15 +9,15 @@ var MEDIA_ROOT = '/var/lib/flexydial/media'
 // Socket io initialization starts
 const options =
 				{
-					 key: fs.readFileSync('/etc/apache2/certs/flexydial.key'),
-					 cert: fs.readFileSync('/etc/apache2/certs/flexydial.crt')
+					 key: fs.readFileSync('/etc/ssl/flexydial.key'),
+					 cert: fs.readFileSync('/etc/ssl/flexydial.crt')
 				};
 var socket_server = https.createServer(options);
 var io = require('socket.io')(socket_server);
 socket_server.listen(3232)
 
 var redis = require('redis');
-leadlist_details_data = redis.createClient();
+leadlist_details_data = redis.createClient({host: process.env.REDIS_URL,port: process.env.REDIS_PORT});
 leadlist_details_data.subscribe('lead-details');
 
 
@@ -34,31 +34,31 @@ io.on('connection', function(socket) {
  		}else{
 			transfer_call.transfercall_route(data,function(err,data){
 				io.emit("transfer_agents",data)
-			})	 		
+			})
  		}
 	});
-	
+
 	socket.on('tr_internal_agent_answer',function(data){
 		io.emit("tr_internal_agent_answer_res",data)
-	});	
+	});
 
 	socket.on('transfer_to_agent_rejected',function(data){
 		transfer_call.transfercall_del_alert(data,function(err,data){
 			io.emit("transfer_to_agent_rejected_res",data)
-		})	 		
-	});	
+		})
+	});
 
 	socket.on('tr_from_agent_hangup',function(data){
 		transfer_call.transfercall_del_alert(data,function(err,data){
 			io.emit("tr_from_agent_hangup_res",data)
-		})	 			
+		})
 	});
 	socket.on("dial_number_transfer_to_agent",function(data){
 		io.emit("dial_number_transfer_to_agent_res",data)
 	});
 	socket.on('emergency_logout',function(data){
 		io.emit("do_emergency_logout",data)
-	});	
+	});
 	socket.on('emergency_logout_status',function(data){
 		io.emit("emergency_logout_status_admin",data)
 	});
@@ -67,13 +67,13 @@ io.on('connection', function(socket) {
 	});
 	socket.on('emergency_logout_all_users',function(data){
 		io.emit("do_emergency_logout_all_users",data)
-	});	
+	});
 	socket.on('broadcast_message_to_users',function(data){
 		io.emit("do_broadcast_message",data)
-	});	
+	});
 	socket.on('check_progressive_preview_data',function(data){
 		io.emit("do_progressive_preview_newlead",data)
-	});		
+	});
 });
 
 server = esl.createCallServer();
@@ -83,14 +83,14 @@ server.on('CONNECT', function (req) {
 				dial_method = req.body['variable_outbound_dial_method']
 				if (dial_method == 'Predictive' | dial_method == 'Progressive' | dial_method == 'Preview'){
 					req.execute("transfer","12345 XML default2")
-				} 
+				}
 			}
 		}else{
 			server_ip = req.body['variable_sip_from_host']
 			if (('variable_sip_from_host' in req.body)==false){
 				server_ip = req.body['FreeSWITCH-IPv4']
 			}
-			io.emit('sip_session_details',{'Unique-ID':req.body['Unique-ID'], 
+			io.emit('sip_session_details',{'Unique-ID':req.body['Unique-ID'],
 				'Caller-Caller-ID-Number':req.body['Channel-Orig-Caller-ID-Number'],
 				'variable_sip_from_host': server_ip
 			});
@@ -107,10 +107,10 @@ server.on('CONNECT', function (req) {
 						inbound.wfh_customer_details_route(req,uuid,session_uuid,action,function(err,data){
 							req.execute_uuid(session_uuid, 'playback', `${MEDIA_ROOT}/${session_uuid}.mp3`);
 							// req.execute_uuid(session_uuid, 'playback', `${MEDIA_ROOT}/${session_uuid}.wav`);
-						})            	
+						})
 	    				//inbound.wfh_client_hangup(uuid, action='customer_name', function(err,data){
 						// })
-	                    // req.execute_uuid(uuid, 'set', 'tts_engine=flite');                     
+	                    // req.execute_uuid(uuid, 'set', 'tts_engine=flite');
 	                    // req.execute_uuid(uuid, 'set', 'tts_voice=slt');
 	                    // req.execute_uuid(uuid, 'speak', 'hello dinesh');
 	            	}else if(dtmf == '2'){
@@ -118,7 +118,7 @@ server.on('CONNECT', function (req) {
 						inbound.wfh_customer_details_route(req,uuid,session_uuid,action,function(err,data){
 							req.execute_uuid(session_uuid, 'playback', `${MEDIA_ROOT}/${session_uuid}.mp3`);
 							// req.execute_uuid(session_uuid, 'playback', `${MEDIA_ROOT}/${session_uuid}.wav`);
-						}) 
+						})
 	            	}else if(dtmf == '#'){
 	            		inbound.wfh_client_hangup(uuid, action='unmute', function(err,data){
 						})
@@ -128,19 +128,19 @@ server.on('CONNECT', function (req) {
 	            	}else if(dtmf == '0'){
 	            		req.execute_uuid(uuid, 'hangup');
 						// inbound.wfh_client_hangup(uuid, action='hangup', function(err,data){
-						// })            		
+						// })
 	            	}
-	            } 
-           	}         
+	            }
+           	}
 			return util.log('DTMF',dtmf,"a-leg : ",req.body['Unique-ID']," b-leg : ",req.body['Other-Leg-Unique-ID']);
 		})
 		req.on('CHANNEL_ANSWER',function (req){
 			if ('variable_wfh' in req.body & req.body['variable_wfh'] == 'true'){
 				if (req.body['variable_usertype'] == 'wfh-agent-req-dial'){
 					req.execute("transfer","12345 XML default2")
-				} 			
+				}
 			}
-		})	
+		})
 		req.on('CHANNEL_HANGUP', function (req) {
 			if (!('variable_wfh' in req.body)){
 				io.emit("sip_hangup_client",req.body['variable_cc_agent'])
@@ -149,7 +149,7 @@ server.on('CONNECT', function (req) {
 	 });
 
 });
-server.listen(8084);
+server.listen(8084, '0.0.0.0');
 
 outbound_server = esl.createCallServer();
 outbound_server.on('CONNECT', function (req) {
@@ -175,7 +175,7 @@ outbound_server.on('CONNECT', function (req) {
 	req.execute('set', 'RECORD_COMMENT=Buzz that works');
 	req.execute('set', 'RECORD_DATE=${strftime(%Y-%m-%d %H:%M)}');
 	req.execute('set', 'RECORD_STEREO=true');
-	req.execute("record_session",`/var/spool/freeswitch/default/${date_time}_${destination_number}_${dialed_uuid}.mp3`)			
+	req.execute("record_session",`/var/spool/freeswitch/default/${date_time}_${destination_number}_${dialed_uuid}.mp3`)
 	console.log("outbound connected");
 	req.on('CHANNEL_ANSWER', function (req) {
 		console.log(req.body['Event-Date-Timestamp'])
@@ -230,7 +230,7 @@ outbound_server.on('CONNECT', function (req) {
 		return util.log('OUTBOUND_CHANNEL_HANGUP_COMPLETE');
 	})
 });
-outbound_server.listen(8085);
+outbound_server.listen(8085, '0.0.0.0');
 inbound_server = esl.createCallServer();
 inbound_server.on('CONNECT', function (req) {
 		var channel_data = req.body;
@@ -256,7 +256,7 @@ inbound_server.on('CONNECT', function (req) {
 						req.execute("answer")
 						audio_played = true
 						req.execute('endless_playback', `${MEDIA_ROOT}/${data['audio_moh_sound']}`)
-					}					
+					}
 					inbound.availale_agents(req,caller_id,dialed_uuid,server,destination_number,intiate_time,function(err,data){
 						if (data['cust_status'] == 'true'){
 							io.emit("inbound_agents",data)
@@ -302,7 +302,7 @@ inbound_server.on('CONNECT', function (req) {
 					}else{
 						req.execute('hangup');
 					}
-				}					
+				}
 			}else if(data['queue_call']==true & data['skill_routed_status']==true){
 					req.execute('set', 'call_mode=inbound');
 					req.execute('set', `cc_customer=${destination_number}`);
@@ -310,8 +310,8 @@ inbound_server.on('CONNECT', function (req) {
 					if (data['non_office_hrs']==false){
 						req.execute("transfer",`${caller_id} XML default2`)
 					}else{
-						req.execute('hangup');	
-					}	
+						req.execute('hangup');
+					}
 			}
 		})
 		req.on('CUSTOM', function (req) {
@@ -323,7 +323,7 @@ inbound_server.on('CONNECT', function (req) {
 			if (req.body['CC-Action'] == 'member-queue-end' && req.body['CC-Cause'] == 'Cancel'){
 				if ('CC-Cancel-Reason' in req.body){
 					if (req.body['CC-Cancel-Reason'] == 'TIMEOUT'){
-						req.execute('hangup');	
+						req.execute('hangup');
 					}
 				}
 
@@ -339,7 +339,7 @@ inbound_server.on('CONNECT', function (req) {
                        	date_time = '${strftime(%d-%m-%Y-%H-%M)}'
                        	req.execute('set','disposition=Connected')
                        	req.execute('set', 'cc_customer=${destination_number}');
-                       	req.execute('set', 'cc_export_vars=cc_customer,cc_uname,disposition');                                  
+                       	req.execute('set', 'cc_export_vars=cc_customer,cc_uname,disposition');
                        	req.execute("record_session",`/var/spool/freeswitch/default/${date_time}_${destination_number}_${dialed_uuid}.mp3`)
                        	inbound.inboundcall_dis_alert(answered_agent,dialed_uuid,state='answer',function(err,data){
                            	dict_data = {'dialed_uuid':dialed_uuid,'extension':data}
@@ -371,13 +371,13 @@ inbound_server.on('CONNECT', function (req) {
 	                   	date_time = '${strftime(%d-%m-%Y-%H-%M)}'
 	                   	req.execute('set','disposition=Connected')
 	                   	req.execute('set', 'cc_customer=${destination_number}');
-	                   	req.execute('set', 'cc_export_vars=cc_customer,cc_uname,disposition');                                  
+	                   	req.execute('set', 'cc_export_vars=cc_customer,cc_uname,disposition');
 	                   	req.execute("record_session",`/var/spool/freeswitch/default/${date_time}_${destination_number}_${dialed_uuid}.mp3`)
 	                   	inbound.inboundcall_dis_alert(answered_agent,dialed_uuid,state='answer',function(err,data){
 	                       	dict_data = {'dialed_uuid':dialed_uuid,'extension':data}
 	                       	io.emit("inbound_notanswer_agents",dict_data)
 	                   	})
-	               	}					
+	               	}
 				}
 			return util.log('INBOUND_CHANNEL_BRIDGE');
 		 })
@@ -390,25 +390,25 @@ inbound_server.on('CONNECT', function (req) {
 		req.on('DTMF', function (req) {
 			if(dtmf == ""){
 				t=setTimeout(function(){
-					dtmf = "" 
+					dtmf = ""
 				}, 5000);
 			}
-            dtmf = req.body['DTMF-Digit'] 
+            dtmf = req.body['DTMF-Digit']
             c_dtmf = dtmf.concat(dtmf);
             if (c_dtmf == callback.concat('#')){
 			    clearTimeout(t);
 			    dtmf = ""
 			    req.execute('set','disposition=CBR')
 			    req.execute('hangup');
-            }         
+            }
 			return util.log('INBOUND_DTMF');
 		})
-		
+
 		req.on('CUSTOM', function (req) {
 			if (req.body['CC-Action'] == 'member-queue-end' && req.body['CC-Cause'] == 'Cancel'){
 				if ('CC-Cancel-Reason' in req.body){
 					if (req.body['CC-Cancel-Reason'] == 'TIMEOUT'){
-						req.execute('hangup');	
+						req.execute('hangup');
 					}
 				}
 
@@ -422,18 +422,18 @@ inbound_server.on('CONNECT', function (req) {
 	 				dict_data = {'dialed_uuid':dialed_uuid,'extension':data}
 	 				io.emit("inbound_notanswer_agents",dict_data)
 				})
-	 			inbound.inboundcall_del_alert(dialed_uuid)			
-	 		}	 		
+	 			inbound.inboundcall_del_alert(dialed_uuid)
+	 		}
 	 		// console.log({"sip_extension":req.body['variable_cc_agent'],"ibc_popup":req.body['variable_ibc_popup'],"queue_call":req.body['variable_queue_call']})
 			io.emit("INBOUND_CHANNEL_HANGUP",{"sip_extension":req.body['variable_cc_agent'],"ibc_popup":req.body['variable_ibc_popup'],"queue_call":req.body['variable_queue_call']})
 			return util.log('INBOUND_CHANNEL_HANGUP');
 		})
-					
+
 		req.on('CHANNEL_HANGUP_COMPLETE', function (req) {
 			 return util.log('INBOUND_CHANNEL_HANGUP_COMPLETE');
 		})
 	});
-inbound_server.listen(8087);
+inbound_server.listen(8087, '0.0.0.0');
 
 autodial_server = esl.createCallServer();
 autodial_server.on('CONNECT', function (req) {
@@ -450,7 +450,7 @@ autodial_server.on('CONNECT', function (req) {
 				req.execute('answer');
 				req.execute('hangup');
 				req.on('CHANNEL_BRIDGE', function (req) {
-					callback = ""	
+					callback = ""
 					var bridge_agent = req.body['Other-Leg-Orig-Caller-ID-Number']
 					var dialed_uuid = req.body['Unique-ID']
 					req.execute('set','disposition=Connected')
@@ -466,7 +466,7 @@ autodial_server.on('CONNECT', function (req) {
 				// req.on('DTMF', function (req) {
 				// 	console.log(req.body)
 				// 	return util.log('Autodial_DTMF');
-				// })		
+				// })
 
 				req.on('CHANNEL_ANSWER', function (req) {
 						return util.log('Call was answered');
@@ -476,13 +476,13 @@ autodial_server.on('CONNECT', function (req) {
 					if (req.body['CC-Action'] == 'member-queue-end' && req.body['CC-Cause'] == 'Cancel'){
 						if ('CC-Cancel-Reason' in req.body){
 							if (req.body['CC-Cancel-Reason'] == 'TIMEOUT'){
-								req.execute('hangup');	
+								req.execute('hangup');
 							}
 						}
 
 					}
 				})
-								
+
 				req.on('CHANNEL_HANGUP', function (req) {
 						io.emit("AUTODIAL_CHANNEL_HANGUP",{"sip_extension":req.body['variable_cc_agent']})
 						return util.log('CHANNEL_HANGUP');
@@ -504,7 +504,7 @@ autodial_server.on('CONNECT', function (req) {
 						return util.log('Epipe Error');
 				});
 		});
-autodial_server.listen(8086);
+autodial_server.listen(8086, '0.0.0.0');
 
 
 }).call(this);

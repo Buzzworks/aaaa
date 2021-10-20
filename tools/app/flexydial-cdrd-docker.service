@@ -1,0 +1,15 @@
+[Unit]
+Description=FlexyDial CDR Container
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+#Restart=always
+ExecStartPre=-/usr/bin/docker stop flexydial-cdr
+#ExecStartPre=-/usr/bin/docker rm flexydial-cdr
+ExecStartPre=/usr/bin/docker pull vedakatta/flexydial-app
+ExecStart=/usr/bin/docker run --rm --env-file /etc/default/flexy-app --name flexydial-cdr vedakatta/flexydial-app python manage.py cdrd
+
+[Install]
+WantedBy=multi-user.target
