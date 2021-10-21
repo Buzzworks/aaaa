@@ -17,6 +17,9 @@ cp -r conf.d /etc/nginx/
 source flexycrt.sh
 
 mkdir -p /home/app/
+
+printf "To Authenticate enter Personal Access Token to pull docker image.\n"
+
 docker login -u vedakatta ## Enter Personal Access Token at prompt
 docker pull vedakatta/flexydial-static
 

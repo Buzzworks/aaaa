@@ -6,6 +6,9 @@
 # Supports : Ubuntu,CentOS, Redhat
 ###################################################################################
 
+printf "To Authenticate enter Personal Access Token to pull docker image.\n"
+
+docker login -u vedakatta ## Enter Personal Access Token at prompt
 docker pull vedakatta/flexydial-websocket
 
 cp flexydial-websocket-docker.service /etc/systemd/system/

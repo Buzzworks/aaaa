@@ -9,12 +9,12 @@ var MEDIA_ROOT = '/var/lib/flexydial/media'
 // Socket io initialization starts
 const options =
 				{
-					 key: fs.readFileSync('/etc/ssl/flexydial.key'),
-					 cert: fs.readFileSync('/etc/ssl/flexydial.crt')
+					 key: fs.readFileSync('flexydial.key'),
+					 cert: fs.readFileSync('flexydial.crt')
 				};
 var socket_server = https.createServer(options);
 var io = require('socket.io')(socket_server);
-socket_server.listen(3232)
+socket_server.listen(3233,'0.0.0.0')
 
 var redis = require('redis');
 leadlist_details_data = redis.createClient({host: process.env.REDIS_URL,port: process.env.REDIS_PORT});

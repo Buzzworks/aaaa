@@ -1,7 +1,7 @@
 var fs = require('fs');
 var https = require('https');
 esl = require('esl')
-var ca = fs.readFileSync('/etc/ssl/wss.pem');
+var ca = fs.readFileSync('wss.pem');
 var redis = require('redis');
 var redisClient = redis.createClient({host : process.env.REDIS_URL, port : process.env.REDIS_PORT});
 var options = {
