@@ -37,9 +37,9 @@ class Switch(models.Model):
 	ip_address = models.CharField(max_length =20, db_index=True, unique=True)
 	status = models.CharField(default='Active',choices=Status, max_length=10)
 	created_date = models.DateTimeField(auto_now_add=True)
-	sip_udp_port = models.IntegerField(default=40506, null=True)
+	sip_udp_port = models.IntegerField(default=45060, null=True)
 	rpc_port = models.IntegerField(default=8080, null=True)
-	wss_port = models.IntegerField(default=7443, null=True)
+	wss_port = models.IntegerField(default=7444, null=True)
 	modified_date = models.DateTimeField(auto_now=True)
 	created_by = models.ForeignKey('User', related_name='switch_created_by',on_delete=models.SET_NULL,
 		blank=True, null=True)
@@ -57,7 +57,7 @@ signals.post_save.connect(fs_switch_action, sender=Switch)
 class DialTrunk(models.Model):
 	""" This table is used to store the Dialtrunk infromation of the freeswitch """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
-			on_delete=models.SET_NULL,null=True)	
+			on_delete=models.SET_NULL,null=True)
 	name = models.CharField(max_length = 100, db_index=True, unique=True)
 	description = models.TextField(blank=True, null=True)
 	dial_string = models.CharField(max_length=200, default='freetdm/default/a',
@@ -84,7 +84,7 @@ class DialTrunk(models.Model):
 class UserRole(models.Model):
 	""" This table is used to store the users role an there access levels and permissions """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
-		on_delete=models.SET_NULL,null=True)	
+		on_delete=models.SET_NULL,null=True)
 	name = models.CharField(max_length = 50, db_index=True, unique=True)
 	description = models.CharField(max_length = 200, null=True, blank=True)
 	permissions  = JSONField()
@@ -111,7 +111,7 @@ class UserRole(models.Model):
 class Group(models.Model):
 	""" This table will store the group along with the users in them """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
-			on_delete=models.SET_NULL,null=True)	
+			on_delete=models.SET_NULL,null=True)
 	name = models.CharField(max_length = 50, db_index=True, unique=True)
 	status =  models.CharField(default='Active',choices=Status, max_length=10)
 	color_code = models.CharField(null=True, blank=True, max_length=10)
@@ -126,7 +126,7 @@ class Group(models.Model):
 	@property
 	def users(self):
 		return list(User.objects.filter(group=self).exclude(is_superuser=True).values("username","id"))
-		
+
 	@property
 	def allusers(self):
 		return list(User.objects.all().exclude(group=self).exclude(is_superuser=True).values("username", "id"))
@@ -140,11 +140,11 @@ class Group(models.Model):
 		ordering = ('created_date',)
 
 # signals.post_save.connect(fs_add_grp_user, sender=Group)
-		  
+
 class User(AbstractUser):
 	""" This table will store the user information """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
-			on_delete=models.SET_NULL,null=True)	
+			on_delete=models.SET_NULL,null=True)
 	date_of_birth = models.DateField(null=True, blank=True)
 	user_role = models.ForeignKey(UserRole, related_name='User_Role',
 			null=True, on_delete=models.SET_NULL, blank=True)
@@ -165,7 +165,7 @@ class User(AbstractUser):
 	email_password = models.CharField(max_length=50,blank=True,null=True)
 	created_by = models.ForeignKey("self", related_name='user_created_by',on_delete=models.SET_NULL,
 		blank=True, null=True)
-   
+
 	def __str__(self):
 		return self.username
 
@@ -197,7 +197,7 @@ class User(AbstractUser):
 			return ', '.join(self.group.all().values_list(
 				"name", flat=True).exclude(name__isnull=True))
 		return ""
-   
+
 	@property
 	def active_campaign(self):
 		return Campaign.objects.filter(Q(users=self)|Q(
@@ -216,7 +216,7 @@ class User(AbstractUser):
 		if self.created_by:
 			return self.created_by.username
 		return ""
-	
+
 	class Meta:
 		ordering = ('-id',)
 
@@ -228,8 +228,8 @@ def getAdmin():
 	return admin_list
 
 class UserVariableManager(models.Manager):
-	""" 
-	The custom model manager will create the bulk user variable and call 
+	"""
+	The custom model manager will create the bulk user variable and call
 	fs_add_phone_user to trigger the signals for saving the  user in freeswitch
 	"""
 	def bulk_create(self, objs, **kwargs):
@@ -303,7 +303,7 @@ class UserVariable(models.Model):
 		return self.extension
 	@property
 	def campaign(self):
-		return Campaign.objects.all()	
+		return Campaign.objects.all()
 
 	class Meta:
 		ordering = ('created_date',)
@@ -314,7 +314,7 @@ signals.pre_delete.connect(fs_del_user, sender=UserVariable)
 class CampaignSchedule(models.Model):
 	""" This table will store the shift timing """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
-			on_delete=models.SET_NULL,null=True)	
+			on_delete=models.SET_NULL,null=True)
 	name = models.CharField(max_length = 100, db_index=True, unique=True)
 	description = models.TextField(blank=True, null=True)
 	schedule_days = models.CharField(default=SCHEDULE_DAYS[0][0], choices=SCHEDULE_DAYS, max_length=10)
@@ -328,9 +328,9 @@ class CampaignSchedule(models.Model):
 		return self.name
 
 class AudioFile(models.Model):
-	""" This table will store the audio file information """	
+	""" This table will store the audio file information """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
-			on_delete=models.SET_NULL,null=True)	
+			on_delete=models.SET_NULL,null=True)
 	name = models.CharField(max_length = 100, db_index=True, unique=True)
 	description = models.TextField(blank=True, null=True)
 	audio_file = models.FileField(upload_to='upload', blank=True)
@@ -339,7 +339,7 @@ class AudioFile(models.Model):
 	modified_date = models.DateTimeField(auto_now=True)
 	created_by = models.ForeignKey(User, related_name='audio_created_by',on_delete=models.SET_NULL,
 		blank=True, null=True)
-	
+
 	def __str__(self):
 		return self.name
 
@@ -366,7 +366,7 @@ class Disposition(models.Model):
 	created_by = models.ForeignKey(User, related_name='disposition_created_by',on_delete=models.SET_NULL,
 		blank=True, null=True)
 	updatelead = models.BooleanField(default=False)
-	
+
 	def __str__(self):
 		return self.name
 
@@ -383,14 +383,14 @@ class RelationTag(models.Model):
 	modified_date = models.DateTimeField(auto_now=True)
 	created_by = models.ForeignKey(User, related_name='relationtag_created_by',on_delete=models.SET_NULL,
 		blank=True, null=True)
-	
+
 	def __str__(self):
 		return self.name
 
 class PauseBreak(models.Model):
 	""" This table will store the break time and other information """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
-			on_delete=models.SET_NULL,null=True)	
+			on_delete=models.SET_NULL,null=True)
 	name = models.CharField(max_length= 200, db_index=True, unique=True)
 	status = models.CharField(default='Active',choices=Status, max_length=10)
 	break_time = models.TimeField(blank=True, null=True)
@@ -426,7 +426,7 @@ class SkilledRouting(models.Model):
 	schedule = models.ForeignKey(CampaignSchedule,
 			null=True, on_delete=models.SET_NULL, blank=True)
 	skill_popup = models.BooleanField(default=False)
-	d_abandoned_camp = models.CharField(max_length=100,null=True) 
+	d_abandoned_camp = models.CharField(max_length=100,null=True)
 	audio = JSONField(default=dict)
 	status = models.CharField(default='Active', choices=Status, max_length=10)
 	created = models.DateTimeField(auto_now_add=True)
@@ -440,7 +440,7 @@ class SkilledRouting(models.Model):
 class SMSTemplate(models.Model):
 	""" This table will store the Sms Templates information """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
-			on_delete=models.SET_NULL,null=True)	
+			on_delete=models.SET_NULL,null=True)
 	name = models.CharField(max_length = 50, unique=True)
 	campaign = models.ForeignKey('Campaign',on_delete=models.SET_NULL,null=True,blank=True, related_name='template_campaign')
 	text = models.TextField(null=True, blank=True)
@@ -458,10 +458,10 @@ class SMSTemplate(models.Model):
 class SMSGateway(models.Model):
 	""" This table will store the Sms credentials gateway  information """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
-			on_delete=models.SET_NULL,null=True)	
+			on_delete=models.SET_NULL,null=True)
 	name = models.CharField(max_length = 50, unique=True)
 	key = models.CharField(max_length = 1032, null=True)
-	gateway_url = models.URLField(max_length = 200) 
+	gateway_url = models.URLField(max_length = 200)
 	disposition = models.ManyToManyField(Disposition, blank=True)
 	template = models.ManyToManyField(SMSTemplate, blank=True)
 	status = models.CharField(default='Active', choices=Status, max_length=10)
@@ -478,7 +478,7 @@ class SMSGateway(models.Model):
 class EmailTemplate(models.Model):
 	""" This table will store the Email Templates information """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
-			on_delete=models.SET_NULL,null=True)	
+			on_delete=models.SET_NULL,null=True)
 	name = models.CharField(max_length = 100, unique=True)
 	campaign = models.ManyToManyField('Campaign', related_name='email_campaign',
 			null=True, blank=True)
@@ -496,7 +496,7 @@ class EmailTemplate(models.Model):
 class EmailGateway(models.Model):
 	""" This table will store the Email Credentails gateway information """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
-			on_delete=models.SET_NULL,null=True)	
+			on_delete=models.SET_NULL,null=True)
 	name = models.CharField(max_length = 50, unique=True)
 	email_host = models.CharField(max_length = 1032)
 	email_port = models.IntegerField()
@@ -516,13 +516,13 @@ class EmailGateway(models.Model):
 		ordering =['-id']
 
 class DialTrunkPriority(models.Model):
-	""" 
-	This table stores the mutiple trunks info and 
+	"""
+	This table stores the mutiple trunks info and
 	will pick on priority will dialing the calling
 	"""
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
-			on_delete=models.SET_NULL,null=True)	
-	priority = models.IntegerField(default=0, db_index=True, blank=True)	
+			on_delete=models.SET_NULL,null=True)
+	priority = models.IntegerField(default=0, db_index=True, blank=True)
 	trunk = models.ForeignKey(DialTrunk, related_name='priority_trunk',
 			null=True, blank=True, on_delete=models.CASCADE)
 	did = JSONField(default=dict)
@@ -535,7 +535,7 @@ class DialTrunkPriority(models.Model):
 class DiaTrunkGroup(models.Model):
 	""" this table stores the dial trunk group information  """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
-			on_delete=models.SET_NULL,null=True)	
+			on_delete=models.SET_NULL,null=True)
 	name = models.CharField(max_length = 50, unique=True)
 	trunks =  models.ManyToManyField(DialTrunkPriority, blank=True)
 	total_channel_count = models.IntegerField(default=0, db_index=True, blank=True)
@@ -634,17 +634,17 @@ class Campaign(models.Model):
 		if self.campaignvariable_set.all():
 			return self.campaignvariable_set.all()[0].prefix
 		return ""
-	
+
 	@property
 	def campaign_script(self):
 		return ", ".join(self.script.all().values_list("id", flat=True))
-		
+
 	@property
 	def campaign_variable(self):
-		return CampaignVariable.objects.get(campaign=self)	
+		return CampaignVariable.objects.get(campaign=self)
 
 	def __str__(self):
-		return self.name or self.slug 	
+		return self.name or self.slug
 
 	def save(self, *args, **kwargs):
 		super().save(*args, **kwargs)
@@ -743,8 +743,8 @@ signals.m2m_changed.connect(fs_user_campaign, sender=Campaign.users.through)
 class CampaignPriority(models.Model):
 	""" This table store the campaign information for ingroup campaings """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
-			on_delete=models.SET_NULL,null=True)	
-	priority = models.IntegerField(default=0, db_index=True, blank=True)	
+			on_delete=models.SET_NULL,null=True)
+	priority = models.IntegerField(default=0, db_index=True, blank=True)
 	campaign = models.ForeignKey(Campaign, related_name='priority_campaign',
 			null=True, blank=True, on_delete=models.CASCADE)
 	created_date = models.DateTimeField(auto_now=True)
@@ -756,7 +756,7 @@ class CampaignPriority(models.Model):
 class InGroupCampaign(models.Model):
 	""" This table store the inbound functionality of the campaign """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
-			on_delete=models.SET_NULL,null=True)	
+			on_delete=models.SET_NULL,null=True)
 	name = models.CharField(max_length = 100, db_index=True, unique=True)
 	caller_id =JSONField(default=dict)
 	strategy = models.CharField(default='0',choices=STRATEGY_CHOICES, max_length=10)
@@ -772,7 +772,7 @@ class InGroupCampaign(models.Model):
 class Script(models.Model):
 	""" This table sotre the script info"""
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
-			on_delete=models.SET_NULL,null=True)	
+			on_delete=models.SET_NULL,null=True)
 	name = models.CharField(max_length = 100, db_index=True, unique=True)
 	campaign = models.ForeignKey(Campaign,on_delete=models.SET_NULL,null=True,blank=True)
 	text = models.TextField(null=True, blank=True)
@@ -830,12 +830,12 @@ class CallDetail(models.Model):
 	"""
 	This table is for storing the calldetail logs with agent feedback.
 	"""
-	site = models.ForeignKey(Site, default=settings.SITE_ID, 
+	site = models.ForeignKey(Site, default=settings.SITE_ID,
 			on_delete=models.SET_NULL,null=True,related_name='CallDetail')
 	campaign = models.ForeignKey(Campaign,on_delete=models.SET_NULL,null=True,db_index=True)
 	campaign_name = models.CharField(default='', max_length=50,null=True)
 	user = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,db_index=True)
-	phonebook = models.CharField(default='',max_length=50,  null=True) 
+	phonebook = models.CharField(default='',max_length=50,  null=True)
 	contact_id = models.BigIntegerField(blank=True, null=True, db_index=True)
 	customer_cid = models.CharField(default='', max_length=50,null=True)
 	callflow = models.CharField(default='', max_length=50, null=True)
@@ -871,7 +871,7 @@ class CallDetail(models.Model):
 	inbound_wait_time = models.TimeField(default=default_time, null=True, blank=True)
 	blended_time = models.TimeField(default=default_time, blank=True, null=True)
 	blended_wait_time = models.TimeField(default=default_time, blank=True, null=True)
-	uniqueid = models.CharField(default=None, max_length=30, null=True)			
+	uniqueid = models.CharField(default=None, max_length=30, null=True)
 	created = models.DateTimeField(auto_now_add=True, db_index=True)
 	updated = models.DateTimeField(auto_now=True, db_index=True)
 
@@ -903,7 +903,7 @@ class DiallerEventLog(models.Model):
 	campaign = models.ForeignKey(Campaign,on_delete=models.SET_NULL,null=True)
 	campaign_name = models.CharField(default='', max_length=50,null=True)
 	user = models.ForeignKey(User,on_delete=models.SET_NULL,null=True)
-	phonebook = models.CharField(default='',max_length=50, editable=False, null=True) 
+	phonebook = models.CharField(default='',max_length=50, editable=False, null=True)
 	contact_id = models.BigIntegerField(blank=True, null=True, db_index=True)
 	session_uuid = models.UUIDField(db_index=True, editable=False, null=True)
 	a_leg_uuid = models.UUIDField(editable=False, null=True)
@@ -947,8 +947,8 @@ class DiallerEventLog(models.Model):
 		else:
 			return ['']*6
 
-	
-		
+
+
 class CdrFeedbck(models.Model):
 	"""
 	This model is used to store feedback submitted on hangup
@@ -960,7 +960,7 @@ class CdrFeedbck(models.Model):
 	calldetail = models.OneToOneField(CallDetail, related_name='cdrfeedback', on_delete=models.CASCADE, null=True,db_index=True)
 	session_uuid = models.UUIDField(db_index=True, editable=False, null=True)
 	contact_id = models.BigIntegerField(blank=True, null=True, db_index=True)
-	comment = models.TextField(blank=True, null=True) 
+	comment = models.TextField(blank=True, null=True)
 
 	class Meta:
 		get_latest_by = 'session_uuid'
@@ -1052,7 +1052,7 @@ class AgentActivity(models.Model):
 	pause_progressive_time  = models.TimeField(default=default_time, blank=True, null=True,
 		verbose_name='Pause Progressive Time')
 	inbound_time = models.TimeField(default=default_time, blank=True, null=True)
-	inbound_wait_time = models.TimeField(default=default_time, blank=True, null=True)	
+	inbound_wait_time = models.TimeField(default=default_time, blank=True, null=True)
 	blended_time = models.TimeField(default=default_time, blank=True, null=True)
 	blended_wait_time = models.TimeField(default=default_time, blank=True, null=True)
 	class Meta:
@@ -1074,7 +1074,7 @@ class DNC(models.Model):
 	user = models.ForeignKey(User, on_delete=models.SET_NULL,related_name="dnc_user",null=True, blank=True)
 	numeric  = models.CharField(default='', max_length=50,null=True, db_index=True)
 	global_dnc = models.BooleanField(default=False)
-	uniqueid = models.CharField(default=None, max_length=30, null=True)			
+	uniqueid = models.CharField(default=None, max_length=30, null=True)
 	status = models.CharField(default='Active',choices=Status, max_length=10)
 	created = models.DateTimeField(auto_now_add=True)
 	updated = models.DateTimeField(auto_now=True)
@@ -1085,7 +1085,7 @@ class DNC(models.Model):
 	@property
 	def campaign_list(self):
 		return ", ".join(self.campaign.all().values_list("name", flat=True))
-		
+
 	def __str__(self):
 		return str(self.numeric)
 
@@ -1096,7 +1096,7 @@ class CallBackContact(models.Model):
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
 			on_delete=models.CASCADE,null=True)
 	contact_id = models.BigIntegerField(null=True, blank=True, db_index=True)
-	campaign = models.CharField(max_length=100,null=True, blank=True) 
+	campaign = models.CharField(max_length=100,null=True, blank=True)
 	phonebook = models.CharField(max_length=100,null=True, blank=True)
 	user = models.CharField(max_length=100,null=True)
 	numeric  = models.CharField(default='', max_length=50,null=True, db_index=True)
@@ -1127,7 +1127,7 @@ class CurrentCallBack(models.Model):
 	contact_id = models.BigIntegerField(null=True, blank=True, db_index=True)
 	callbackcontact_id = models.BigIntegerField(null=True, blank=True, db_index=True)
 	notification_id = models.BigIntegerField(null=True, blank=True, db_index=True)
-	campaign = models.CharField(max_length=100,null=True, blank=True) 
+	campaign = models.CharField(max_length=100,null=True, blank=True)
 	phonebook = models.CharField(max_length=100,null=True, blank=True)
 	user = models.CharField(max_length=100,null=True)
 	numeric  = models.CharField(default='', max_length=50,null=True, db_index=True)
@@ -1150,7 +1150,7 @@ class Abandonedcall(models.Model):
 	""" This table is used to to store the missed/abandoned calls information """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
 			on_delete=models.CASCADE,null=True)
-	campaign = models.CharField(max_length=100,null=True, blank=True) 
+	campaign = models.CharField(max_length=100,null=True, blank=True)
 	user = models.CharField(max_length=100,null=True)
 	caller_id = models.CharField(max_length=100,null=True)
 	numeric  = models.CharField(default='', max_length=50,null=True, db_index=True)
@@ -1175,7 +1175,7 @@ class Notification(models.Model):
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
 			on_delete=models.CASCADE,null=True)
 	contact_id = models.BigIntegerField(blank=True, null=True, db_index=True)
-	campaign = models.CharField(max_length=100,null=True, blank=True) 
+	campaign = models.CharField(max_length=100,null=True, blank=True)
 	user = models.CharField(max_length=100,null=True)
 	title=models.CharField(max_length=256,null=True)
 	message = models.TextField()
@@ -1183,7 +1183,7 @@ class Notification(models.Model):
 	viewed  = models.BooleanField(default=False)
 	created_date = models.DateTimeField(auto_now_add=True)
 	modified_date = models.DateTimeField(auto_now=True)
-	notification_type = models.CharField(max_length=100, null=True, blank=True)    
+	notification_type = models.CharField(max_length=100, null=True, blank=True)
 	def __str__(self):
 		return str(self.title)
 
@@ -1218,7 +1218,7 @@ class DataUploadLog(models.Model):
 
 class StickyAgent(models.Model):
 	"""
-	This models stores the sticky agent info 
+	This models stores the sticky agent info
 	"""
 	numeric  = models.CharField(default='', max_length=15,null=True, db_index=True)
 	campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE ,db_index=True, null=True)
@@ -1260,7 +1260,7 @@ class SMSLog(models.Model):
 
 class ThirdPartyApi(models.Model):
 	"""
-	This model is used for thirdparty api 
+	This model is used for thirdparty api
 	"""
 	name = models.CharField(max_length=50)
 	status = models.CharField(default='Active',choices=Status, max_length=10)
@@ -1280,7 +1280,7 @@ class ThirdPartyApi(models.Model):
 		return self.name
 
 class VoiceBlaster(models.Model):
-	""" 
+	"""
 	This is the model for voiceblaster
 	"""
 	name = models.CharField(max_length=50)
@@ -1342,7 +1342,7 @@ class EmailScheduler(models.Model):
 
 class ReportColumnVisibility(models.Model):
 	"""
-	Thid model is used to store userwise visibility of report columns 
+	Thid model is used to store userwise visibility of report columns
 	"""
 	user = models.ForeignKey(User,on_delete=models.CASCADE, null=True,
 		blank=True, related_name='user_report')
@@ -1355,7 +1355,7 @@ class ReportColumnVisibility(models.Model):
 
 class CallRecordingFeedback(models.Model):
 	"""
-	Thid model is used to store userwise visibility of report columns 
+	Thid model is used to store userwise visibility of report columns
 	"""
 	user = models.ForeignKey(User,on_delete=models.CASCADE, null=True,
 		blank=True, related_name='user_call_recording')
@@ -1364,7 +1364,7 @@ class CallRecordingFeedback(models.Model):
 	created = models.DateTimeField(auto_now_add=True)
 	updated = models.DateTimeField(auto_now=True)
 	def __str__(self):
-		return str(self.user.username)	
+		return str(self.user.username)
 
 class SkilledRoutingCallerid(models.Model):
 	""" this models is used for  storing skill routing callerids"""
@@ -1373,7 +1373,7 @@ class SkilledRoutingCallerid(models.Model):
 
 class BroadcastMessages(models.Model):
 	"""
-	This model stores all the broadcast messages that has been published to agents 
+	This model stores all the broadcast messages that has been published to agents
 	"""
 	sent_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True,
 			related_name='broadcast_user')
@@ -1403,7 +1403,7 @@ class Holidays(models.Model):
 	created_by = models.ForeignKey(User, related_name='holiday_created_by',on_delete=models.SET_NULL,blank=True, null=True)
 	created = models.DateTimeField(auto_now_add=True)
 	updated = models.DateTimeField(auto_now=True)
-	
+
 	def __str__(self):
 		return self.name
 
@@ -1428,7 +1428,7 @@ class PasswordChangeLogs(models.Model):
 	change_type= models.CharField(default='0',choices=PasswordChangeType,max_length=2,null=True,blank=True)
 	changed_by = models.ForeignKey(User,on_delete=models.SET_NULL,blank=True, null=True, related_name='password_changed_by')
 	user_email = models.CharField(max_length=150,blank=True,null=True)
-	message = models.TextField() 
+	message = models.TextField()
 	created = models.DateTimeField(auto_now_add=True)
 
 	def __str__(self):

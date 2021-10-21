@@ -60,7 +60,7 @@ from crm.models import (CrmField, TempContactInfo, Phonebook,
 			Contact,CrmField,ContactInfo, DownloadReports, LeadBucket, AlternateContact)
 from crm.serializers import (AgentCrmFieldSerializer,TempContactInfoSerializer, ContactSerializer,CssContactSerializer, AssignedContactInfoSerializer, ContactListSerializer, LeadBucketSerializer, AlternateContactSerializer)
 from crm.utility import crm_field_value_schema, get_customizable_crm_fields,get_customizable_crm_fields_for_template
-from flexydial.views import (check_permission, get_paginated_object, data_for_pagination, get_active_campaign, 
+from flexydial.views import (check_permission, get_paginated_object, data_for_pagination, get_active_campaign,
 	data_for_vue_pagination, sendSMS, csvDownloadTemplate, create_admin_log_entry, sendsmsparam)
 from callcenter.signals import (fs_pre_del_user)
 from callcenter.schedulejobs import (leadrecycle_add,leadrecycle_del,schedulereports_download,sched,remove_scheduled_job)
@@ -71,7 +71,7 @@ from .utility import (redirect_user, get_object, get_pre_campaign_edit_info,
 	dummy_agent_activity,group_add_user_rpc, get_user_group, get_user_role, get_user_switch,
 	get_user_dialtrunk, get_user_disposition, get_user_pausebreak, get_user_campaignschedule,
 	get_model_data, validate_uploaded_dnc,upload_dnc_nums,submit_feedback, customer_detials, convert_into_timedelta,
-	total_list_users,camp_list_users,user_hierarchy, user_hierarchy_object, update_contact_on_css, get_transform_key, update_contact_on_portifolio, 
+	total_list_users,camp_list_users,user_hierarchy, user_hierarchy_object, update_contact_on_css, get_transform_key, update_contact_on_portifolio,
 	validate_third_party_token,get_temp_contact,get_contact_data, upload_template_sms,get_crm_fields_dict, channel_trunk_single_call, DownloadCssQuery,get_campaign_did, get_group_did,DownloadCssQuery,diff_time_in_seconds,
 	save_report_column_visibility, get_report_visible_column,save_email_log, get_used_did, get_used_did_by_pk,convert_into_timeformat, email_connection, check_non_admin_user, getDaemonsStatus,upload_holiday_dates,read_status)
 
@@ -115,8 +115,8 @@ def save_csv(file_name, list):
 # @cache_page(CACHE_TTL)
 def curl_addsip(request,domain):
 	"""
-	Adding the information into the directory html 
-	for generating the xml files 
+	Adding the information into the directory html
+	for generating the xml files
 	"""
 	domain = Switch.objects.filter(name=domain)
 	if domain:
@@ -131,9 +131,9 @@ def curl_addsip(request,domain):
 @csrf_exempt
 # @cache_page(CACHE_TTL)
 def curl_loadcc(request,domain):
-	""" 
-	Adding the information into ccconf.html 
-	for generating the xml file 
+	"""
+	Adding the information into ccconf.html
+	for generating the xml file
 	"""
 	domain = Switch.objects.filter(name=domain)
 	if domain:
@@ -147,8 +147,8 @@ def curl_loadcc(request,domain):
 	return render(request,'fsconfig/ccconf.html', context,content_type='application/xml')
 
 class Echo(object):
-	""" 
-	Echoing the csv values back again 
+	"""
+	Echoing the csv values back again
 	"""
 	def write(self, value):
 		return value
@@ -173,7 +173,7 @@ def convert_to_zip(result):
 
 def common_functionality_to_store_data(data, user):
 	"""
-	Common data while submiting the feedback 
+	Common data while submiting the feedback
 	"""
 	status = {}
 	campaign_name = data.get('campaign','')
@@ -234,7 +234,7 @@ class LoginAPIView(APIView):
 		return Response({"forgot_password":forgot_password})
 
 	def post(self, request):
-		## Data for login validation 
+		## Data for login validation
 		serializer = LoginSerializer(data=request.data)
 		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps({}))
 		PASSWORD_ATTEMPTS = pickle.loads(settings.R_SERVER.get("password_attempt_status") or pickle.dumps({}))
@@ -265,7 +265,7 @@ class LoginAPIView(APIView):
 					updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
 					updated_agent_dict[user.extension] = AGENTS[user.extension]
 					settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
-					#set password attempt count to zero 
+					#set password attempt count to zero
 					PASSWORD_ATTEMPTS[username] = 0
 					settings.R_SERVER.set('password_attempt_status',pickle.dumps(PASSWORD_ATTEMPTS))
 					# store login time to agent activity
@@ -277,10 +277,10 @@ class LoginAPIView(APIView):
 					#### Set enabled modules into sesssion ####
 					modules_queryset = Modules.objects.filter(parent=None, status='Active', is_menu=True).order_by('sequence')
 					request.session['modules'] = ModulesSerializer(modules_queryset, many=True).data
-					request.session['login_time'] = login_time.isoformat() 
+					request.session['login_time'] = login_time.isoformat()
 
 					#Track agent activity
-					if request.user.user_role and request.user.user_role.access_level == 'Agent': 
+					if request.user.user_role and request.user.user_role.access_level == 'Agent':
 						activity_list = ['tos', 'app_time', 'dialer_time', 'wait_time',
 						'media_time', 'spoke_time', 'preview_time',
 						'predictive_time', 'feedback_time', 'break_time']
@@ -291,7 +291,7 @@ class LoginAPIView(APIView):
 						activity_dict["campaign_name"] = ""
 						activity_dict["break_type"] = ""
 						create_agentactivity(activity_dict)
-					#Track supervisors  login activity 
+					#Track supervisors  login activity
 					login_activity = False
 					if request.user.is_superuser or (request.user.user_role and request.user.user_role.access_level in ['Admin','Manager','Supervisor']):
 						AGENTS[user.extension]['screen'] = 'AdminScreen'
@@ -309,7 +309,7 @@ class LoginAPIView(APIView):
 					if username in PASSWORD_ATTEMPTS:
 						if PASSWORD_ATTEMPTS[username] >= password_obj.max_password_attempt:
 							error_dict = {"error": "This account is Locked Please Try to User Forgot Password or Contact Administrator",'forgot_password':forgot_password}
-						else:	
+						else:
 							error_dict = {"error": "This account is not active",'forgot_password':forgot_password}
 					else:
 						error_dict = {"error": "This account is not active",'forgot_password':forgot_password}
@@ -327,8 +327,8 @@ class LoginAPIView(APIView):
 								return Response(error_dict)
 							else:
 								PASSWORD_ATTEMPTS[username] += 1
-						else: 
-							PASSWORD_ATTEMPTS[username] = 1 
+						else:
+							PASSWORD_ATTEMPTS[username] = 1
 						settings.R_SERVER.set('password_attempt_status',pickle.dumps(PASSWORD_ATTEMPTS))
 		error_dict = {"error": "Username or Password is incorrect",'forgot_password':forgot_password}
 		return Response(error_dict)
@@ -355,14 +355,14 @@ class LogoutAPIView(LoginRequiredMixin, APIView):
 		if makeInactive:
 			request.user.is_active = False
 			request.user.save()
-		
+
 		la_count = agent_count= dl_count = 0
 		if request.user.is_superuser or request.user.user_role.access_level in ['Admin','Manager','Supervisor']:
 			logout_activity = True
 		if logout_activity:
 			last_event_time = AdminLogEntry.objects.filter(created_by=request.user,event_type='LOGIN').last()
 			if last_event_time:
-				log_time = last_event_time.created  
+				log_time = last_event_time.created
 				login_activity_time = datetime.now() - log_time
 				login_duration_time = (datetime.min + login_activity_time).time()
 				AdminLogEntry.objects.create(created_by=request.user, change_message=request.user.username+" logout to application",
@@ -372,7 +372,7 @@ class LogoutAPIView(LoginRequiredMixin, APIView):
 			fs_administration_hangup(request.GET.get('variable_sip_from_host'),uuid=request.GET.get('Unique-ID'))
 			return JsonResponse({'Success':"successfully loggedout."})
 		return HttpResponseRedirect(reverse('login'))
-		
+
 class ResetPasswordApiView(LoginRequiredMixin, APIView):
 	"""
 	This view is to reset agent password
@@ -482,7 +482,7 @@ class EmergencyLogoutAllUserApiView(LoginRequiredMixin, APIView):
 class DashBoardApiView(LoginRequiredMixin, APIView):
 	"""
 	This view is used to gives a graphical and overall telephony
-	status  
+	status
 	"""
 	login_url = '/'
 	renderer_classes = [TemplateHTMLRenderer]
@@ -521,9 +521,9 @@ class DashBoardApiView(LoginRequiredMixin, APIView):
 		for camp in camp_name:
 			livedata_dict['campaign'] = camp
 			livedata_dict['datetime'] =datetime.now()
-			livedata_dict['total_call'] = len(list(settings.R_SERVER.smembers(camp)) + 
+			livedata_dict['total_call'] = len(list(settings.R_SERVER.smembers(camp)) +
 				list(settings.R_SERVER.smembers(camp+'_autodial')))
-			livedata_list.append(livedata_dict)     
+			livedata_list.append(livedata_dict)
 			livedata_dict ={}
 		trunk_status = pickle.loads(settings.R_SERVER.get("trunk_status") or pickle.dumps(AGENTS))
 		trunks_data = list(DialTrunk.objects.filter(status='Active').values('id','name','channel_count',free_channels=F('channel_count')))
@@ -570,7 +570,7 @@ class EavesdropSessionApiView(LoginRequiredMixin, APIView):
 
 class PieChartLiveData(APIView):
 	"""
-			This Class contains the count shown in the Pie chart on Dashboard 
+			This Class contains the count shown in the Pie chart on Dashboard
 	"""
 	def get(self,request):
 		final_dict = {}
@@ -592,7 +592,7 @@ class PieChartLiveData(APIView):
 
 class OnCallAgentData(LoginRequiredMixin, APIView):
 	"""
-	This views used to show the oncalldata 
+	This views used to show the oncalldata
 	"""
 	login_url = '/'
 
@@ -707,10 +707,10 @@ class CampaignLiveDataView(LoginRequiredMixin, APIView):
 			phonebook_data = phonebooks.aggregate(total_ll_count = Count('id'),
 				active_ll_count=Count('id',filter=Q(status='Active')))
 			campaign_dict.update(phonebook_data)
-			
+
 			campaign_dict['totalcalls_today'] = CallDetail.objects.filter(campaign_name=campaign['name'] ,updated__date=datetime.now().date(),
 				dialed_status='Connected').count()
-			
+
 			campaign_dict['queueLoginagents_count'] = 0
 			if campaign['name'] in r_campaigns:
 				campaign_dict['queueLoginagents_count'] = len(r_campaigns[campaign['name']])
@@ -777,7 +777,7 @@ class UsersListApiView(LoginRequiredMixin, ListAPIView):
 			context['request'] = request
 			context['server_ip'] = settings.WEB_SOCKET_HOST
 			return Response(context)
-	
+
 @method_decorator(user_validation, name='post')
 class UsersCreateApiView(LoginRequiredMixin, APIView):
 	"""
@@ -820,7 +820,7 @@ class UsersCreateApiView(LoginRequiredMixin, APIView):
 	def post(self, request):
 		existing_user = request.POST.get("existing_user", "")
 		user_serializer = self.serializer_class(data=request.POST)
-		user_variable_serializer = UserVariableCreateSerializer(data=request.POST) 
+		user_variable_serializer = UserVariableCreateSerializer(data=request.POST)
 		if user_serializer.is_valid():
 			if user_variable_serializer.is_valid():
 				user = user_serializer.save(created_by=request.user)
@@ -892,7 +892,7 @@ class UsersEditApiView(LoginRequiredMixin, APIView):
 		if serializer.is_valid():
 			serializer.save()
 			if user_variable_serializer.is_valid():
-				user_variable_serializer.save() 
+				user_variable_serializer.save()
 				create_admin_log_entry(request.user, "user","2",'UPDATED',user.username)
 			else:
 				print({"errors": user_variable_serializer.errors})
@@ -1013,14 +1013,14 @@ class GroupListApiView(LoginRequiredMixin, APIView):
 @method_decorator(group_validation, name='put')
 class GroupModifyApiView(APIView):
 	"""
-	This class is for group edit and saving 
+	This class is for group edit and saving
 	"""
 	serializer_class = GroupSerializer
 	def post(self, request, pk, format=None):
 		group = get_object(pk, "callcenter", "Group")
 		serializer = self.serializer_class(group)
 		serializer.data['id'] = pk
-		return JsonResponse({'querysets': serializer.data, 'queryset':group.users, 
+		return JsonResponse({'querysets': serializer.data, 'queryset':group.users,
 			'allusers':group.allusers})
 
 	def put(self, request, pk, format=None):
@@ -1042,7 +1042,7 @@ class GroupModifyApiView(APIView):
 				for user_remove in user_remove_queryset:
 					user_remove.group.remove(group)
 			create_admin_log_entry(request.user, "group","2",'UPDATED',group.name)
-			group_add_user_rpc(user_add_queryset=user_add_queryset,user_remove_queryset=user_remove_queryset,group_id=pk)       
+			group_add_user_rpc(user_add_queryset=user_add_queryset,user_remove_queryset=user_remove_queryset,group_id=pk)
 			return Response()
 		return JsonResponse(serializer.errors, status=500)
 
@@ -1071,7 +1071,7 @@ class SwitchListApiView(LoginRequiredMixin, APIView):
 		('ip_address', 'IP Address'),
 		('status', 'status'),
 		)
-		PORT_DETAILS = {'sip_udp_port':40506,'rpc_port':8080,'wss_port':7443,'event_socket_port':8021}
+		PORT_DETAILS = {'sip_udp_port':45060,'rpc_port':8080,'wss_port':7444,'event_socket_port':8021}
 		camp_name, active_camp, noti_count = get_active_campaign(request)
 		context = {'id_list': switch_list, 'default_port':PORT_DETAILS,
 		 "paginate_by_columns": paginate_by_columns, "noti_count":noti_count}
@@ -1105,7 +1105,7 @@ class SwitchListApiView(LoginRequiredMixin, APIView):
 			if pk:
 				create_admin_log_entry(request.user, 'Switch','2','UPDATED', request.POST["name"])
 			else:
-				create_admin_log_entry(request.user, 'Switch', '1','CREATED', request.POST["name"]) 
+				create_admin_log_entry(request.user, 'Switch', '1','CREATED', request.POST["name"])
 			return Response()
 		return JsonResponse(serializer.errors, status=500)
 
@@ -1113,7 +1113,7 @@ class SwitchListApiView(LoginRequiredMixin, APIView):
 @method_decorator(dispo_validation, name='post')
 class DisposListApiView(LoginRequiredMixin, APIView):
 	"""
-	this view class is for dispositions create and 
+	this view class is for dispositions create and
 	check the existing dispositions.
 	"""
 	login_url = '/'
@@ -1123,7 +1123,7 @@ class DisposListApiView(LoginRequiredMixin, APIView):
 
 	def get(self, request, **kwargs):
 		page_info = data_for_pagination(request)
-		
+
 		if page_info["search_by"] and page_info["column_name"]:
 			queryset = Disposition.objects.exclude(status="Delete").filter(**{page_info["column_name"]+"__istartswith": page_info["search_by"]})
 		else:
@@ -1164,7 +1164,7 @@ class DisposListApiView(LoginRequiredMixin, APIView):
 @method_decorator(check_create_permission, name='get')
 class DispositionsCreateApiView(LoginRequiredMixin, generics.CreateAPIView):
 	"""
-	This view is used to create N number of Dispotions. 
+	This view is used to create N number of Dispotions.
 	"""
 	login_url = '/'
 	renderer_classes = [TemplateHTMLRenderer]
@@ -1192,7 +1192,7 @@ class DispositionsCreateApiView(LoginRequiredMixin, generics.CreateAPIView):
 @method_decorator(check_update_permission, name='get')
 class DispositionsEditApiView(LoginRequiredMixin, generics.CreateAPIView):
 	"""
-	This view is used to create N number of Dispotions. 
+	This view is used to create N number of Dispotions.
 	"""
 	login_url = '/'
 	renderer_classes = [TemplateHTMLRenderer]
@@ -1224,7 +1224,7 @@ class DispositionsEditApiView(LoginRequiredMixin, generics.CreateAPIView):
 
 class GetExistingDisposition(LoginRequiredMixin, APIView):
 	"""
-	This views is to get the exisitng dispostions based on  id 
+	This views is to get the exisitng dispostions based on  id
 	"""
 	def post(self, request, pk):
 		disposition = get_object(pk, "callcenter", "Disposition")
@@ -1258,7 +1258,7 @@ class RelationTagListApiView(LoginRequiredMixin,APIView):
 		'id_list': relationtag_list,
 		"paginate_by_columns":paginate_by_columns, 'noti_count':noti_count}
 		context = {**context, **kwargs['permissions'], **page_info}
-		
+
 		if request.is_ajax():
 			result = list(RelationTagPaginationSerializer(queryset, many=True).data)
 			pagination_dict["table_data"] = result
@@ -1298,7 +1298,7 @@ class RelationTagCreateApiView(LoginRequiredMixin, generics.CreateAPIView):
 @method_decorator(check_update_permission, name='get')
 class RelationTagEditApiView(LoginRequiredMixin, generics.CreateAPIView):
 	"""
-	This view is used to create N number of Dispotions. 
+	This view is used to create N number of Dispotions.
 	"""
 	login_url = '/'
 	renderer_classes = [TemplateHTMLRenderer]
@@ -1345,7 +1345,7 @@ class PausebreaksListApiView(LoginRequiredMixin, APIView):
 			)
 		default_ex_lists = ['Breakfast Break', 'Tea Break','Lunch Break', 'Meeting', 'Dinner Break']
 		camp_name, active_camp, noti_count = get_active_campaign(request)
-		context = { 
+		context = {
 		'id_list':pause_break_list,
 		'default_list':default_ex_lists,
 		"paginate_by_columns":paginate_by_columns, "noti_count":noti_count,'break_status': Status,}
@@ -1405,7 +1405,7 @@ class DialTrunkListApiView(LoginRequiredMixin, APIView):
 
 	def get(self, request, **kwargs):
 		page_info = data_for_pagination(request)
-		
+
 		if page_info["search_by"] and page_info["column_name"]:
 			if page_info["column_name"] == "switch":
 				queryset = DialTrunk.objects.filter(switch__name__istartswith=page_info["search_by"])
@@ -1450,7 +1450,7 @@ class DialTrunkListApiView(LoginRequiredMixin, APIView):
 
 @method_decorator(user_role_validation, name='put')
 class DialTrunkModifyApiView(APIView):
-	""" 
+	"""
 	This view s used to save the modified dialtrunk
 	"""
 	serializer_class = DialTrunkSerializer
@@ -1496,7 +1496,7 @@ class DialTrunkGroupListApiView(LoginRequiredMixin, APIView):
 
 	def get(self, request, **kwargs):
 		page_info = data_for_pagination(request)
-		
+
 		if page_info["search_by"] and page_info["column_name"]:
 			dial_trunk_group = DiaTrunkGroup.objects.filter(**{page_info["column_name"]+"__istartswith": page_info["search_by"]})
 		else:
@@ -1522,7 +1522,7 @@ class DialTrunkGroupListApiView(LoginRequiredMixin, APIView):
 			return Response(context)
 
 class TrunkGroupCreateEditApiView(LoginRequiredMixin,APIView):
-	""" 
+	"""
 	This views is for creating and edit the trunkgroup
 	"""
 	login_url = '/'
@@ -1573,7 +1573,7 @@ class TrunkGroupCreateEditApiView(LoginRequiredMixin,APIView):
 						did["start"] = trunk['did_start']
 						did["end"] = trunk['did_end']
 					trunk_priority = DialTrunkPriority.objects.create(priority=trunk["trunk_priority"], trunk_id=trunk["trunk_id"],
-						did=did) 
+						did=did)
 					trunk_group.trunks.add(trunk_priority)
 					trunk_group.save()
 			campaigns = Campaign.objects.filter(trunk_group=trunk_group)
@@ -1751,7 +1751,7 @@ class CampaignCreateApiView(LoginRequiredMixin, generics.CreateAPIView):
 				campaign.trunk_did = {"did":trunk_did_data["did"],"type_of_did":trunk_did_data["did_type"],
 				"did_start":trunk_did_data["did_start"],"did_end":trunk_did_data["did_end"]}
 				campaign.is_trunk_group = False
-			campaign.save() 
+			campaign.save()
 			if lead_data :
 				for lead in lead_data:
 					lead_serializer = LeadRecycleSerializer(data=lead)
@@ -1874,7 +1874,7 @@ class CampaignEditApiView(LoginRequiredMixin, APIView):
 						created = True
 					if lead_serializer.is_valid():
 						temp_lead = lead_serializer.save(campaign=campaign)
-					
+
 					if temp_lead.status == 'Active':
 						leadrecycle_add(instance=temp_lead)
 					else:
@@ -2068,7 +2068,7 @@ class ScriptListApiView(LoginRequiredMixin, generics.ListAPIView):
 	login_url = '/'
 	renderer_classes = [TemplateHTMLRenderer]
 	template_name = "admin/script_list.html"
-	
+
 	def get(self, request, **kwargs):
 		page_info = data_for_pagination(request)
 		script = Script.objects.all()
@@ -2169,7 +2169,7 @@ class ScriptGetCrmFieldsApiView(APIView):
 		contact_fields = ['numeric', 'alt_numeric', 'first_name', 'last_name', 'email']
 		contact_fields = contact_fields + crm_fields
 		context = {'contact_fields':contact_fields}
-		return JsonResponse(context)    
+		return JsonResponse(context)
 
 @method_decorator(check_read_permission, name='get')
 class AudioListApiView(LoginRequiredMixin, generics.ListAPIView):
@@ -2182,7 +2182,7 @@ class AudioListApiView(LoginRequiredMixin, generics.ListAPIView):
 
 	def get(self, request, **kwargs):
 		page_info = data_for_pagination(request)
-		
+
 		if page_info["search_by"] and page_info["column_name"]:
 			queryset = AudioFile.objects.filter(**{page_info["column_name"]+"__iexact": page_info["search_by"]})
 		else:
@@ -2220,7 +2220,7 @@ class UserRoleView(LoginRequiredMixin, generics.ListAPIView):
 	renderer_classes = [TemplateHTMLRenderer]
 	template_name = "users/user_role.html"
 	permissions = {"Dashboard": ["all"]}
-	
+
 	def get(self, request, *args, **kwargs):
 		page = int(request.GET.get('page' ,1))
 		paginate_by = int(request.GET.get('paginate_by', 10))
@@ -2239,8 +2239,8 @@ class UserRoleView(LoginRequiredMixin, generics.ListAPIView):
 		camp_name, active_camp, noti_count = get_active_campaign(request)
 		context = {
 		'paginate_by':paginate_by,
-		'id_list': role_list, 'paginate_by_list':PAGINATE_BY_LIST, 
-		'search_by':search_by, 'column_name':column_name, 
+		'id_list': role_list, 'paginate_by_list':PAGINATE_BY_LIST,
+		'search_by':search_by, 'column_name':column_name,
 		'paginate_by_columns':paginate_by_columns,
 		'noti_count':noti_count}
 		context = {**context, **kwargs['permissions']}
@@ -2462,7 +2462,7 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 			uniquefields = []
 		crmfield_context = get_transform_key(uniquefields)
 		start_date = datetime.strptime(start_date,"%Y-%m-%d %H:%M").isoformat()
-		end_date = datetime.strptime(end_date,"%Y-%m-%d %H:%M").isoformat()         
+		end_date = datetime.strptime(end_date,"%Y-%m-%d %H:%M").isoformat()
 		start_end_date_filter = Q(created__gte=start_date)&Q(created__lte=end_date)
 		if selected_user:
 			all_users = selected_user
@@ -2483,7 +2483,7 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 		elif selected_campaign:
 			query_string = Q(campaign_name__in=selected_campaign)
 			if not (request.user.is_superuser or admin):
-				get_camp_users = list(get_campaign_users(selected_campaign, 
+				get_camp_users = list(get_campaign_users(selected_campaign,
 				request.user).values_list("id",flat=True))
 				query_string=Q(campaign_name__in = selected_campaign,user__in=get_camp_users)|Q(campaign_name__in = selected_campaign,user=None)
 		queryset = CallDetail.objects.filter(start_end_date_filter).filter(query_string).filter(**query).select_related("campaign", "user")
@@ -2491,7 +2491,7 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 			paginator.is_datatable_request = True
 		else:
 			paginator.is_datatable_request = False
-			
+
 		page = paginate_queryset(request, queryset, paginator)
 		if page is not None:
 			serializer = self.serializer_class(page, many=True)
@@ -2568,10 +2568,10 @@ class CallRecordingView(LoginRequiredMixin, generics.ListAPIView):
 			admin = True
 		all_campaigns = request.POST.getlist("all_campaigns[]", []) if 'all_campaigns[]' in request.POST else request.POST.get("all_campaigns", "").split(',')
 		all_users = request.POST.getlist("all_users[]", []) if 'all_users[]' in request.POST else request.POST.get("all_users", "").split(',')
-		customer_cid = request.POST.get("customer_cid","") 
+		customer_cid = request.POST.get("customer_cid","")
 		selected_campaign = request.POST.getlist("selected_campaign[]", []) if 'selected_campaign[]' in request.POST else request.POST.getlist("selected_campaign", [])
 		selected_user = request.POST.getlist("selected_user[]", []) if 'selected_user[]' in request.POST else request.POST.getlist("selected_user",[])
-		unique_id = request.POST.get("unique_id","") 
+		unique_id = request.POST.get("unique_id","")
 		filters = {}
 		download_report = request.POST.get("agent_reports_download", "")
 		if download_report:
@@ -2586,7 +2586,7 @@ class CallRecordingView(LoginRequiredMixin, generics.ListAPIView):
 			filters['selected_records'] = request.POST.get("selected_records",'').split(',')
 			DownloadReports.objects.create(report='Call Recordings',filters=filters, user=request.user.id, serializers=self.serializer_class, col_list=col_list, status=True)
 			return JsonResponse({"message":"Your Download request is created, will notify in download notification once completed."})
-		
+
 		if selected_user:
 			if selected_user[0]=='':
 				selected_user = []
@@ -2611,9 +2611,9 @@ class CallRecordingView(LoginRequiredMixin, generics.ListAPIView):
 			queryset = queryset.filter(call_duration__gte=start_duration)
 		elif end_duration:
 			queryset = queryset.filter(call_duration__lte=end_duration)
-		# queryset = 
+		# queryset =
 		queryset =  queryset.filter(Q(campaign_name__in=list(all_campaigns),
-				user__id__in=list(all_users))|Q(user__id__in=list(all_users))| 
+				user__id__in=list(all_users))|Q(user__id__in=list(all_users))|
 				Q(campaign_name__in=list(all_campaigns) ,user=None)|Q(campaign=None)|Q(user=None))
 		page = int(request.POST.get('page' ,1))
 		paginate_by = int(request.POST.get('paginate_by', 10))
@@ -2624,9 +2624,9 @@ class CallRecordingView(LoginRequiredMixin, generics.ListAPIView):
 				queryset = queryset.filter(customer_cid=customer_cid)
 			if selected_campaign:
 				if not (request.user.is_superuser or admin):
-					get_camp_users = list(get_campaign_users(selected_campaign, 
+					get_camp_users = list(get_campaign_users(selected_campaign,
 					request.user).values_list("id",flat=True))
-					queryset = queryset.filter(Q(campaign_name__in = selected_campaign), 
+					queryset = queryset.filter(Q(campaign_name__in = selected_campaign),
 						Q(user__in=get_camp_users)|Q(user=None))
 				else:
 					queryset = queryset.filter(campaign_name__in = selected_campaign)
@@ -2641,7 +2641,7 @@ class CallRecordingView(LoginRequiredMixin, generics.ListAPIView):
 				queryset = queryset.order_by('-'+order_col)
 		queryset = get_paginated_object(queryset, page, paginate_by)
 		result = DiallerEventLogSerializer(queryset, many=True).data
-		return JsonResponse({'total_records': queryset.paginator.count, 'total_pages': queryset.paginator.num_pages, 
+		return JsonResponse({'total_records': queryset.paginator.count, 'total_pages': queryset.paginator.num_pages,
 			'page': queryset.number, 'has_next': queryset.has_next(), 'has_prev': queryset.has_previous(),
 			'start_index':queryset.start_index(), 'end_index':queryset.end_index(),
 			'table_data':result})
@@ -2764,7 +2764,7 @@ class PendingCallbackCallView(LoginRequiredMixin, generics.ListAPIView):
 		paginate_by = int(request.POST.get('paginate_by', 10))
 		queryset = get_paginated_object(queryset, page, paginate_by)
 		result = CurrentCallBackSerializer(queryset,many=True).data
-		return JsonResponse({'total_records': queryset.paginator.count, 'total_pages': queryset.paginator.num_pages, 
+		return JsonResponse({'total_records': queryset.paginator.count, 'total_pages': queryset.paginator.num_pages,
 			'page': queryset.number, 'has_next': queryset.has_next(), 'has_prev': queryset.has_previous(),
 			'start_index':queryset.start_index(), 'end_index':queryset.end_index(),
 			'table_data':result})
@@ -2956,11 +2956,11 @@ class CallRecordingFeedbackView(LoginRequiredMixin, generics.ListAPIView):
 		queryset = get_paginated_object(queryset, page, paginate_by)
 
 		result = CallRecordingFeedbackSerializer(queryset,many=True).data
-		
+
 		return JsonResponse({'total_records': queryset.paginator.count, 'total_pages': queryset.paginator.num_pages,
 			'page': queryset.number, 'has_next': queryset.has_next(), 'has_prev': queryset.has_previous(),
 			'start_index':queryset.start_index(), 'end_index':queryset.end_index(), 'table_data':result})
-	
+
 def get_current_balance(contact_id):
 	""" Thsi method to get the crm field current balance in customer info section """
 	contact_info = ContactInfo.objects.filter(contact__id__in=list(contact_id))
@@ -3170,7 +3170,7 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		end_date = request.POST.get("end_date", "")
 		page = int(request.POST.get('page' ,1))
 		paginate_by = int(request.POST.get('paginate_by', 10))
-		
+
 		users = get_paginated_object(queryset, page, paginate_by)
 		start_date = datetime.strptime(start_date,"%Y-%m-%d %H:%M").isoformat()
 		end_date = datetime.strptime(end_date,"%Y-%m-%d %H:%M").isoformat()
@@ -3462,7 +3462,7 @@ class CampainwisePerformanceReportView(LoginRequiredMixin,APIView):
 		selected_user = request.POST.get("selected_user", "")
 		all_users = request.POST.get("all_users","")
 		all_users = all_users.split(',')
-	
+
 		if selected_campaign:
 			campaign_list = selected_campaign
 
@@ -3536,7 +3536,7 @@ class CampainwisePerformanceReportView(LoginRequiredMixin,APIView):
 @method_decorator(check_read_permission, name='get')
 class AgentMISReportView(LoginRequiredMixin, generics.ListAPIView, pagination.PageNumberPagination):
 	"""
-	This View is used to show agent mis report 
+	This View is used to show agent mis report
 	"""
 	login_url = '/'
 	renderer_classes = [TemplateHTMLRenderer]
@@ -3613,7 +3613,7 @@ class AgentMISReportView(LoginRequiredMixin, generics.ListAPIView, pagination.Pa
 @method_decorator(check_read_permission, name='get')
 class CampaignMISReportView(LoginRequiredMixin, generics.ListAPIView, pagination.PageNumberPagination):
 	"""
-	This View is used to show campaignwise mis report 
+	This View is used to show campaignwise mis report
 	"""
 	login_url = '/'
 	renderer_classes = [TemplateHTMLRenderer]
@@ -3657,7 +3657,7 @@ class CampaignMISReportView(LoginRequiredMixin, generics.ListAPIView, pagination
 		context["campaign_list"] =campaign_list
 		all_fields =  list(set(Campaign.objects.all().exclude(disposition=None).values_list("disposition__name", flat=True)))
 		tmp_list = ["Campaign", "Total Dispo Count", "AutoFeedback", "AbandonedCall", "NC", "Invalid Number", "RedialCount", "AlternateDial", "PrimaryDial", "NF(No Feedback)"]
-		all_fields = tmp_list + list(set(all_fields)) 
+		all_fields = tmp_list + list(set(all_fields))
 		context["all_fields"] = all_fields
 		context["user_list"] = user_list
 		context['report_visible_cols'] = report_visible_cols
@@ -3679,7 +3679,7 @@ class CampaignMISReportView(LoginRequiredMixin, generics.ListAPIView, pagination
 		context = get_campaign_mis(request.POST, request)
 		camp_name, active_camp, noti_count = get_active_campaign(request)
 		return JsonResponse(context)
-		
+
 class GetCampaignUserAPIView(APIView):
 	"""
 	This view is used to return users of selected campaign
@@ -3695,7 +3695,7 @@ class GetCampaignUserAPIView(APIView):
 			users = []
 		dispo = camp.values_list("disposition__id", flat=True)
 		disposition = list(Disposition.objects.filter(id__in=dispo).values("id", "name"))
-		return JsonResponse({"users":users, "disposition": disposition})    
+		return JsonResponse({"users":users, "disposition": disposition})
 
 # @method_decorator(check_read_permission, name='get')
 class AgentHomeApiView(LoginRequiredMixin, APIView):
@@ -3722,7 +3722,7 @@ class AgentHomeApiView(LoginRequiredMixin, APIView):
 		total_agentcalls = CallDetail.objects.filter(user=request.user).exclude(cdrfeedback=None).aggregate(total_agentcalls_today=Count('id', filter=Q(created__date=date.today())),total_agentcalls_month=Count('id', filter=Q(created__month=datetime.now().month)))
 		total_agent_assigned_calls = Contact.objects.filter(user=request.user, campaign__in=camp_name).count()
 		login_agent_data = LoginAgentDataSerializer(request.user).data
-		context = {'request':request, 'breaks':pause_breaks, "server_ip":settings.WEB_SOCKET_HOST, "can_switch":can_switch, "total_agent_assigned_calls":total_agent_assigned_calls, 
+		context = {'request':request, 'breaks':pause_breaks, "server_ip":settings.WEB_SOCKET_HOST, "can_switch":can_switch, "total_agent_assigned_calls":total_agent_assigned_calls,
 		'user':login_agent_data, 'non_agent_user':non_agent_user}
 		context = {**context, **total_agentcalls}
 		return Response(context)
@@ -3752,17 +3752,17 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 						"with your administrator or login to the another campaign."}, status=403)
 				else:
 					return Response({'error':"This campaign is not available in this time period,please coordinate "\
-						"with your administrator or login to the another campaign."}, status=403)   
+						"with your administrator or login to the another campaign."}, status=403)
 			else:
 				return Response({'error':"This campaign time period is None,please coordinate "\
-						"with your administrator or login to the another campaign."}, status=403)   
+						"with your administrator or login to the another campaign."}, status=403)
 		if request.user.call_type =='3':
 			status = {"error":"SIP-IP-PHONE enable for this user..., please coordinate your administrator."}
 			return Response(status, status=500)
 		app_time = request.POST.get("app_time", "")
 		idle_time = request.POST.get("idle_time", "")
 		if app_time:
-			app_time = datetime.strptime(app_time, '%H:%M:%S').time() 
+			app_time = datetime.strptime(app_time, '%H:%M:%S').time()
 			time = datetime.strptime("0:0:0", '%H:%M:%S').time()
 			idle_time = datetime.strptime(idle_time, '%H:%M:%S').time()
 			agent_data = {"user"}
@@ -3787,7 +3787,7 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 		caller_id = campaign.caller_id
 		sip_udp_port = campaign.switch.sip_udp_port
 		wss_port = campaign.switch.wss_port
-		rpc_port = campaign.switch.rpc_port 
+		rpc_port = campaign.switch.rpc_port
 		disposition = DispositionSerializer(campaign.disposition.filter(status='Active'), many=True).data
 		on_call_dispositions = []
 		not_on_call_dispostion = []
@@ -3900,7 +3900,7 @@ class MaunalDialListAPIView(LoginRequiredMixin, APIView):
 		campaign_object = Campaign.objects.get(name=campaign)
 		data=customer_detials(campaign,dial_number,campaign_object)
 		return JsonResponse(data)
-		
+
 
 class ManualDial(LoginRequiredMixin, APIView):
 	"""
@@ -3930,7 +3930,7 @@ class ManualDial(LoginRequiredMixin, APIView):
 		is_abandoned_call = request.POST.get("is_abandoned_call", 'false')
 		is_abandoned_callback = request.POST.get("is_abandoned_callback", 'false')
 		man_unique_id = request.POST.get("unique_id",None)
-		#Track agent activity 
+		#Track agent activity
 		activity_dict = get_formatted_agent_activities(request.POST)
 		activity_dict["user"] = request.user
 		activity_dict["campaign_name"] = campaign_name
@@ -3957,7 +3957,7 @@ class ManualDial(LoginRequiredMixin, APIView):
 					dial_number = dummy_contact.numeric
 					contact_id = dummy_contact.id
 				else:
-					return Response({"msg": "Numbers are not present in this campaign"})    
+					return Response({"msg": "Numbers are not present in this campaign"})
 			else:
 				return Response({"msg": "Numbers are not present in this campaign"})
 		if dial_number:
@@ -4016,7 +4016,7 @@ class ManualDial(LoginRequiredMixin, APIView):
 
 class HangupCall(LoginRequiredMixin, APIView):
 	"""
-	This class based view is defined for hangup the calls. 
+	This class based view is defined for hangup the calls.
 	"""
 	login_url = '/'
 	def post(self, request):
@@ -4048,11 +4048,11 @@ class HangupCall(LoginRequiredMixin, APIView):
 			temp_contact = TempContactInfo.objects.filter(id=contact_id, status='Locked')
 			if temp_contact.exists():
 				temp_contact.update(status='NotDialed')
-		
+
 		hangup_status=hangup(request.POST.get('switch'),uuid=request.POST.get('uuid'),
 				hangup_type=hangup_type,extension=extension, campaign = campaign, agent_uuid_id=agent_uuid_id)
 		if request.POST.get('page_reload','false') == 'true':
-			
+
 			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
 				pickle.dumps(AGENTS))
 			set_agentReddis(AGENTS,request.user)
@@ -4066,9 +4066,9 @@ class HangupCall(LoginRequiredMixin, APIView):
 		return Response(hangup_status)
 
 def GetContactToCheckcNdnc(user,campaign,campaign_id,temp_contact,portifolio=False):
-	#check for ndnc scrub contact information 
+	#check for ndnc scrub contact information
 	if CampaignVariable.objects.get(campaign=campaign_id).ndnc_scrub:
-		response = scrub(temp_contact.numeric) 
+		response = scrub(temp_contact.numeric)
 		if response:
 			#ndnc_number =True
 			Contact.objects.filter(id=temp_contact.id).update(status='NDNC')
@@ -4124,7 +4124,7 @@ class PreviewUpdateContactStatus(APIView):
 				update_status = False
 				if not contact_id:
 					AGENTS[request.user.extension]['state'] = "Idle"
-					AGENTS[request.user.extension]['event_time'] = datetime.now().strftime('%H:%M:%S')  
+					AGENTS[request.user.extension]['event_time'] = datetime.now().strftime('%H:%M:%S')
 		else:
 			update_status = False
 			if not contact_id:
@@ -4172,15 +4172,15 @@ class SkipCallContactStatus(APIView):
 
 class PauseprogressiveContactStatus(APIView):
 	"""
-	Pausing the progressive contact and storing the 
-	agent activity 
+	Pausing the progressive contact and storing the
+	agent activity
 	"""
 	def post(self, request):
 		campaign_name = request.POST.get("campaign_name", "")
 		user = request.POST.get("username", "")
 		dial_number = request.POST.get("dial_number", "")
 
-		#Track agent activity 
+		#Track agent activity
 		agent_activity_data = []
 		agent_activity_data = get_formatted_agent_activities(request.POST)
 		agent_activity_data['user'] = request.user
@@ -4193,15 +4193,15 @@ class PauseprogressiveContactStatus(APIView):
 
 class StopprogressiveContactStatus(APIView):
 	"""
-	Stopping the progressive calling and 
-	saving the agent activity 
+	Stopping the progressive calling and
+	saving the agent activity
 	"""
 	def post(self, request):
 		campaign_name = request.POST.get("campaign_name", "")
 		user = request.POST.get("username", "")
 		dial_number = request.POST.get("dial_number", "")
 
-		#Track agent activity 
+		#Track agent activity
 		agent_activity_data = []
 		agent_activity_data = get_formatted_agent_activities(request.POST)
 		agent_activity_data['user'] = request.user
@@ -4210,7 +4210,7 @@ class StopprogressiveContactStatus(APIView):
 		agent_activity_data["event"] = "Stopped progressive Pause"
 		agent_activity_data["event_time"] = datetime.now()
 		create_agentactivity(agent_activity_data)
-		return Response({"success:Successfull"})    
+		return Response({"success:Successfull"})
 
 class DispoSubmit(LoginRequiredMixin, APIView):
 	"""
@@ -4238,7 +4238,7 @@ class DispoSubmit(LoginRequiredMixin, APIView):
 		agent_data["predictive_wait_time"] = "0:0:0"
 		agent_data["inbound_wait_time"] = "0:0:0"
 		create_agentactivity(agent_data)
-		
+
 		status = submit_feedback(request.user,request.POST)
 		total_agentcalls_today = CallDetail.objects.filter(user=request.user, created__date=date.today()).exclude(cdrfeedback=None).count()
 		total_agentcalls_month = CallDetail.objects.filter(user=request.user, created__month=datetime.now().month).exclude(cdrfeedback=None).count()
@@ -4406,7 +4406,7 @@ class BlendedApiView(LoginRequiredMixin, APIView):
 				AGENTS[request.user.extension]['call_type'] = ''
 				AGENTS[request.user.extension]['state'] = 'Idle'
 				settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
-			return Response(status)         
+			return Response(status)
 
 class NdncListAPIView(LoginRequiredMixin, APIView):
 	"""
@@ -4483,7 +4483,7 @@ class DNCListAPIView(LoginRequiredMixin, APIView):
 					else:
 						data = pd.read_excel(dnc_file)
 						data = data.replace(np.NaN, "")
-					column_names = data.columns.tolist() 
+					column_names = data.columns.tolist()
 					valid = all(elem in column_names for elem in dnc_columns)
 					if valid:
 						response_data = validate_uploaded_dnc(data)
@@ -4494,10 +4494,10 @@ class DNCListAPIView(LoginRequiredMixin, APIView):
 			return JsonResponse(response_data)
 		except Exception as e:
 			print(e)
-			
+
 class DNCCreateModifyApiView(APIView):
 	"""
-	Dnc contact create and edit 
+	Dnc contact create and edit
 	"""
 	login_url = '/'
 
@@ -4636,7 +4636,7 @@ def delete_inbound_number(campaign=None, dial_number=None, user=None):
 
 class InboundCustomerDetail(APIView):
 	"""
-	Fetching the inbound customer details and 
+	Fetching the inbound customer details and
 	showing once the call patched/picked
 	"""
 	def post(self, request):
@@ -4667,11 +4667,11 @@ class InboundCustomerDetail(APIView):
 			return JsonResponse({})
 		except Exception as e:
 			print("error from InboundCustomerDetail.",e)
-			return JsonResponse({})     
+			return JsonResponse({})
 
 def get_ingroup_campaign(ingroup_campaign):
-	""" 
-	Get the ingroup campaign based on the 
+	"""
+	Get the ingroup campaign based on the
 	strategy and priority to patch the call
 	"""
 	strategy = ingroup_campaign.strategy
@@ -4699,7 +4699,7 @@ def get_ingroup_campaign(ingroup_campaign):
 
 @csrf_exempt
 def inbound_agents_availability(request):
-	""" 
+	"""
 	if the request method is a POST request
 	get the agent avaliable and to path the call
 
@@ -4778,7 +4778,7 @@ def inbound_agents_availability(request):
 						dial_method =campaign_obj.first().dial_method
 						campaign = campaign_obj.first().slug
 						r_campaigns = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps(CAMPAIGNS))
-						AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))                        
+						AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
 						if dial_method['inbound']:
 							queue_call=True
 							callback = campaign_obj[0].queued_busy_callback
@@ -4791,7 +4791,7 @@ def inbound_agents_availability(request):
 							if dial_method['ibc_popup']:
 								queue_call=False
 								if stk_obj and stk_obj.agent.extension in AGENTS:
-									extension = stk_obj.agent.extension 
+									extension = stk_obj.agent.extension
 									if AGENTS[extension]['status'] == 'Ready' and AGENTS[extension]['state'] not in ['InCall','Predictive Wait','Blended Wait']:
 										extensions.append(extension)
 								else:
@@ -4825,7 +4825,7 @@ def inbound_agents_availability(request):
 						else:
 							if stk_obj:
 								if campaign_obj[0].slug in r_campaigns:
-									unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))                                    
+									unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))
 									if stk_obj.agent.extension in unique_extensions:
 										user=stk_obj.agent.extension
 										if AGENTS[user]['status'] == 'Ready' and AGENTS[user]['state'] in ['Inbound Wait','Blended Wait']:
@@ -4858,7 +4858,7 @@ def inbound_agents_availability(request):
 			return JsonResponse({'extension':extensions,'dial_method':dial_method,'non_office_hrs':non_office_hrs,
 				'queue_call':queue_call,"campaign":campaign,'skill_routed_status':skill_routed_status,'skilled_obj':skill,
 				"StickyAgent":stickyagent,'skill_popup':skill_popup,'callback':callback,
-				'cust_status':cust_status,'no_agent_audio':no_agent_audio,'c_max_wait_time':c_max_wait_time,'audio_moh_sound':audio_moh_sound})                
+				'cust_status':cust_status,'no_agent_audio':no_agent_audio,'c_max_wait_time':c_max_wait_time,'audio_moh_sound':audio_moh_sound})
 
 class IncomingCallAPIView(APIView):
 	"""
@@ -4876,7 +4876,7 @@ class IncomingCallAPIView(APIView):
 				unique_uuid = session_details['Unique-ID'],inbound_number=destination_number)
 			delete_inbound_number(request.POST.get('campaign_name'), destination_number, request.user)
 			if 'success' in status:
-				#Track agent activity 
+				#Track agent activity
 				activity_dict = get_formatted_agent_activities(request.POST)
 				activity_dict["user"] = request.user
 				activity_dict["event"] = "INCOMING CALL"
@@ -4888,7 +4888,7 @@ class IncomingCallAPIView(APIView):
 
 class InboundStickyAgent(APIView):
 	"""
-	bridge the call to the inbound sticky agent 	
+	bridge the call to the inbound sticky agent
 	"""
 	def post(self, request):
 		switch_ip = request.POST.get('variable_sip_from_host','')
@@ -4896,7 +4896,7 @@ class InboundStickyAgent(APIView):
 		unique_uuid = request.POST.get('Unique-ID','')
 		status = inbound_stiky_agent_bridge(switch_ip,dialed_uuid=dialed_uuid,unique_uuid = unique_uuid,extension=request.user.extension)
 		return JsonResponse(status)
-	
+
 class SetIbcContactId(APIView):
 	""" This class is used to set_ibc_contact_id """
 	def post(self,request):
@@ -4913,12 +4913,12 @@ class SetIbcContactId(APIView):
 		prev_selected_contact_id=request.POST.get('prev_selected_contact_id','')
 		if prev_selected_contact_id:
 			TempContactInfo.objects.filter(id=prev_selected_contact_id).update(status='NotDialed')
-		return JsonResponse(status)     
+		return JsonResponse(status)
 
 @csrf_exempt
 def rec_check_agent_availabilty(request):
 	"""
-	recersive check the agent avaliable for calls 
+	recersive check the agent avaliable for calls
 	in the queue
 	"""
 	extensions = []
@@ -4955,7 +4955,7 @@ def rec_check_agent_availabilty(request):
 			dial_method =campaign_obj.first().dial_method
 			campaign = campaign_obj.first().slug
 			r_campaigns = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps(CAMPAIGNS))
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))                        
+			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
 			if dial_method['inbound']:
 				queue_call=True
 				callback = campaign_obj[0].queued_busy_callback
@@ -4968,7 +4968,7 @@ def rec_check_agent_availabilty(request):
 				if dial_method['ibc_popup']:
 					queue_call=False
 					if stk_obj and stk_obj.agent.extension in AGENTS:
-						extension = stk_obj.agent.extension 
+						extension = stk_obj.agent.extension
 						if AGENTS[extension]['status'] == 'Ready' and AGENTS[extension]['state'] not in ['InCall','Predictive Wait','Blended Wait']:
 							extensions.append(extension)
 					else:
@@ -5002,7 +5002,7 @@ def rec_check_agent_availabilty(request):
 			else:
 				if stk_obj:
 					if campaign_obj[0].slug in r_campaigns:
-						unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))                                    
+						unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))
 						if stk_obj.agent.extension in unique_extensions:
 							user=stk_obj.agent.extension
 							if AGENTS[user]['status'] == 'Ready' and AGENTS[user]['state'] in ['Inbound Wait','Blended Wait']:
@@ -5024,7 +5024,7 @@ def rec_check_agent_availabilty(request):
 				status['cust_status']='uuid_not_exist'
 		else:
 			status['cust_status']='timeout'
-			extensions=[]           
+			extensions=[]
 		return JsonResponse({'extension':extensions,'cust_status':status.get('cust_status',False),
 				'no_agent_audio':status.get('no_agent_audio',False),'c_max_wait_time':status.get('c_max_wait_time',25),
 				'audio_moh_sound':status.get('audio_moh_sound',None)})
@@ -5043,7 +5043,7 @@ class ParkCallAPIView(APIView):
 			,park_status=request.POST.get('park_status'))
 
 		if 'success' in status:
-			#Track agent activity 
+			#Track agent activity
 			activity_dict =dummy_agent_activity()
 			activity_dict["user"] = request.user
 			if request.POST.get('park_status') == 'true':
@@ -5104,7 +5104,7 @@ class TransferAgentCallAPIView(APIView):
 
 class TransferAgentCallHangupAPIView(APIView):
 	"""
-	Hangup the transfer agent calls 
+	Hangup the transfer agent calls
 	"""
 	def post(self, request):
 		event = request.POST.get('event')
@@ -5123,7 +5123,7 @@ class TransferAgentCallHangupAPIView(APIView):
 
 class TransferCallAPIView(APIView):
 	"""
-	Transfer the call to the agent 
+	Transfer the call to the agent
 	"""
 	def post(self, request):
 		transfer_uuid = request.POST.get("transfer_uuid", "")
@@ -5159,7 +5159,7 @@ class MergeCallAPIView(APIView):
 		activity_dict['event'] = request.POST.get('event')
 		create_agentactivity(activity_dict)
 		status = fs_transfer_call(request.POST.get("variable_sip_from_host"),conference_num_uuid=conference_num_uuid,dialed_uuid=dialed_uuid
-			,transfer_mode=transfer_mode,session_uuid =session_uuid,extension=extension,conf_uuids=conf_uuids)        
+			,transfer_mode=transfer_mode,session_uuid =session_uuid,extension=extension,conf_uuids=conf_uuids)
 		status={"success":"successfully"}
 		return JsonResponse(status)
 
@@ -5183,7 +5183,7 @@ class GetAvailableAgentsAPIView(APIView):
 
 		user_list = UserVariable.objects.filter(
 			extension__in=agent_extension).values("user__username", "extension")
-		
+
 		available_agents = []
 		campaign_obj = Campaign.objects.get(slug=campaign)
 		for user in user_list:
@@ -5209,7 +5209,7 @@ class WebrtcSessionSetVar(APIView):
 
 class InternalTransferCallHangup(APIView):
 	"""
-	Internal transfer call hangup 
+	Internal transfer call hangup
 	"""
 	def post(self, request):
 		uuid = request.POST.get("uuid", "")
@@ -5246,7 +5246,7 @@ class TransferCustomerDetail(APIView):
 			contact_info_obj = Contact.objects.filter(numeric=dial_number, id=contact_id)
 			if contact_info_obj:
 				contact_info = ContactSerializer(contact_info_obj[0]).data
-				  
+
 		return JsonResponse({"contact_info": contact_info})
 
 class EavesdropApiView(APIView):
@@ -5265,11 +5265,11 @@ class EavesdropApiView(APIView):
 
 class CustomerInfoAPIView(APIView):
 	"""
-		this function gets the third party api and status 
+		this function gets the third party api and status
 	"""
 	def get(self, request):
 		AGENTS = {}
-		sip_extension = request.GET.get('sip_extension', '') 
+		sip_extension = request.GET.get('sip_extension', '')
 		call_timestamp = request.GET.get('call_timestamp',None)[:13]
 		if sip_extension =='':
 			sip_extension = request.user.extension
@@ -5318,7 +5318,7 @@ class CssListApiView(LoginRequiredMixin,APIView):
 		queryset = get_paginated_object(queryset, page_info["page"], page_info["paginate_by"] )
 		pagination_dict = data_for_vue_pagination(queryset)
 		paginate_by_columns = (('name', 'name'),
-			('status', 'status'),('campaign','campaign')) 
+			('status', 'status'),('campaign','campaign'))
 		context = {'paginate_by_columns':paginate_by_columns, 'id_list':id_list}
 		context = {**context,**kwargs['permissions'], **page_info}
 
@@ -5335,8 +5335,8 @@ class CssListApiView(LoginRequiredMixin,APIView):
 @method_decorator(check_read_permission, name='get')
 class SkilledRoutingApiView(LoginRequiredMixin,APIView):
 	"""
-		This class contains the skilled routing list 
-	""" 
+		This class contains the skilled routing list
+	"""
 	login_url = '/'
 	renderer_classes = [TemplateHTMLRenderer]
 	template_name = 'campaign/skilled-routing.html'
@@ -5347,7 +5347,7 @@ class SkilledRoutingApiView(LoginRequiredMixin,APIView):
 			queryset = SkilledRouting.objects.filter(**{page_info["column_name"]+"__istartswith": page_info["search_by"]})
 		else:
 			queryset = SkilledRouting.objects.all()
-		id_list = list(queryset.values_list("id", flat=True))   
+		id_list = list(queryset.values_list("id", flat=True))
 		queryset = get_paginated_object(queryset, page_info["page"], page_info["paginate_by"])
 		pagination_dict = data_for_vue_pagination(queryset)
 		paginate_by_columns = (('name', 'name'),('status','status'),)
@@ -5368,8 +5368,8 @@ class SkilledRoutingApiView(LoginRequiredMixin,APIView):
 @method_decorator(skill_validation,name='post')
 class CreateSkilledRoutingApiView(LoginRequiredMixin,APIView):
 	"""
-		This class contains the skilled routing list 
-	""" 
+		This class contains the skilled routing list
+	"""
 	login_url = '/'
 	renderer_classes = [TemplateHTMLRenderer]
 	template_name = 'campaign/skilled-routing-create.html'
@@ -5409,7 +5409,7 @@ class CreateSkilledRoutingApiView(LoginRequiredMixin,APIView):
 @method_decorator(skill_edit_validation, name='put')
 class EditSkilledRoutingApiView(LoginRequiredMixin, APIView):
 	"""
-	Editing the skill routing view 
+	Editing the skill routing view
 	"""
 	login_url = '/'
 	renderer_classes = [TemplateHTMLRenderer]
@@ -5436,7 +5436,7 @@ class EditSkilledRoutingApiView(LoginRequiredMixin, APIView):
 		raw_data = []
 		raw_dict ={}
 		data['raw_data'] = skill.skills
-		data = {**data,**kwargs['permissions']}     
+		data = {**data,**kwargs['permissions']}
 		return Response(data)
 	def put(self,request, pk, *kwargs):
 		skill_data = get_object(pk, "callcenter", "SkilledRouting")
@@ -5472,14 +5472,14 @@ class CssCreateEditApiView(LoginRequiredMixin,APIView):
 		data["status"] =Status
 		data['operator'] = OPERATORS_CHOICES
 		data['logical_operator'] = LOGICAL_OPERATOR_CHOICES
-		data['all_fields'] = [f for f in Contact._meta.get_fields() if f.name not in ['site', 'campaign', 'contacts' ,'churncount','disposition', 
+		data['all_fields'] = [f for f in Contact._meta.get_fields() if f.name not in ['site', 'campaign', 'contacts' ,'churncount','disposition',
 		'created_date', 'modified_date']]
-		data['order_by_col'] =[f for f in Contact._meta.get_fields() if f.name not in ['site', 'campaign','phonebook','contacts' ,'churncount','disposition', 
+		data['order_by_col'] =[f for f in Contact._meta.get_fields() if f.name not in ['site', 'campaign','phonebook','contacts' ,'churncount','disposition',
 		'created_date', 'modified_date']]
 		if pk:
 			css_data = get_object(pk, 'callcenter', 'CSS')
 			data['css'] = css_data
-			data['raw_query'] = css_data.raw_query 
+			data['raw_query'] = css_data.raw_query
 		data = {**data,**kwargs['permissions']}
 		return Response(data)
 
@@ -5494,7 +5494,7 @@ class CssCreateEditApiView(LoginRequiredMixin,APIView):
 			PhonebookBucketCampaign.objects.filter(id=campaign_id.id).update(is_contact=True)
 			return Response({'success':'CSS Created Successfully'})
 		return JsonResponse(serializer_css.errors, status=500)
-	
+
 	def put(self, request, pk, format=None):
 		css_data = get_object(pk, "callcenter", "CSS")
 		query_list = json.loads(request.data.get('querys',"[]"))
@@ -5552,7 +5552,7 @@ class WindowReloadApiView(APIView):
 
 def formatted_notification(all_notifications, notifications, noti_type):
 	"""
-	showing the notification data 
+	showing the notification data
 	to daplay on agent side
 	"""
 	notification_list = []
@@ -5754,7 +5754,7 @@ class GetTotalAbandonedcalls(LoginRequiredMixin, APIView):
 		total_abandonedcalls = AbandonedcallSerializer(paginate_obj, many=True).data
 		return Response({'total_records': paginate_obj.paginator.count,'total_pages': paginate_obj.paginator.num_pages,
 			'page': paginate_obj.number,'has_next': paginate_obj.has_next(),
-			'has_prev': paginate_obj.has_previous(),'start_index':paginate_obj.start_index(), 
+			'has_prev': paginate_obj.has_previous(),'start_index':paginate_obj.start_index(),
 			'end_index':paginate_obj.end_index(),
 			"total_abandonedcalls":total_abandonedcalls},status=200)
 
@@ -5776,14 +5776,14 @@ class GetCampaignAbandonedcalls(LoginRequiredMixin, APIView):
 		campaign_abandonedcalls=AbandonedcallSerializer(paginate_obj,many=True).data
 		return JsonResponse({'total_records': paginate_obj.paginator.count,'total_pages': paginate_obj.paginator.num_pages,
 			'page': paginate_obj.number,'has_next': paginate_obj.has_next(),
-			'has_prev': paginate_obj.has_previous(),'start_index':paginate_obj.start_index(), 
+			'has_prev': paginate_obj.has_previous(),'start_index':paginate_obj.start_index(),
 			'end_index':paginate_obj.end_index(),
 			"campaign_abandonedcalls":campaign_abandonedcalls},status=200)
 
 
 class AgentLiveDataAPIView(APIView):
 	"""
-	this class is defined for send notification to agent, current callbacks and abandoned data 
+	this class is defined for send notification to agent, current callbacks and abandoned data
 	"""
 
 	def get(self,request,**kwargs):
@@ -5844,7 +5844,7 @@ class GetTotalCallbacks(LoginRequiredMixin, APIView):
 			total_callback = CallBackContactSerializer(paginate_obj, many=True).data
 		return JsonResponse({'total_records': paginate_obj.paginator.count,'total_pages': paginate_obj.paginator.num_pages,
 			'page': paginate_obj.number,'has_next': paginate_obj.has_next(),
-			'has_prev': paginate_obj.has_previous(),'start_index':paginate_obj.start_index(), 
+			'has_prev': paginate_obj.has_previous(),'start_index':paginate_obj.start_index(),
 			'end_index':paginate_obj.end_index(),
 			"total_callback":total_callback},status=200)
 
@@ -5901,7 +5901,7 @@ class MakeAbandonedCall(LoginRequiredMixin, APIView):
 
 class GetTotalCallsPerDay(LoginRequiredMixin,APIView):
 	"""
-	this class will get totalcallsperday by the agent 
+	this class will get totalcallsperday by the agent
 	"""
 	login_url= '/'
 	def post(self,request):
@@ -5952,7 +5952,7 @@ class GetTotalCallsPerMonth(LoginRequiredMixin,APIView):
 		queryset = CallDetail.objects.filter(**filter_dict).exclude(cdrfeedback=None).order_by('-created')
 		paginate_obj = get_paginated_object(queryset, page, paginate_by)
 		agent_callpermonth = CallDetailReportFieldSerializer(paginate_obj,many=True).data
-		
+
 		return Response({'total_records': paginate_obj.paginator.count,'total_pages': paginate_obj.paginator.num_pages,
 			'page': paginate_obj.number,'has_next': paginate_obj.has_next(),'has_prev': paginate_obj.has_previous(),
 			'start_index':paginate_obj.start_index(), 'end_index':paginate_obj.end_index(),
@@ -6007,7 +6007,7 @@ class GetAgentAssignedCall(LoginRequiredMixin, APIView):
 			'total_data':agent_assigned_calls})
 
 class GetLeadBucket(LoginRequiredMixin, APIView):
-	""" 
+	"""
 		This view is to get Lead bucket data
 	"""
 	login_url = '/'
@@ -6037,8 +6037,8 @@ class GetLeadBucket(LoginRequiredMixin, APIView):
 
 class GetLatestNoificationView(APIView):
 	"""
-	Get the latest notification for all 
-	the application 
+	Get the latest notification for all
+	the application
 	"""
 	def get(self,request):
 		context = {}
@@ -6065,7 +6065,7 @@ class GetMultilineChartLiveData(LoginRequiredMixin, APIView):
 			live_dict['label'] = camp.name
 			contact = Contact.objects.filter(campaign=camp.name)
 			for time in range(9,22):
-				today_date_time = datetime(date.today().year,date.today().month,date.today().day,time) 
+				today_date_time = datetime(date.today().year,date.today().month,date.today().day,time)
 				time_diff = datetime(date.today().year,date.today().month,date.today().day,time+1)
 				if datetime.now() > today_date_time:
 					dialed_count = contact.filter(status="Dialed", modified_date__gte=today_date_time, modified_date__lte=time_diff).count()
@@ -6078,7 +6078,7 @@ class GetMultilineChartLiveData(LoginRequiredMixin, APIView):
 
 class GetAgentCallCountLiveData(LoginRequiredMixin,APIView):
 	"""
-	Get the agent call count 
+	Get the agent call count
 	"""
 	def get(self,request):
 		agent_data = []
@@ -6086,7 +6086,7 @@ class GetAgentCallCountLiveData(LoginRequiredMixin,APIView):
 			usr_agent = list(User.objects.filter(is_active=True, user_role__access_level='Agent').order_by('username'))
 		else:
 			usr_agent = User.objects.filter(Q(reporting_to=request.user)).order_by('username')
-		for agent in usr_agent: 
+		for agent in usr_agent:
 			agent_dict= []
 			agent_dict.append(agent.username)
 			data_count = Contact.objects.filter(user=agent, modified_date__contains=date.today()).count() + TempContactInfo.objects.filter(
@@ -6107,7 +6107,7 @@ class ConferenceMute(APIView):
 
 class GetCrmFieldsByCampaign(APIView):
 	"""
-	Get the crmfields based on campaign 
+	Get the crmfields based on campaign
 	"""
 	def post(self,request):
 		campaign = request.POST.get('campaign','').strip()
@@ -6190,7 +6190,7 @@ class ConferenceHangup(APIView):
 
 class GetCallHistoryApiView(LoginRequiredMixin, APIView):
 	"""
-	This View is used to get call history for particular no on particular campaign 
+	This View is used to get call history for particular no on particular campaign
 	"""
 	login_url = '/'
 
@@ -6214,7 +6214,7 @@ class GetCallHistoryApiView(LoginRequiredMixin, APIView):
 
 class PendingCallbackUpdateUserView(LoginRequiredMixin, APIView):
 	"""
-	This View is used to get call history for particular no on particular campaign 
+	This View is used to get call history for particular no on particular campaign
 	"""
 	login_url = '/'
 
@@ -6233,7 +6233,7 @@ class PendingCallbackUpdateUserView(LoginRequiredMixin, APIView):
 
 class UpdateAbandonedCallUserView(LoginRequiredMixin, APIView):
 	"""
-	This View is used to get call history for particular no on particular campaign 
+	This View is used to get call history for particular no on particular campaign
 	"""
 	login_url = '/'
 
@@ -6247,12 +6247,12 @@ class UpdateAbandonedCallUserView(LoginRequiredMixin, APIView):
 				Notification.objects.filter(numeric=request.POST.get("numeric",""), title='Abandonedcall').delete()
 				message = "Dear Agent you have a abandoned call from this number {}".format(request.POST.get("numeric", ""))
 				notification_obj = Notification.objects.create(campaign=request.POST.get("campaign", ""),
-					user=request.POST.get("user", ""),title='Abandonedcall',                    
-					message=message,numeric = request.POST.get("numeric",""))   
-				if request.POST.get("user", ""):                    
-					notification_obj.notification_type = "user_abandonedcall"   
-				else:                   
-					notification_obj.notification_type = "campaign_abandonedcall"               
+					user=request.POST.get("user", ""),title='Abandonedcall',
+					message=message,numeric = request.POST.get("numeric",""))
+				if request.POST.get("user", ""):
+					notification_obj.notification_type = "user_abandonedcall"
+				else:
+					notification_obj.notification_type = "campaign_abandonedcall"
 				notification_obj.save()
 		return JsonResponse({"msg":"abandoned call updated successfully"})
 
@@ -6285,7 +6285,7 @@ def DownloadRelationJsonData(request):
 
 class ImportRelationData(APIView):
 	"""
-	Importing the relation json data if exists update the same data 
+	Importing the relation json data if exists update the same data
 	"""
 	serializer_class = RelationTagSerializer
 
@@ -6308,7 +6308,7 @@ class ImportRelationData(APIView):
 
 class ImportDispositionData(APIView):
 	"""
-	Importing the disposition json data if exists update the same data 
+	Importing the disposition json data if exists update the same data
 	"""
 	def post(self,request):
 		file = request.FILES.get('dispo-file','')
@@ -6332,7 +6332,7 @@ class ImportDispositionData(APIView):
 
 class CheckCampaignInSkilled(APIView):
 	"""
-	Checking the campaings assigned in the skilled routing and validating 
+	Checking the campaings assigned in the skilled routing and validating
 	in the campaign page when inbound is unchecked
 	"""
 	def post(self,request):
@@ -6350,10 +6350,10 @@ class CheckCampaignInSkilled(APIView):
 
 class GetAgentCampaign(APIView):
 	"""
-	Importing the disposition json data if exists update the same data 
+	Importing the disposition json data if exists update the same data
 	"""
 	def post(self,request):
-		return JsonResponse({"active_campaign":list(request.user.active_campaign)}) 
+		return JsonResponse({"active_campaign":list(request.user.active_campaign)})
 
 class ChangeAgentState(APIView):
 	"""
@@ -6447,14 +6447,14 @@ class BillingView(LoginRequiredMixin,APIView):
 					"days":count,
 					"days_band":'>=15' if count >=15 else '< 15'
 					})
-		return JsonResponse({'total_records': queryset.paginator.count, 'total_pages': queryset.paginator.num_pages, 
+		return JsonResponse({'total_records': queryset.paginator.count, 'total_pages': queryset.paginator.num_pages,
 			'page': queryset.number, 'has_next': queryset.has_next(), 'has_prev': queryset.has_previous(),
 			'start_index':queryset.start_index(), 'end_index':queryset.end_index(),
 			'table_data':result})
 
 class AdminLogAPIView(LoginRequiredMixin, APIView):
 	"""
-	This view is to change password 
+	This view is to change password
 	"""
 	login_url = '/'
 	renderer_classes = [TemplateHTMLRenderer]
@@ -6496,7 +6496,7 @@ class AdminLogAPIView(LoginRequiredMixin, APIView):
 
 @csrf_exempt
 def wfh_customer_details(request):
-	# if the request method is a POST request get the wfh customer details 
+	# if the request method is a POST request get the wfh customer details
 	if request.method == 'POST':
 		try:
 			wfh_agents = pickle.loads(settings.R_SERVER.get("wfh_agents") or pickle.dumps({}))
@@ -6522,7 +6522,7 @@ def wfh_customer_details(request):
 
 class CreateThirdPartyToken(APIView):
 	"""
-	Get the thirdparty token creation 
+	Get the thirdparty token creation
 	"""
 	permission_classes = [AllowAny]
 	model = ThirdPartyApiUserToken
@@ -6552,7 +6552,7 @@ class CreateThirdPartyToken(APIView):
 
 class ThirdPartyCall(APIView):
 	"""
-	Intiate the click to call  
+	Intiate the click to call
 	"""
 	permission_classes = [AllowAny]
 	model = ThirdPartyApiUserToken
@@ -6601,7 +6601,7 @@ class ThirdPartyUserCampaignListAPIView(LoginRequiredMixin, APIView):
 		pagination_dict = data_for_vue_pagination(queryset)
 		paginate_by_columns = (('',''),('user__username', 'UserName'),('mobile_no', 'Mobile No'),('campaign__name', 'Campaign'),)
 		data['campaign_list'] = list(Campaign.objects.values("id", "name"))
-		data["paginate_by_columns"] = paginate_by_columns       
+		data["paginate_by_columns"] = paginate_by_columns
 		context= {**data, **page_info}
 		if request.is_ajax():
 			result = ThirdPartyApiUserTokenSerialzer(queryset, many=True).data
@@ -6645,7 +6645,7 @@ class ThirdPartyUserCampaignListAPIView(LoginRequiredMixin, APIView):
 
 class HangUpThirdPartyCall(APIView):
 	"""
-	Hangup thr click to call api 
+	Hangup thr click to call api
 	"""
 	permission_classes = [AllowAny]
 	model = ThirdPartyApiUserToken
@@ -6709,7 +6709,7 @@ class ThirdPartyUserCampaignAPIView(APIView):
 			pagination_dict = data_for_vue_pagination(queryset)
 			paginate_by_columns = (('',''),('user__username', 'UserName'),('mobile_no', 'Mobile No'),('campaign__name', 'Campaign'),)
 			data['campaign_list'] = list(Campaign.objects.values("id", "name"))
-			data["paginate_by_columns"] = paginate_by_columns       
+			data["paginate_by_columns"] = paginate_by_columns
 			context= {**data, **page_info}
 			result = ThirdPartyApiUserTokenSerialzer(queryset, many=True).data
 			pagination_dict["table_data"] = result
@@ -6720,7 +6720,7 @@ class ThirdPartyUserCampaignAPIView(APIView):
 
 @method_decorator(edit_third_party_token, name='post')
 class ThirdPartyUserCampaignListEditAPIView(LoginRequiredMixin,APIView):
-	
+
 	login_url = '/'
 	renderer_classes = [TemplateHTMLRenderer]
 	template_name = "campaign/edit-third-party-api-user-campaign.html"
@@ -6731,10 +6731,10 @@ class ThirdPartyUserCampaignListEditAPIView(LoginRequiredMixin,APIView):
 		tp_obj = get_object(pk,'callcenter','ThirdPartyApiUserToken')
 		users = User.objects.filter().values('id','username')
 		campaign = Campaign.objects.filter().values('id','name')
-		context['queryset'] = tp_obj 
-		context['campaigns'] =campaign 
-		context['users'] =users 
-		context['can_create'] = True 
+		context['queryset'] = tp_obj
+		context['campaigns'] =campaign
+		context['users'] =users
+		context['can_create'] = True
 		context = {**context}
 		return Response(context)
 	def post(self,request,pk):
@@ -6743,12 +6743,12 @@ class ThirdPartyUserCampaignListEditAPIView(LoginRequiredMixin,APIView):
 		user_id = request.POST.get('user')
 		campaign_id = request.POST.get('campaign_id')
 		token = request.POST.get('token')
-		if str(tp_obj.domain) != domain or str(tp_obj.user.id) != user_id or str(tp_obj.campaign.id) != campaign_id:            
+		if str(tp_obj.domain) != domain or str(tp_obj.user.id) != user_id or str(tp_obj.campaign.id) != campaign_id:
 			   current_date = datetime.now().strftime("%Y-%m-%d")
 			   user = User.objects.get(id=request.POST.get('user'))
 			   campaign = Campaign.objects.get(id=request.POST.get('campaign'))
 			   token_str = domain+user.username+campaign.name+current_date
-			   token = uuid.uuid5(uuid.NAMESPACE_OID, token_str).hex           
+			   token = uuid.uuid5(uuid.NAMESPACE_OID, token_str).hex
 		tp_serializer = ThirdPartyApiUserTokenEditSerialzer(tp_obj,data=request.POST)
 		if tp_serializer.is_valid():
 			   tp_serializer.save(token=token)
@@ -6758,7 +6758,7 @@ class ThirdPartyUserCampaignListEditAPIView(LoginRequiredMixin,APIView):
 
 class UploadCsvThirdParty(APIView):
 	"""
-	Upload the thirdparty csv 
+	Upload the thirdparty csv
 	"""
 	permission_classes = [AllowAny]
 	model = ThirdPartyApiUserToken
@@ -6842,7 +6842,7 @@ class SMSTemplateView(LoginRequiredMixin, generics.ListAPIView):
 	login_url = '/'
 	renderer_classes = [TemplateHTMLRenderer]
 	template_name = "sms_management/sms_templates.html"
-	
+
 	def get(self, request, **kwargs):
 		page_info = data_for_pagination(request)
 		sms_template = SMSTemplate.objects.all()
@@ -6923,7 +6923,7 @@ class SmsTemplateCreateEditApiView(LoginRequiredMixin, APIView):
 
 class SmsTemplateGetCrmFieldsApiView(APIView):
 	"""
-	Get the sms template crm fields 
+	Get the sms template crm fields
 	"""
 	def post(self, request, **kwargs):
 		field_list = []
@@ -6937,7 +6937,7 @@ class SmsTemplateGetCrmFieldsApiView(APIView):
 
 class DownloadSampleSmsTemplate(APIView):
 	"""
-	Download the sample csv templates 
+	Download the sample csv templates
 	"""
 	def get(self, request, campaign, file_type, format=None):
 		column_list = []
@@ -6985,7 +6985,7 @@ class SMSGatewayView(LoginRequiredMixin, generics.ListAPIView):
 	login_url = '/'
 	renderer_classes = [TemplateHTMLRenderer]
 	template_name = "sms_management/sms_gateway.html"
-	
+
 	def get(self, request, **kwargs):
 		page_info = data_for_pagination(request)
 		sms_gateway = SMSGateway.objects.all()
@@ -7012,7 +7012,7 @@ class SMSGatewayView(LoginRequiredMixin, generics.ListAPIView):
 			context = {**context, **kwargs['permissions'], **pagination_dict}
 			context['request']: request
 			return Response(context)
-			
+
 @method_decorator(check_read_permission, name='get')
 class SmsGatewayCreateEditApiView(LoginRequiredMixin, APIView):
 	"""
@@ -7206,7 +7206,7 @@ class ThirdPartyEditAPIView(LoginRequiredMixin,APIView):
 
 class ApiCrmCampaings(LoginRequiredMixin ,APIView):
 	"""
-	get the crmfields based on campaign 
+	get the crmfields based on campaign
 	"""
 	login_url = '/'
 	def post(self,request):
@@ -7265,7 +7265,7 @@ class VoiceBlasterAPIView(LoginRequiredMixin, APIView):
 @method_decorator(check_read_permission, name='get')
 @method_decorator(voiceblaster_validation, name='post')
 class VoiceBlasterCreateAPIView(LoginRequiredMixin, APIView):
-	"""	
+	"""
 	Voice blaster create view
 	"""
 	login_url = '/'
@@ -7292,7 +7292,7 @@ class VoiceBlasterCreateAPIView(LoginRequiredMixin, APIView):
 		else:
 			print(serializer.errors)
 		return Response({'success':'successfully'})
-		
+
 @method_decorator(check_read_permission, name='get')
 @method_decorator(voiceblaster_edit_validation, name='post')
 class VoiceBlasterEditAPIView(LoginRequiredMixin, APIView):
@@ -7357,7 +7357,7 @@ class DownloadCertificateApiView(APIView):
 
 class GetCampaignSwitchTrunkView(APIView):
 	"""
-	Get the trunk details present in the campaign 
+	Get the trunk details present in the campaign
 	"""
 	def post(self,request,**kwargs):
 		trunk_list = DialTrunk.objects.filter(switch__id=request.POST.get("switch_id")).annotate(text=F('name')).values("text","id")
@@ -7389,8 +7389,8 @@ class GetPhonebookDetailsApi(LoginRequiredMixin, APIView):
 				ll_queuedabandonedcall_count=Count('status',filter=Q(status="Queued-Abandonedcall"))
 				)
 			campaign_dict['ll_dialed_count'] = campaign_dict['ll_dialed_count'] + campaign_dict['ll_nc_count'] +campaign_dict['ll_drop_count'] + campaign_dict['ll_invalidnumber_count'] + campaign_dict['ll_queuedcallback_count'] + campaign_dict['ll_queuedabandonedcall_count']
-			campaign_dict['status'] = phonebook.status 
-			campaign_dict['name'] = phonebook.name 
+			campaign_dict['status'] = phonebook.status
+			campaign_dict['name'] = phonebook.name
 			campaign_dict['totalcalls_today'] = Contact.objects.filter(phonebook_id=phonebook.id ,modified_date__date=datetime.now().date(),status='Dialed').count()
 			total_d = total_d+campaign_dict["ll_total_data"]
 			lc_data.append(campaign_dict)
@@ -7405,7 +7405,7 @@ class GetPhonebookDetailsApi(LoginRequiredMixin, APIView):
 					contacts_raw = Contact.objects.raw(c_query['query_string'])
 					contacts = list(contacts_raw)
 				contacts_count = contacts_count + len(contacts)
-			data["without_css"] = int(total_d) - contacts_count 
+			data["without_css"] = int(total_d) - contacts_count
 			data["with_css"] = contacts_count
 		return JsonResponse(data)
 
@@ -7445,7 +7445,7 @@ class CustomerInfoInMessage(APIView):
 				c_data += "\t Contact Number : %s, \n"%(cust_info[0]['contact__numeric'])
 				for i,k in cust_info[0]['customer_raw_data'].items():
 					c_data += "%s :: \n"%(i)
-					for l,j in k.items():   
+					for l,j in k.items():
 						c_data += "\t %s : %s, \n"%(l,j)
 			else:
 				c_data="no data found on this contact : %s"%(unique_id)
@@ -7511,7 +7511,7 @@ class ReportEmailSchedulerAPIView(LoginRequiredMixin,APIView):
 		email_scheduler = EmailScheduler.objects.filter(created_by=request.user)
 		if email_scheduler.exists():
 			context['selected_reports'] = True
-			context['sch_status'] = True 
+			context['sch_status'] = True
 			context['status'] = email_scheduler.first().status
 			context['reports'] = email_scheduler.first().reports
 			context['schedule_time'] = email_scheduler.first().schedule_time
@@ -7615,8 +7615,8 @@ class DownloadScheduledReportAPIView(APIView):
 				if user.is_superuser or (user.user_role and user.user_role.access_level in ['Admin','Manager','Supervisor']):
 					#decode token
 					if token:
-						base64_bytes = token.encode("ascii") 
-						sample_string_bytes = base64.b64decode(base64_bytes) 
+						base64_bytes = token.encode("ascii")
+						sample_string_bytes = base64.b64decode(base64_bytes)
 						sample_string = sample_string_bytes.decode("ascii")
 						file_path = os.path.join(settings.MEDIA_ROOT, sample_string)
 						if os.path.exists(file_path):
@@ -7631,10 +7631,10 @@ class DownloadScheduledReportAPIView(APIView):
 							error_dict = {"error": "File Not found!"}
 							return JsonResponse(error_dict, status=401)
 				else:
-					error_dict = {"error": "Only Admin or Manager or Supervisor can access this file"}      
+					error_dict = {"error": "Only Admin or Manager or Supervisor can access this file"}
 				return JsonResponse(error_dict, status=404)
 			else:
-				error_dict = {"error": "User is not active"}        
+				error_dict = {"error": "User is not active"}
 				return JsonResponse(error_dict, status=400)
 		error_dict = {"error": "Username or Password is incorrect"}
 		return JsonResponse(error_dict, status=500)
@@ -7669,7 +7669,7 @@ class AlternateNumberView(LoginRequiredMixin, generics.ListAPIView):
 			filters['download_type'] = request.POST.get("agent_reports_download_type",'csv')
 			DownloadReports.objects.create(report='Alternate Contact', filters=filters, user=request.user.id, serializers=None, col_list=col_list, status=True)
 			return JsonResponse({"message":"Your Download request is created, will notify in download notification once completed."})
-		
+
 		start_date = request.POST.get("start_date", "")
 		end_date = request.POST.get("end_date", "")
 		start_date = datetime.strptime(start_date,"%Y-%m-%d %H:%M").isoformat()
@@ -7678,12 +7678,12 @@ class AlternateNumberView(LoginRequiredMixin, generics.ListAPIView):
 		if request.POST.get("unique_id", ""):
 			query = Q(uniqueid= request.POST.get("unique_id", ""))
 		queryset = AlternateContact.objects.filter(Q(created_date__gte=start_date, created_date__lte=end_date),query)
-		
+
 		page = int(request.POST.get('page' ,1))
 		paginate_by = int(request.POST.get('paginate_by', 10))
 		queryset = get_paginated_object(queryset, page, paginate_by)
 		result = AlternateContactSerializer(queryset,many=True).data
-		return JsonResponse({'total_records': queryset.paginator.count, 'total_pages': queryset.paginator.num_pages, 
+		return JsonResponse({'total_records': queryset.paginator.count, 'total_pages': queryset.paginator.num_pages,
 			'page': queryset.number, 'has_next': queryset.has_next(), 'has_prev': queryset.has_previous(),
 			'start_index':queryset.start_index(), 'end_index':queryset.end_index(),
 			'table_data':result})
@@ -7720,7 +7720,7 @@ class EmailGatewayView(LoginRequiredMixin, generics.ListAPIView):
 	login_url = '/'
 	renderer_classes = [TemplateHTMLRenderer]
 	template_name = "email_management/email_gateway.html"
-	
+
 	def get(self, request, **kwargs):
 		page_info = data_for_pagination(request)
 		email_gateway = EmailGateway.objects.all()
@@ -7747,7 +7747,7 @@ class EmailGatewayView(LoginRequiredMixin, generics.ListAPIView):
 			context = {**context, **kwargs['permissions'], **pagination_dict}
 			context['request']: request
 			return Response(context)
-			
+
 @method_decorator(check_read_permission, name='get')
 class EmailGatewayCreateEditApiView(LoginRequiredMixin, APIView):
 	"""
@@ -7810,7 +7810,7 @@ class EmailGatewayCreateEditApiView(LoginRequiredMixin, APIView):
 
 class SendEmailApiView(APIView):
 	"""
-	Sending the emails based on the configuration 
+	Sending the emails based on the configuration
 	"""
 	def post(self,request):
 		try:
@@ -7854,7 +7854,7 @@ class EmailTemplateListApiView(LoginRequiredMixin, generics.ListAPIView):
 	login_url = '/'
 	renderer_classes = [TemplateHTMLRenderer]
 	template_name = "email_management/email_list.html"
-	
+
 	def get(self, request, **kwargs):
 		page_info = data_for_pagination(request)
 		email = EmailTemplate.objects.all()
@@ -8045,8 +8045,8 @@ class BroadCastUserMessageApi(LoginRequiredMixin,APIView):
 
 class GetBroadCastMessage(LoginRequiredMixin,APIView):
 	"""
-	Displaying the breoadcast message 
-	and after vewing updating the status 
+	Displaying the breoadcast message
+	and after vewing updating the status
 	"""
 	def get(self, request):
 		if request.user:
@@ -8068,7 +8068,7 @@ class GetBroadCastMessage(LoginRequiredMixin,APIView):
 				return Response({'error':"Oops we couldn't find your broadcast message"})
 		else:
 			return Response({'error':"Oops we missed your broadcast id "})
-		return Response({'b_messages':'updated the viewed'})	
+		return Response({'b_messages':'updated the viewed'})
 
 class GetAgentBreakwisetotal(LoginRequiredMixin,APIView):
 	"""
@@ -8087,7 +8087,7 @@ class GetAgentBreakwisetotal(LoginRequiredMixin,APIView):
 
 class ResetTrunkChannelCount(LoginRequiredMixin,APIView):
 	"""
-	resetting the trunk channel count 
+	resetting the trunk channel count
 	"""
 	def post(self, request):
 		trunk_id = request.data.get('trunk_id','')
@@ -8215,7 +8215,7 @@ class HolidaysApiView(LoginRequiredMixin,APIView):
 			context['request']: request
 			return Response(context)
 
-	
+
 @method_decorator(check_read_permission, name='get')
 @method_decorator(holiday_validation,name='post')
 class CreateEditHolidaysApiView(LoginRequiredMixin,APIView):
@@ -8231,7 +8231,7 @@ class CreateEditHolidaysApiView(LoginRequiredMixin,APIView):
 		is_edit = True
 		audio_files = AudioFile.objects.filter(status='Active').values('id','name')
 		if pk:
-			holidays = get_object(pk,"callcenter","Holidays") 
+			holidays = get_object(pk,"callcenter","Holidays")
 			if permission_dict['can_update']:
 				can_view = True
 		else:
@@ -8258,7 +8258,7 @@ class UploadHolidaysApiView(LoginRequiredMixin,APIView):
 
 	def post(self, request):
 		holiday_file = request.FILES.get("uploaded_file", "")
-		audio_file_id = request.POST.get('audio_file',None) 
+		audio_file_id = request.POST.get('audio_file',None)
 		data = {}
 		if holiday_file.size <= 1:
 			data["err_msg"] = 'File must not be empty'

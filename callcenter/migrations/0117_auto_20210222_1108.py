@@ -18,12 +18,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='switch',
             name='sip_udp_port',
-            field=models.IntegerField(default=40506, null=True),
+            field=models.IntegerField(default=45060, null=True),
         ),
         migrations.AddField(
             model_name='switch',
             name='wss_port',
-            field=models.IntegerField(default=7443, null=True),
+            field=models.IntegerField(default=7444, null=True),
         ),
         migrations.AlterField(
             model_name='reportcolumnvisibility',
