@@ -3,9 +3,10 @@ import louie
 import json
 import uuid
 import time
+from django.conf import settings
 def run_task():
 	""" esl connection for freeswitch"""
-	con = ESL.ESLconnection('127.0.0.1', '8021', 'ClueCon')
+	con = ESL.ESLconnection(settings.FREESWITCH_IP_ADDRESS, '8021', 'ClueCon')
 	while True:
 		if con.connected():
 			try:
@@ -28,7 +29,7 @@ def run_task():
 		else:
 			print("esl is not connected to freeswitch, Kindly check freeswitch status")
 			time.sleep(2)
-			con = ESL.ESLconnection('127.0.0.1', '8021', 'ClueCon')
+			con = ESL.ESLconnection(settings.FREESWITCH_IP_ADDRESS, '8021', 'ClueCon')
 
 from scripts import fsevents
 from scripts import fsagentlive

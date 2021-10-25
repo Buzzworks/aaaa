@@ -19,7 +19,7 @@ function agent_datatable(table){
                 } )
             }
         },
-        columnDefs: [ 
+        columnDefs: [
         {
             targets: [0, -2],
             orderable: false,
@@ -79,7 +79,7 @@ function initial_dialler_state(){
         $("#blndd_btnResumePause").attr({
             "class": "btn btn-success btn-lg d-none",
             "title": "Start Blended Mode"
-        })        
+        })
         $("#btnResumePause,#ibc_btnResumePause,#blndd_btnResumePause").find('i').attr("class", "fa fa-play")
         $("#agent-break-status").addClass("d-none")
         $('#iframe_tab_li').addClass('d-none')
@@ -223,7 +223,7 @@ function isNumber(evt) {
 }
 // check entered value is number only ends
 
-// time format 
+// time format
 function format_time(datetime) {
     if (datetime != '') {
         return moment(datetime).format("YYYY-MM-DD HH:mm:ss");
@@ -274,7 +274,7 @@ function create_agent_activity_data() {
     agent_activity['agent_mute_time'] = sessionStorage.getItem("mute_time")
     agent_activity['pause_progressive_time'] = sessionStorage.getItem("pause_progressive_time")
     if (sessionStorage.getItem("transfer_time") != "") {
-        agent_activity['agent_transfer_time'] = sessionStorage.getItem("transfer_time") 
+        agent_activity['agent_transfer_time'] = sessionStorage.getItem("transfer_time")
     }
     return agent_activity
 }
@@ -283,7 +283,7 @@ var socket = '';
 
 function node_connection(host) {
     var nodejs_port = '3232';
-    socket = io(host + ':' + nodejs_port, {
+    socket = io(host, {
         'reconnection': true,
         'reconnectionDelay': 2000,
         'reconnectionDelayMax': 5000,
@@ -327,7 +327,7 @@ function webrtcfunction() {
 new PerfectScrollbar('#setting-content');
 var csrf_token = $("input[name='csrfmiddlewaretoken']").val()
 
-// toggle sidebar 
+// toggle sidebar
 $('#right-sidebar-button').click(function() {
     $('#right-sidebar').toggleClass('open')
     if ($('#right-sidebar').hasClass('open')) {
@@ -391,7 +391,7 @@ $('#flexy_agent_profile li:nth-child(3),#flexy_agent_profile li:nth-child(4), .m
             getTotalCallback();
         } else if (tab_link == 'abandonedcalls') {
             getAbandonedCalls();
-        } 
+        }
         $("#contents-" + tab_link).removeClass('d-none');
         $('.page-title').text(tab_link)
         $('.breadcrumb').append('<li class="breadcrumb-item" aria-current="page"><a href="#" id="crm-home">'
@@ -449,10 +449,10 @@ var dialler_login_vue = new Vue({
                     dialler_login_vue.active_campaign = [... data["active_campaign"]]
                 },
                 error: function(data) {
-                    
+
                 },
                 complete: function (data) {
-                  
+
                 }
             })
         },
@@ -509,8 +509,8 @@ function session_campaign_detail(dial_method) {
             }
         }else{
             sessionStorage.setItem("outbound", "Predictive")
-            $("#btnResumePause").removeClass("d-none") 
-              list_of_modes.push('Predictive')         
+            $("#btnResumePause").removeClass("d-none")
+              list_of_modes.push('Predictive')
         }
     }
     if (dial_method["manual"] == true) {
@@ -524,15 +524,15 @@ function session_campaign_detail(dial_method) {
             sessionStorage.setItem("inbound", true)
             list_of_modes.push('Inbound')
             if (dial_method['ibc_popup'] != true){
-                $("#ibc_btnResumePause").removeClass("d-none")  
+                $("#ibc_btnResumePause").removeClass("d-none")
             }
         }else{
             sessionStorage.setItem("inbound", true)
             if(dial_method["inbound"] == false && dial_method["outbound"] != "Predictive"){
-                list_of_modes.push('Inbound')    
+                list_of_modes.push('Inbound')
             }
             if(dial_method['ibc_popup']==true){
-                list_of_modes.push('Inbound')    
+                list_of_modes.push('Inbound')
             }
         }
     }
@@ -659,7 +659,7 @@ $('#scSubmit').click(function() {
             session_campaign_detail(dial_method)
             callback_mode = data['campaign']['callback_mode']
             $('#select_camp option:selected').attr({"data-server":data["campaign"]["switch"]["ip_address"],
-            "data-feedback_time":data["campaign"]["auto_feedback_time"], 
+            "data-feedback_time":data["campaign"]["auto_feedback_time"],
             "data-progressive_time":data["campaign"]["auto_progressive_time"]})
             dnc=data['campaign']['dnc']
             $("#LeadPreview").prop("checked", true)
@@ -708,7 +708,7 @@ $('#scSubmit').click(function() {
             $('#scSubmit').prop('disabled', true);
         },
         complete: function (data) {
-            
+
         }
     });
 });
@@ -734,7 +734,7 @@ $('#btnLogMeOut').click(function() {
         }
         $('.preloader').fadeIn('fast');
         // var campaign = $("#select_camp :selected").text()
-        $('#break_timer').countimer('stop');    
+        $('#break_timer').countimer('stop');
         // $(".agent-break-status").addClass("d-none")
         if(agent_info_vue.isMobile()){
             $('#mb_landing_page').removeClass('d-none');
@@ -886,7 +886,7 @@ $('#AgentDialPad button').click(function() {
     if(agent_info_vue.state == 'InCall'){
         dtmf_value = $(this).text().trim()
         click_dtmf(dtmf_value)
-    }else{ 
+    }else{
         var mdinput = $('#MDPhonENumbeR');
         if ($(this).attr('id') == 'dialer-pad-undo') {
             $(mdinput).val(
@@ -954,7 +954,7 @@ $('#skip_btn').click(function(){
                 $(".progressive_pause_div").find("button").remove()
                 $("#dummy-fb-time").append('<span id="fb_timer" class="pl-1"></span>')
                 $("#fb_timer_div strong").text("WrapUp Time :")
-                
+
             }else if(sessionStorage.getItem("outbound") == "Preview"){
                 $("#MDPhonENumbeR, #manual-dial-now, #dialpad-toggle, #flexy-agent-dialpad").prop("disabled", false);
                 // agent_info_vue.state = 'Idle'
@@ -1002,11 +1002,11 @@ $("#LeadPreview").change(function(){
               $('#fb_timer').click()
               $("#fb_timer").remove()
               $("#dummy-fb-time").append('<span id="fb_timer" class="pl-1"></span>')
-        } 
+        }
         $('#btnDialHangup').trigger("click")
     }
  })
- //Pause progressive Timer 
+ //Pause progressive Timer
 $('#pause_pro_btn').click(function(){
     $('#timer_pause_progressive').click()
     $("#progressive_timer").countimer('stop')
@@ -1029,12 +1029,12 @@ $('#pause_pro_btn').click(function(){
         url: '/api/pause-progressive-call/',
         data: form_data,
         success:function(){
-           
+
             // $('#pause_pro_btn').html("<button type='button' class='btn btn-danger btn-rounded btn-icon' id='resume_pro_btn'><i class='far fa-resume'></i></button>")
         }
     })
 })
-//stop progressive Timer 
+//stop progressive Timer
 $('#stop_pro_btn').click(function(){
     $('#timer_pause_progressive').click()
     $("#progressive_timer").countimer('start')
@@ -1086,9 +1086,9 @@ $("#btnNextCall").click(function() {
         $("#call-loader").fadeIn("fast")
         if (lead_preview == true) {
             if (sessionStorage.getItem("outbound") == "Progressive") {
-                $("#progressive_timer").countimer('start'); 
-                $('#pause_pro_btn').removeClass('d-none')  
-            } 
+                $("#progressive_timer").countimer('start');
+                $('#pause_pro_btn').removeClass('d-none')
+            }
             if(sessionStorage.getItem("outbound") == "Preview"){
                 $("#preview_timer").countimer('start');
                 $('#pause_pro_btn').addClass('d-none')
@@ -1149,7 +1149,7 @@ $("#btnNextCall").click(function() {
                             $("#skip_btn").attr("title","Stop Preview Dialing")
                             $("#dummy-fb-time").html('<span id="fb_timer" class="pl-1"></span>')
                             preview_timer_display = sessionStorage.getItem("preview_time");
-                            preview_timer_display = sessionStorage.setItem("preview_time", "0:0:0"); 
+                            preview_timer_display = sessionStorage.setItem("preview_time", "0:0:0");
                             agent_timer_data = agent_time_format(preview_timer_display)
                             initiate_agent_timer("#fb_timer", agent_timer_data)
                             $("#fb_timer_div strong").text("Preview Time :")
@@ -1339,12 +1339,12 @@ function hangup_activity() {
                 $("#blndd_btnResumePause").removeClass("d-none")
             }
         }else{
-            $("#btnResumePause").removeClass("d-none")            
-        }        
+            $("#btnResumePause").removeClass("d-none")
+        }
     }
     if (sessionStorage.getItem("inbound") == "true" && sessionStorage.getItem("outbound") != "Predictive" && $.inArray(sessionStorage.getItem("ibc_popup"),["","false"]) != -1) {
         $("#ibc_btnResumePause").removeClass("d-none")
-    }    
+    }
     $("#btnDialHangup, #btnParkCall, #btnTransferCall").addClass("d-none")
     $("#livecall h3").removeClass().addClass("nolivecall").text("NO LIVE CALL").attr("title", "NO LIVE CALL");
     agent_info_vue.state = 'Feedback'
@@ -1407,7 +1407,7 @@ $('#btnDialHangup').click(function() {
             var dial_number = $("#phone_number").text().trim()
             sessionStorage.setItem('previous_number',dial_number)
         }
-        
+
         var details = JSON.stringify(session_details[extension])
         var caller_id = sessionStorage.getItem("caller_id")
         var call_data = {
@@ -1430,7 +1430,7 @@ $('#btnDialHangup').click(function() {
             $("#progressive_timer").countimer('stop');
             $("#progressive_timer").text("0:0:0")
             callmode = 'progressive'
-        } 
+        }
         if(sessionStorage.getItem("outbound") == "Preview"){
             $("#preview_timer").countimer('stop');
             $("#preview_timer").text("0:0:0")
@@ -1466,7 +1466,7 @@ $('#btnDialHangup').click(function() {
                     }
                     $("#agent-callbacks-div button").addClass("disabled")
                     $("#btnLogMeOut, #btnNextCall").prop("disabled", true)
-                } 
+                }
                 else if ("info" in data) {
                     showInfoToast(data["info"], 'top-center')
                     $("#skip_btn").trigger("click")
@@ -1520,7 +1520,7 @@ $('#btnDialHangup').click(function() {
                 call_data['agent_uuid_id'] =session_details[extension]['Unique-ID']
             }
         }
-        
+
         agent_hangup = true
         hangup_time = new Date($.now());
         sessionStorage.setItem("predictive_time_val", sessionStorage.getItem("predictive_time"))
@@ -1597,7 +1597,7 @@ $('#btnResumePause').click(function() {
             $("#predictive_timer").countimer('start');
             $('#idle_timer').countimer('stop');
             $("#agent-callbacks-div button, #profile-tab,#show-callbacks-active, #show-callbacks-campaign, #show-abandonedcalls-campaign, #show-campaign-lead-bucket, #show-campaign-assigned-calls, #show-camp-requeue-lead-bucket, #show-camp-assigned-dialed-calls, #show-camp-assigned-notdialed-calls").addClass("disabled")
-            predictive_time  = sessionStorage.getItem("predictive_time"); 
+            predictive_time  = sessionStorage.getItem("predictive_time");
             agent_timer_data = agent_time_format(predictive_time)
             initiate_agent_timer("#predictive_timer_display", agent_timer_data)
             $('#predictive_timer_div').removeClass('d-none')
@@ -1931,7 +1931,7 @@ function common_manual_call_function(dial_number, data) {
                     list_of_contacts_table.clear().draw()
                     list_of_contacts_table.rows.add(data['contact_info']);
                     list_of_contacts_table.draw();
-                   
+
                 }else if('error' in data){
                     showWarningToast('Contact Info is Not avaliabe', 'top-right')
                 }
@@ -1966,7 +1966,7 @@ $('#manual-dial-now').click(function() {
     if(dial_number){
         if (extension in session_details && Object.keys(session_details[extension]).length > 0){
             var data = {'dial_number':dial_number, 'campaign':campaign_name}
-            $('.breadcrumb li').find('#crm-home').trigger('click');     
+            $('.breadcrumb li').find('#crm-home').trigger('click');
             sessionStorage.setItem('previous_number', dial_number)
             var contact_id = ""
             callmode = 'manual'
@@ -2071,13 +2071,13 @@ function create_feedback_data(){
         }
     }
     if (redial_status == true) {
-        primary_dispo = 'Redialed'   
+        primary_dispo = 'Redialed'
         call_reset_agent_status = false
     }
     if (call_info_vue.alt_dial == true) {
-        primary_dispo = 'AlternateDial'   
+        primary_dispo = 'AlternateDial'
         if (call_info_vue.primary_dial){
-            primary_dispo = 'PrimaryDial'   
+            primary_dispo = 'PrimaryDial'
         }
         call_reset_agent_status = false
     }
@@ -2094,13 +2094,13 @@ function create_feedback_data(){
         if (dnc == 'local'){
             custinfo['global_dnc']=false
         }else{
-            custinfo['global_dnc']=true   
+            custinfo['global_dnc']=true
         }
     }
     var cb_schedule_counter = 0
     $.each($("#dispo-form").serializeArray(), function(_, kv) {
-        if (kv.name == 'primary_dispo') { 
-            feedback_dict[kv.name] = primary_dispo 
+        if (kv.name == 'primary_dispo') {
+            feedback_dict[kv.name] = primary_dispo
         }
         else if(kv.name == "default_schedule_time"){
             var cb_name = $(callback_field[cb_schedule_counter]).data('label')
@@ -2118,7 +2118,7 @@ function create_feedback_data(){
             if(kv.name in feedback_dict){
                 feedback_dict[kv.name] = feedback_dict[kv.name]+','+kv.value
             }else{
-                feedback_dict[kv.name] = kv.value 
+                feedback_dict[kv.name] = kv.value
             }
         }
     })
@@ -2137,7 +2137,7 @@ function create_feedback_data(){
         custinfo['feedback'] = JSON.stringify(feedback_dict);
     }
     else {
-        custinfo['feedback'] = JSON.stringify({});   
+        custinfo['feedback'] = JSON.stringify({});
     }
     custinfo['relation_tag'] = JSON.stringify(agent_relationtag_vue.taggingData_list)
     if (transferCall_picked == true){
@@ -2190,13 +2190,13 @@ function create_feedback_data(){
     custinfo['internal_tc_number'] = sessionStorage.getItem('internal_transfer_no')
     custinfo['external_tc_number'] = sessionStorage.getItem('external_transfer_no')
     //Track agent activities
-    custinfo['progressive_time_val'] = sessionStorage.getItem('progressive_time_val') 
+    custinfo['progressive_time_val'] = sessionStorage.getItem('progressive_time_val')
     custinfo['predictive_time_val']  = sessionStorage.getItem('predictive_time_val')
     custinfo['inbound_time_val']  = sessionStorage.getItem('inbound_time_val')
     custinfo['blended_time_val']  = sessionStorage.getItem('blended_time_val')
     custinfo['preview_time_val'] = sessionStorage.getItem('preview_time_val')
     if(sessionStorage.getItem('contact_id','') == undefined || sessionStorage.getItem('contact_id','') == "undefined") {
-        if(callmode == 'inbound' | callmode == 'inbound-blended' | callmode == 'manual'){    
+        if(callmode == 'inbound' | callmode == 'inbound-blended' | callmode == 'manual'){
              if(list_of_contacts_table.rows().any() == true){
                 list_cont_id = list_of_contacts_table.rows(0).data()
                 sessionStorage.setItem('contact_id',list_cont_id[0].id)
@@ -2312,7 +2312,7 @@ $("#submit_customer_info").click(function() {
                     sessionStorage.removeItem("internal_transfer_no")
                     sessionStorage.removeItem("external_transfer_no")
                     sessionStorage.removeItem("prev_selected_contact_id")
-                    // checking for dap button status 
+                    // checking for dap button status
                     if(!$('#dap_details').hasClass('d-none')){
                         dap_details_data = ""
                         $('#dap_details').addClass('d-none')
@@ -2553,7 +2553,7 @@ function getAgentLivedata() {
                 $('#heartbit').removeClass('d-none')
             }
             else {
-                $('#heartbit').addClass('d-none')   
+                $('#heartbit').addClass('d-none')
             }
             sessionStorage.setItem("dialled_assingned_calls", data['dialled_assingned_calls'])
             sessionStorage.setItem("notdialed_assigned_calls", data['notdialed_assigned_calls'])
@@ -2755,7 +2755,7 @@ callperday_vue = new Vue({
         has_prev:false,
         start_index:0,
         end_index:0,
-        
+
     },
     methods:{
         changePage(value){
@@ -2774,7 +2774,7 @@ callperday_vue = new Vue({
         }
     }
 })
-//this function is to get total calls made today by agent 
+//this function is to get total calls made today by agent
 function getTotalCallsPerDay(filter_dict={}){
     filter_dict['page'] = $('#nextPage_number').val()
     filter_dict['paginate_by'] = $('#page_length').val()
@@ -2795,7 +2795,7 @@ function getTotalCallsPerDay(filter_dict={}){
             callperday_vue.end_index = data['end_index']
         },
     })
-} 
+}
 
 // to show active callback table
 $('#show-callbacks-active, #mb-show-callbacks-active').click(function() {
@@ -2830,7 +2830,7 @@ $('#show-abandonedcalls-campaign').click(function() {
     $('#page_length').val('10')
     getCampaignAbandonedcalls(campaign_name)
 })
-// to show total contacts agent dialed today 
+// to show total contacts agent dialed today
 $('#show-agent-totalcall-today, #mb-show-agent-totalcall-today').click(function(){
     hideHomeDiv()
     $('#fetch_dispo_count_daily').find('.dispo_count_btn span').text('All Dispositions')
@@ -2945,9 +2945,9 @@ function CallPerMonth(filter_dict={}){
             callpermonth_vue.end_index = data['end_index']
             $('#processingIndicator').css( 'display', false ? 'block' : 'none' );
         }
-    })    
+    })
 }
-function callsmonthly_table(table){    
+function callsmonthly_table(table){
 callpermonth_table = $(table).DataTable({
         "destroy": true,
         "bPaginate": false,
@@ -3266,7 +3266,7 @@ function agent_activity_timer() {
     sessionStorage.setItem("progressive_time", $("#progressive_timer").text());
     sessionStorage.setItem("predictive_time", $("#predictive_timer").text());
     sessionStorage.setItem("inbound_time", $("#inbound_timer").text());
-    sessionStorage.setItem("blended_time", $("#blended_timer").text());    
+    sessionStorage.setItem("blended_time", $("#blended_timer").text());
     sessionStorage.setItem("break_time", $("#break_timer").text());
     sessionStorage.setItem("mute_time", $("#mute_timer").text());
     sessionStorage.setItem("hold_time", $("#hold_timer").text());
@@ -3466,7 +3466,7 @@ $('#btnTransferCall').click(function() {
                 $('#btnTransferCall').val('true')
                 var btn_transfer_call_status = true;
             }
-        } 
+        }
         var data = {
             'dialed_uuid': dialed_uuid,
             'transfer_call_status': btn_transfer_call_status,
@@ -3485,7 +3485,7 @@ $('#btnTransferCall').click(function() {
                     if (isTransferableCall = true) {
                         isTransferableCall=false
                     }
-                }, 
+                },
                 error: function(err) {
                     $('#btnParkCall').removeClass("active")
                     $('#btnTransferCall').val('false')
@@ -3553,13 +3553,13 @@ $("input[name=my-radio]:radio").click(function() {
                     $('#agents-type-select').find('option').not(":first").remove();
                     session_details[extension]['dialtimeout']=data['dialtimeout']
                     $.each(avail_agents, function(index, value) {
-                        $('#agents-type-select').append($("<option></option>").attr("value",value["agent_extension"]).text(value["username"]));                         
+                        $('#agents-type-select').append($("<option></option>").attr("value",value["agent_extension"]).text(value["username"]));
                        /* $("#agents-type-select").append(new Option(value["username"], value["extension"], false, false))*/
                     });
 
                 }
             }
-        });        
+        });
 
     }else if ($('input[name=my-radio]:checked').val() == "external"){
         $('#external-sec-div').removeClass('d-none');
@@ -3569,7 +3569,7 @@ $("input[name=my-radio]:radio").click(function() {
         $('#devp-alert').removeClass('d-none');
             setTimeout(function(){
             $('#devp-alert').addClass('d-none');
-        },3000)         
+        },3000)
         // $('#queue-sec-div').removeClass('d-none');
         $('#internal-sec-div,#external-sec-div').addClass('d-none');
     }
@@ -3597,14 +3597,14 @@ $('#external-dial-btn,#internal-dial-btn,#queue-dial-btn').click(function() {
                 data['transfer_from_agent_uuid']=session_details[extension]['Unique-ID']
                 data['transfer_number']=session_details[extension]['dial_number']
                 $('#queue-radio,#external-radio,#agents-type-select,#internal-dial-btn').prop("disabled", true);
-                $('#transfer-type-select').prop("disabled", true);                  
+                $('#transfer-type-select').prop("disabled", true);
                 $('#hang-merge-btn-div,#transfer-btn').addClass('d-none')
                 $('#hang-transfer-btn-div').removeClass('d-none')
                 socket.emit('transfer',data);
                 transfer_ringback_file= document.getElementById("Transfer-Ring-Back");
                 transfer_notanswer_file= document.getElementById("Transfer-NotAnswer");
                 transfer_notanswer_file.pause();
-                transfer_ringback_file.play(); 
+                transfer_ringback_file.play();
                 transfer_audio_func=setTimeout(function(){
                     transfer_ringback_file.pause();
                     transfer_notanswer_file.play();
@@ -3616,7 +3616,7 @@ $('#external-dial-btn,#internal-dial-btn,#queue-dial-btn').click(function() {
                 $('#transfer-error').removeClass('d-none').find('div').text("Please, select agent to make call")
                     setTimeout(function(){
                         $('#transfer-error').addClass('d-none').find('div').text("")
-                    }, 3000)              
+                    }, 3000)
             }
         }else if ($('input[name=my-radio]:checked').val() == "queue"){
             if($('#queue-type-select').val() != ""){
@@ -3626,17 +3626,17 @@ $('#external-dial-btn,#internal-dial-btn,#queue-dial-btn').click(function() {
                 $('#external-radio,#internal-radio,#queue-type-select,#queue-dial-btn').prop("disabled", true);
                 $('#hang-transfer-btn-div').removeClass('d-none')
                 $('#hang-merge-btn-div').addClass('d-none')
-                $('#transfer-type-select').prop("disabled", true);                
-            }                   
+                $('#transfer-type-select').prop("disabled", true);
+            }
         }else {
             if($('#dial-number-text').val().length >= 9 && $('#dial-number-text').val().length <= 10){
                 $('#close-popup').prop("disabled",true)
                 $('#queue-radio,#internal-radio,#dial-number-text,#external-dial-btn').prop("disabled", true);
                 $('#external-dial-btn').addClass('d-none')
                 $('.tc-loader-div').show()
-                $('#transfer-type-select').prop("disabled", true); 
+                $('#transfer-type-select').prop("disabled", true);
                 var transfer_agent_number = $('#dial-number-text').val()
-                var transfer_type = 'external'                
+                var transfer_type = 'external'
                 var ext_external = sessionStorage.getItem("external_transfer_no")
                 if (ext_external != null ) {
                     ext_external+=", "+transfer_agent_number
@@ -3649,7 +3649,7 @@ $('#external-dial-btn,#internal-dial-btn,#queue-dial-btn').click(function() {
                 data['transfer_type']=transfer_type
                 data['campaign_name'] = campaign_name
                 data['transfer_mode'] = $('#transfer-type-select').val()
-                $.extend(data,session_details[extension])            
+                $.extend(data,session_details[extension])
                 $.ajax({
                     type:'post',
                     headers: {"X-CSRFToken": csrf_token},
@@ -3660,7 +3660,7 @@ $('#external-dial-btn,#internal-dial-btn,#queue-dial-btn').click(function() {
                             $("#call-loader").fadeOut("fast")
                             $('#hang-transfer-btn-div').removeClass('d-none')
                             $('#hang-merge-btn-div').addClass('d-none')
-                            if ($('#transfer-type-select').val() == "attr-transfer") { 
+                            if ($('#transfer-type-select').val() == "attr-transfer") {
                                 session_details[extension]['transfer_uuid']=data['transfer_to_agent_uuid']
                             }else{
                                 var temp_dict = {}
@@ -3684,7 +3684,7 @@ $('#external-dial-btn,#internal-dial-btn,#queue-dial-btn').click(function() {
                                     session_details[extension]['conference_list_uuid'] = [temp_dict]
                                 }
                                 session_details[extension]['conference_num_uuid'] = data['transfer_to_agent_uuid']
-                            }           
+                            }
                         }else{
                             $('#transfer-error').removeClass('d-none').find('div').text(data['error'])
                             setTimeout(function(){
@@ -3694,9 +3694,9 @@ $('#external-dial-btn,#internal-dial-btn,#queue-dial-btn').click(function() {
                             $('#queue-radio,#internal-radio,#dial-number-text,#external-dial-btn').prop("disabled",false);
                             $('#transfer-type-select').prop("disabled", false);
                         }
-                        $('.tc-loader-div').hide()     
+                        $('.tc-loader-div').hide()
                     }
-                }) 
+                })
             }else{
                 $('#transfer-error').removeClass('d-none').find('div').text("Enter proper number to dial")
                 setTimeout(function(){
@@ -3735,7 +3735,7 @@ $('#attr-hangup-btn,#3way-hangup-btn').click(function() {
                         reset_transfer_popup()
                     }
                 }
-            });        
+            });
         }
     }else if ($('input[name=my-radio]:checked').val() == "internal"){
             var transfer_agent_number = $('#agents-type-select').val()
@@ -3743,7 +3743,7 @@ $('#attr-hangup-btn,#3way-hangup-btn').click(function() {
                 data['transfer_to_agent_number']=transfer_agent_number
                 data['transfer_from_agent_number']=extension
                 data['transfer_from_agent_uuid']=session_details[extension]['Unique-ID']
-                data['variable_sip_from_host'] =session_details[extension]['variable_sip_from_host']    
+                data['variable_sip_from_host'] =session_details[extension]['variable_sip_from_host']
             socket.emit("tr_from_agent_hangup",data)
             transfer_notanswer_file.pause();
             transfer_ringback_file.pause();
@@ -3767,7 +3767,7 @@ $('#attr-hangup-btn,#3way-hangup-btn').click(function() {
             });
     }else{
         $('#external-radio,#internal-radio,#queue-type-select,#queue-dial-btn').prop("disabled", false);
-    }   
+    }
 });
 conference_initiated = false
 function three_way_calling_method() {
@@ -3897,7 +3897,7 @@ $('#close-popup').click(function() {
         success: function(data) {
             $('#btnParkCall').removeClass("active")
             $('#btnTransferCall').val('false')
-            var btn_transfer_call_status = false;            
+            var btn_transfer_call_status = false;
         },
         error: function(err) {
                 $('#btnParkCall').addClass("active")
@@ -3938,7 +3938,7 @@ $('#ibc_btnResumePause').click(function() {
             $("#inbound_timer").countimer('start');
             $('#idle_timer').countimer('stop');
             $("#agent-callbacks-div button, #profile-tab, #show-callbacks-active, #show-callbacks-campaign, #show-abandonedcalls-campaign ,#show-campaign-lead-bucket, #show-campaign-assigned-calls, #show-camp-requeue-lead-bucket, #show-camp-assigned-dialed-calls, #show-camp-assigned-notdialed-calls").addClass("disabled")
-            inbound_time  = sessionStorage.getItem("inbound_time"); 
+            inbound_time  = sessionStorage.getItem("inbound_time");
             agent_timer_data = agent_time_format(inbound_time)
             initiate_agent_timer("#inbound_timer_display", agent_timer_data)
             $('#inbound_timer_div').removeClass('d-none')
@@ -4044,7 +4044,7 @@ function set_inbound_customer_detail(ic_number,contact_id){
 
             // }
             $('#relation_tag_link,#feedback_tab_link').removeClass('disabled');
-            if(sms_templates.send_sms_callrecieve && callmode !="manual"){ 
+            if(sms_templates.send_sms_callrecieve && callmode !="manual"){
                 setTimeout(sms_templates.sendSMS(campaign_id,sms_templates.selected_template,ic_number), 5000)
             }
             if(email_templates.email_type == '0' && callmode !="manual"){
@@ -4097,7 +4097,7 @@ $('#blndd_btnResumePause').click(function() {
             $("#blended_timer").countimer('start');
             $('#idle_timer').countimer('stop');
             $("#agent-callbacks-div button, #profile-tab, #show-callbacks-active, #show-callbacks-campaign, #show-abandonedcalls-campaign, #show-campaign-lead-bucket, #show-campaign-assigned-calls, #show-camp-requeue-lead-bucket, #show-camp-assigned-dialed-calls, #show-camp-assigned-notdialed-calls").addClass("disabled")
-            blended_time  = sessionStorage.getItem("blended_time"); 
+            blended_time  = sessionStorage.getItem("blended_time");
             agent_timer_data = agent_time_format(blended_time)
             initiate_agent_timer("#blended_timer_display", agent_timer_data)
             $('#blended_timer_div').removeClass('d-none')
@@ -4280,7 +4280,7 @@ function close_agent_sidebar(){
             $('body').removeClass('agent-sidebar-hidden')
             $('#incoming_call_vue').animate({ 'right': '20px' }, 200)
         }
-    }        
+    }
 }
 
 $(document).on('click', '#agent_to_admin_switchscreen',function(){
@@ -4308,7 +4308,7 @@ $(document).on('click', '#agent_to_admin_switchscreen',function(){
         error:function(data){
             $('.preloader').fadeOut('fast');
             console.log(data)
-        }   
+        }
     })
 })
 
