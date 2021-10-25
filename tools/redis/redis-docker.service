@@ -6,10 +6,10 @@ Requires=docker.service
 [Service]
 TimeoutStartSec=0
 Restart=always
-ExecStartPre=-/usr/bin/docker stop redis
-#ExecStartPre=-/usr/bin/docker rm redis
+RestartSec=1
 #ExecStartPre=/usr/bin/docker pull redis
 ExecStart=/usr/bin/docker run --rm -p 6379:6379 -v /var/lib/redis/data/:/var/lib/redis/data/ --name redis redis
+ExecStop=/usr/bin/docker stop redis
 
 [Install]
 WantedBy=multi-user.target

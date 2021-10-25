@@ -5,11 +5,11 @@ Requires=docker.service
 
 [Service]
 TimeoutStartSec=0
-#Restart=always
-ExecStartPre=-/usr/bin/docker stop postgres-db
-ExecStartPre=-/usr/bin/docker rm postgres-db
+Restart=always
+RestartSec=1
 #ExecStartPre=/usr/bin/docker pull postgres:14
 ExecStart=/usr/bin/docker run --rm -p 5432:5432 --env-file /etc/default/flexydial-db -v /opt/docker-postgres.sql:/docker-entrypoint-initdb.d/docker_postgres_init.sql -v pgdata:/var/lib/postgresql/data/  --name postgres-db postgres
+ExecStop=/usr/bin/docker stop postgres-db
 
 [Install]
 WantedBy=multi-user.target
