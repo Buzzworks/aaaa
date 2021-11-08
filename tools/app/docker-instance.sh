@@ -34,6 +34,8 @@ EOT
 #firewall-cmd --add-port=5432/tcp --permanent
 #firewall-cmd --reload
 
+mkdir -p /var/lib/flexydial/media
+
 systemctl enable flexydial-app-docker
 systemctl start flexydial-app-docker
 

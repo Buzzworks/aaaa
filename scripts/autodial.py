@@ -16,7 +16,7 @@ from callcenter.models import (Campaign,CallDetail,AgentActivity,User,
 from crm.models import Contact,TempContactInfo,Phonebook,ContactInfo,DownloadReports, PhoneBookUpload
 from scripts.fsautodial import fsdial,fs_voice_blaster
 from django.db.models import Q, Count, F
-from callcenter.utility import (get_current_users, download_call_detail_report, download_agent_perforance_report, campaignwise_performance_report, 
+from callcenter.utility import (get_current_users, download_call_detail_report, download_agent_perforance_report, campaignwise_performance_report,
 	download_agent_mis, download_agent_activity_report, download_campaignmis_report, download_callbackcall_report,
 	download_abandonedcall_report,set_download_progress_redis, download_call_recordings, download_contactinfo_report, download_phonebookinfo_report,
 	download_billing_report, camp_list_users, DownloadCssQuery, download_call_recording_feedback_report,download_management_performance_report,download_alternate_contact_report, freeswicth_server)
@@ -88,7 +88,7 @@ def fetch_callback_contact(campaign,fetch_count):
 	""" fetching the callback contacts and displaying to the user"""
 	try:
 		if campaign['auto_qcb_dial']:
-			callback_contact = CallBackContact.objects.filter(Q(campaign=campaign['name'], schedule_time__lte = datetime.now(), 
+			callback_contact = CallBackContact.objects.filter(Q(campaign=campaign['name'], schedule_time__lte = datetime.now(),
 				callback_type='queue'),Q(user=None)|Q(user=''))
 			c_unique_numbers = callback_contact.order_by('numeric','id').distinct('numeric').values('id','contact_id','numeric')[:fetch_count]
 			if c_unique_numbers:
@@ -184,7 +184,7 @@ def generate_report():
 				download_phonebookinfo_report(filters=i.filters, user=i.user, col_list=i.col_list,download_report_id=i.id)
 def phonebook_data_bucket():
 	"""
-	This function is use to reach the campaign hopper level of contacts in tempcontact_info table. 
+	This function is use to reach the campaign hopper level of contacts in tempcontact_info table.
 	"""
 	try:
 		order_campaigns = list(PhonebookBucketCampaign.objects.raw("select * from callcenter_phonebookbucketcampaign where is_contact = True order by agent_login_count DESC"))
@@ -203,7 +203,7 @@ def phonebook_data_bucket():
 							if campaign['auto_qcb_dial'] or campaign['auto_ac_dial']:
 								fetch_data_count = fetch_callback_contact(campaign,fetch_data_count)
 						if fetch_data_count >= 1 or campaign['portifolio']:
-							if campaign['css']: 
+							if campaign['css']:
 								camp_css = CSS.objects.filter(campaign=campaign['name'],status='Active')
 								if camp_css.exists():
 									css_query = sorted(camp_css.first().raw_query, key = lambda i: i['priority'])
@@ -255,7 +255,7 @@ def phonebook_data_bucket():
 												contacts_raw = Contact.objects.raw(c_query['query_string'] + " limit "+ str(fetch_data_count))
 												contacts = list(contacts_raw)
 											contacts_count = len(contacts)
-											create_tempcontact_data(contacts, 'Queued')	
+											create_tempcontact_data(contacts, 'Queued')
 											if contacts_count > fetch_data_count:
 												break
 											else:
@@ -265,7 +265,7 @@ def phonebook_data_bucket():
 												camp.save()
 								else:
 									camp.is_contact = False
-									camp.save() 
+									camp.save()
 							else:
 								count = len(camp_list_users(campaign['name']))
 								phonebook_count = phonebook_list.count()
@@ -324,7 +324,7 @@ def phonebook_data_bucket():
 										else:
 											contacts = phone.contacts.filter(status="NotDialed").order_by('?','priority')[:fetch_data_count]
 										contacts_count = contacts.count()
-										create_tempcontact_data(contacts, 'Queued')	
+										create_tempcontact_data(contacts, 'Queued')
 										if contacts_count > fetch_data_count:
 											break
 										else:
@@ -376,7 +376,7 @@ def create_logout_entry(extension):
 					AgentActivity(**actvity_dict).save()
 					AgentActivity(**{'user':user,'event':'LOGOUT','event_time':now_date}).save()
 					print('Logout(Poor Connectivity)')
-				else: 
+				else:
 					if user.is_superuser or user.user_role.access_level in ['Admin','Manager','Supervisor']:
 						last_event_time = AdminLogEntry.objects.filter(created_by=user,event_type='LOGIN').last()
 						if last_event_time:
@@ -422,8 +422,8 @@ def session_expire_check():
 		if locked_tmp_data:
 			locked_tmp_data.update(status="NotDialed")
 		transaction.commit()
-		connections['crm'].close()		
-		connections['default'].close()	
+		connections['crm'].close()
+		connections['default'].close()
 	except Exception as e:
 		print("Exception occures from session_expire_check",e)
 
@@ -484,7 +484,7 @@ def update_queued_contact():
 				contact.dial_count = contact.dial_count + 1
 				contact.save()
 	except Exception as e:
-		print("update_queued_contact :", e)		
+		print("update_queued_contact :", e)
 
 def create_calldetial_missing_contact():
 	""" creating the missing calldetails from diallervent log"""
