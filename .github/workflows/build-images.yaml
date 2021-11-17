@@ -1,0 +1,99 @@
+
+---
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ main ]
+  release:
+    types: [created]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Prepare Environment
+        id: preenv
+        run: |
+          echo "::set-output name=date::$(date +'%Y-%m-%d')"
+          IMAGE_ID=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "master" ] && VERSION=latest
+          [ "$VERSION" == "main" ] && VERSION=latest
+          echo  "::set-output name=IMAGE_ID::$IMAGE_ID"
+          echo  "::set-output name=VERSION::$VERSION"
+
+    - name: Build Flexydial-app Docker Image
+      run: |
+        docker build . \
+          --build-arg COMMIT_SHA="${{GITHUB_SHA}}" \
+          --build-arg FLEXYDIAL_VERSION="6.0.1" \
+          --build-arg FLEXYDIAL_BRANCH="${{ github.ref }}" \
+          --build-arg FLEXYDIAL_IMAGE_DATE_CREATED="${{ steps.preenv.outputs.date }}" \
+          --build-arg AIRFLOW_IMAGE_REPOSITORY=${{ github.repository }} \
+          --tag ${{ steps.preenv.outputs.IMAGE_ID }}:${{ steps.preenv.outputs.VERSION }} --label "runnumber=${{github.run_number}}"
+
+    - name: Build Flexydial-static Docker Image
+      run: |
+        cd static
+        docker build . \
+          --build-arg COMMIT_SHA="${{GITHUB_SHA}}" \
+          --build-arg FLEXYDIAL_VERSION="6.0.1" \
+          --build-arg FLEXYDIAL_BRANCH="${{ github.ref }}" \
+          --build-arg FLEXYDIAL_IMAGE_DATE_CREATED="${{ steps.preenv.outputs.date }}" \
+          --build-arg AIRFLOW_IMAGE_REPOSITORY=${{ github.repository }} \
+          --tag ${{ steps.preenv.outputs.IMAGE_ID }}-static:${{ steps.preenv.outputs.VERSION }} --label "runnumber=${{github.run_number}}"
+        cd ../
+
+    - name: Build Flexydial-websocket Docker Image
+      run: |
+        cd fs-dialplan
+        docker build . \
+          --build-arg COMMIT_SHA="${{GITHUB_SHA}}" \
+          --build-arg FLEXYDIAL_VERSION="6.0.1" \
+          --build-arg FLEXYDIAL_BRANCH="${{ github.ref }}" \
+          --build-arg FLEXYDIAL_IMAGE_DATE_CREATED="${{ steps.preenv.outputs.date }}" \
+          --build-arg AIRFLOW_IMAGE_REPOSITORY=${{ github.repository }} \
+          --tag ${{ steps.preenv.outputs.IMAGE_ID }}-websocket:${{ steps.preenv.outputs.VERSION }} --label "runnumber=${{github.run_number}}"
+        cd ../
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Push image to Docker and Github Packages
+      run: |
+        docker push ${{ steps.preenv.outputs.IMAGE_ID }}:${{ steps.preenv.outputs.VERSION }}
+        docker tag ${{ steps.preenv.outputs.IMAGE_ID }}:${{ steps.preenv.outputs.VERSION }} ${{ secrets.DOCKER_USERNAME }}/flexydial-app:$VERSION
+        docker tag ${{ steps.preenv.outputs.IMAGE_ID }}-static:${{ steps.preenv.outputs.VERSION }} ${{ secrets.DOCKER_USERNAME }}/flexydial-static:$VERSION
+        docker tag ${{ steps.preenv.outputs.IMAGE_ID }}-websocket:${{ steps.preenv.outputs.VERSION }} ${{ secrets.DOCKER_USERNAME }}/flexydial-websocket:$VERSION
+        docker push ${{ secrets.DOCKER_USERNAME }}/flexydial-app:$VERSION
+        docker push ${{ secrets.DOCKER_USERNAME }}/flexydial-static:$VERSION
+        docker push ${{ secrets.DOCKER_USERNAME }}/flexydial-websocket:$VERSION
+
