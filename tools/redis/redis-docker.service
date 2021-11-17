@@ -8,7 +8,7 @@ TimeoutStartSec=0
 Restart=always
 RestartSec=1
 #ExecStartPre=/usr/bin/docker pull redis
-ExecStart=/usr/bin/docker run --rm -p 6379:6379 -v /var/lib/redis/data/:/var/lib/redis/data/ --name redis redis
+ExecStart=/usr/bin/docker run --rm -p 0.0.0.0:6379:6379 -v /var/lib/redis/data/:/var/lib/redis/data/ --name redis redis
 ExecStop=/usr/bin/docker stop redis
 
 [Install]

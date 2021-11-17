@@ -3,21 +3,18 @@ import sys,os
 # import the logging library
 import logging
 import math
-import re
 import socket
 import pycurl
-from io import StringIO,BytesIO
+from io import BytesIO
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 import xmlrpc.client
 from string import Template
 from django.conf import settings
-from django.db import transaction
-from collections import Counter
 from scripts.contacts import autodial_num_update,autodial_num_fetch
 from callcenter.models import DNC,CallDetail,Switch
 from crm.models import TempContactInfo, Contact
-import json,pickle
+import pickle
 from datetime import datetime,timedelta
 from callcenter.utility import trunk_channels_count, set_campaign_channel
 
@@ -108,7 +105,7 @@ def fs_voice_blaster(campaign):
 									print("RPC Error %s: Freeswitch RPC module may not be" \
 										  " loaded or properly configured" %(e))
 
-							logger.info("Campaign:%s || Ratio:%s || Channel:%s || Used:%s || Free:%s " \
+							print("Campaign:%s || Ratio:%s || Channel:%s || Used:%s || Free:%s " \
 												% ( campaign.name,camp_settings.dial_ratio,
 												allowted_channels,ftdm_down_count,free_channel,
 											)
@@ -285,7 +282,7 @@ def fsdial(campaign):
 
 				#print("%s campaign | dial_ratio : %s | agents_wait : %s | \
 				#	Diled_numbers : %s | next_dial_count : %s" % (campaign.name,campaign.campaign_variable.dial_ratio,agent_count,fs_cust_in_pd_camapaign,count))
-				logger.info("Campaign:%s || Ratio:%s || Channel:%s || Used:%s || Free:%s || WaitUsers:%s || PredictiveUsersInCall:%s || QueueInitCallCount: %s" \
+				print("Campaign:%s || Ratio:%s || Channel:%s || Used:%s || Free:%s || Wait:%s || InCall:%s || Queue: %s" \
 										% ( campaign.name,camp_settings.dial_ratio,
 												allowted_channels,ftdm_down_count,free_channel,
 												agent_count,total_pd_agents,count

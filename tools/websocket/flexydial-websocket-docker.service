@@ -8,7 +8,7 @@ TimeoutStartSec=0
 Restart=always
 RestartSec=1
 ExecStartPre=/usr/bin/docker pull vedakatta/flexydial-websocket
-ExecStart=/usr/bin/docker run --rm -p 3233:3233 -p 8084-8087:8084-8087 --env-file /etc/default/flexydial-websocket -v /var/lib/flexydial/media:/var/lib/flexydial/media --name flexydial-websocket vedakatta/flexydial-websocket
+ExecStart=/usr/bin/docker run --rm -p 0.0.0.0:3233:3233 -p 0.0.0.0:8084-8087:8084-8087 --env-file /etc/default/flexydial-websocket -v /var/lib/flexydial/media:/var/lib/flexydial/media --name flexydial-websocket vedakatta/flexydial-websocket
 ExecStop=/usr/bin/docker stop flexydial-websocket
 
 [Install]

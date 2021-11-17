@@ -28,7 +28,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '*^gyxflla@kwhnj6$o)n=ihi2-ntcy-)t7phnc^%p!9_a&al&!'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 LOGIN_URL = '/'
 ALLOWED_HOSTS = ['*']
 
@@ -222,7 +222,9 @@ s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.connect(("8.8.8.8", 80))
 IP_ADDRESS = s.getsockname()[0]
 s.close()
-INTERNAL_IPS = [IP_ADDRESS, "127.0.0.1",'192.168.3.64']
+INTERNAL_IPS = [IP_ADDRESS, "127.0.0.1"]
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_IDLE_TIMEOUT = 60*100
@@ -232,7 +234,7 @@ PASSWORD_RESET_TIMEOUT_DAYS = 1
 
 WEB_SOCKET_HOST = os.environ.get('WEB_SOCKET_HOST')
 FREESWITCH_IP_ADDRESS = os.environ.get('FREESWITCH_HOST')
-SOURCE = 'SLI'
+SOURCE = 'FLEXY'
 LOCATION = 'Mumbai'
 
 SSL_CERTIFICATE = "/etc/ssl/ca-flexydial.crt"
