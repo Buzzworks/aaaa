@@ -2,7 +2,6 @@ FROM node:lts-slim
 
 ENV NODE_ENV production \
     NODE_TLS_REJECT_UNAUTHORIZED=0 \
-    TINI_VERSION v0.19.0 \
     TZ=Asia/Kolkata \
     REDIS_PORT=6379
 
@@ -23,6 +22,7 @@ COPY . /home/app/fs-dialplan/
 
 RUN npm ci --only=production && npm cache clean --force
 
+ENV TINI_VERSION v0.19.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
 ENTRYPOINT ["/tini", "--"]

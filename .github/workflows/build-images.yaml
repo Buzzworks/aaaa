@@ -4,7 +4,7 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ '*' ]
   release:
     types: [created]
 
@@ -23,6 +23,7 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Prepare Environment
+      id: preenv
       run: |
         echo "::set-output name=date::$(date +'%Y-%m-%d')"
         IMAGE_ID=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -42,22 +43,22 @@ jobs:
     - name: Build Flexydial-app Docker Image
       run: |
         docker build . \
-          --build-arg COMMIT_SHA="${{GITHUB_SHA}}" \
+          --build-arg COMMIT_SHA="${{ github.sha }}" \
           --build-arg FLEXYDIAL_VERSION="6.0.1" \
           --build-arg FLEXYDIAL_BRANCH="${{ github.ref }}" \
           --build-arg FLEXYDIAL_IMAGE_DATE_CREATED="${{ steps.preenv.outputs.date }}" \
-          --build-arg AIRFLOW_IMAGE_REPOSITORY=${{ github.repository }} \
+          --build-arg FLEXYDIAL_IMAGE_REPOSITORY=${{ github.repository }} \
           --tag ${{ steps.preenv.outputs.IMAGE_ID }}:${{ steps.preenv.outputs.VERSION }} --label "runnumber=${{github.run_number}}"
 
     - name: Build Flexydial-static Docker Image
       run: |
         cd static
         docker build . \
-          --build-arg COMMIT_SHA="${{GITHUB_SHA}}" \
+          --build-arg COMMIT_SHA="${{ github.sha }}" \
           --build-arg FLEXYDIAL_VERSION="6.0.1" \
           --build-arg FLEXYDIAL_BRANCH="${{ github.ref }}" \
           --build-arg FLEXYDIAL_IMAGE_DATE_CREATED="${{ steps.preenv.outputs.date }}" \
-          --build-arg AIRFLOW_IMAGE_REPOSITORY=${{ github.repository }} \
+          --build-arg FLEXYDIAL_IMAGE_REPOSITORY=${{ github.repository }} \
           --tag ${{ steps.preenv.outputs.IMAGE_ID }}-static:${{ steps.preenv.outputs.VERSION }} --label "runnumber=${{github.run_number}}"
         cd ../
 
@@ -65,34 +66,24 @@ jobs:
       run: |
         cd fs-dialplan
         docker build . \
-          --build-arg COMMIT_SHA="${{GITHUB_SHA}}" \
+          --build-arg COMMIT_SHA="${{ github.sha }}" \
           --build-arg FLEXYDIAL_VERSION="6.0.1" \
           --build-arg FLEXYDIAL_BRANCH="${{ github.ref }}" \
           --build-arg FLEXYDIAL_IMAGE_DATE_CREATED="${{ steps.preenv.outputs.date }}" \
-          --build-arg AIRFLOW_IMAGE_REPOSITORY=${{ github.repository }} \
+          --build-arg FLEXYDIAL_IMAGE_REPOSITORY=${{ github.repository }} \
           --tag ${{ steps.preenv.outputs.IMAGE_ID }}-websocket:${{ steps.preenv.outputs.VERSION }} --label "runnumber=${{github.run_number}}"
         cd ../
 
-    - name: Log in to Docker Hub
-      uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-
     - name: Log in to the Container registry
-      uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+      uses: docker/login-action@v1
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
+        logout: true
 
-    - name: Push image to Docker and Github Packages
+    - name: Push image to Github Registry
       run: |
         docker push ${{ steps.preenv.outputs.IMAGE_ID }}:${{ steps.preenv.outputs.VERSION }}
-        docker tag ${{ steps.preenv.outputs.IMAGE_ID }}:${{ steps.preenv.outputs.VERSION }} ${{ secrets.DOCKER_USERNAME }}/flexydial-app:$VERSION
-        docker tag ${{ steps.preenv.outputs.IMAGE_ID }}-static:${{ steps.preenv.outputs.VERSION }} ${{ secrets.DOCKER_USERNAME }}/flexydial-static:$VERSION
-        docker tag ${{ steps.preenv.outputs.IMAGE_ID }}-websocket:${{ steps.preenv.outputs.VERSION }} ${{ secrets.DOCKER_USERNAME }}/flexydial-websocket:$VERSION
-        docker push ${{ secrets.DOCKER_USERNAME }}/flexydial-app:$VERSION
-        docker push ${{ secrets.DOCKER_USERNAME }}/flexydial-static:$VERSION
-        docker push ${{ secrets.DOCKER_USERNAME }}/flexydial-websocket:$VERSION
-
+        docker push ${{ steps.preenv.outputs.IMAGE_ID }}-static:${{ steps.preenv.outputs.VERSION }}
+        docker push ${{ steps.preenv.outputs.IMAGE_ID }}-websocket:${{ steps.preenv.outputs.VERSION }}

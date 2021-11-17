@@ -1,5 +1,6 @@
 # Flexydial 6.0
 
+[![Docker Image CI](https://github.com/Buzzworks/flexydial/actions/workflows/build-images.yaml/badge.svg)](https://github.com/Buzzworks/flexydial/actions/workflows/build-images.yaml)
 
 ## Requirements:
 
