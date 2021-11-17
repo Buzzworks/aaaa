@@ -23,22 +23,21 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Prepare Environment
-        id: preenv
-        run: |
-          echo "::set-output name=date::$(date +'%Y-%m-%d')"
-          IMAGE_ID=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+      run: |
+        echo "::set-output name=date::$(date +'%Y-%m-%d')"
+        IMAGE_ID=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-          # Change all uppercase to lowercase
-          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          # Strip git ref prefix from version
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-          # Strip "v" prefix from tag name
-          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-          # Use Docker `latest` tag convention
-          [ "$VERSION" == "master" ] && VERSION=latest
-          [ "$VERSION" == "main" ] && VERSION=latest
-          echo  "::set-output name=IMAGE_ID::$IMAGE_ID"
-          echo  "::set-output name=VERSION::$VERSION"
+        # Change all uppercase to lowercase
+        IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+        # Strip git ref prefix from version
+        VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+        # Strip "v" prefix from tag name
+        [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+        # Use Docker `latest` tag convention
+        [ "$VERSION" == "master" ] && VERSION=latest
+        [ "$VERSION" == "main" ] && VERSION=latest
+        echo  "::set-output name=IMAGE_ID::$IMAGE_ID"
+        echo  "::set-output name=VERSION::$VERSION"
 
     - name: Build Flexydial-app Docker Image
       run: |
