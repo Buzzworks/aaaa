@@ -47,7 +47,6 @@ RUN apt-get update \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ENV VIRTUAL_ENV=/home/app/flexydialenv \
-    PATH="$VIRTUAL_ENV/bin:$PATH" \
     DEBIAN_FRONTEND=noninteractive LANGUAGE=C.UTF-8 LANG=C.UTF-8 LC_ALL=C.UTF-8 LC_CTYPE=C.UTF-8 LC_MESSAGES=C.UTF-8 \
     TZ=Asia/Kolkata
 
@@ -56,6 +55,8 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 COPY . /home/app/
 
 COPY --from=BuildImage /home/app/flexydialenv /home/app/flexydialenv
+
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 LABEL org.buzzworks.flexydial.distro="ubuntu" \
   org.buzzworks.flexydial.distro.version="focal" \
