@@ -12,7 +12,7 @@ docker pull vedakatta/flexydial-app
 
 cp flexydial-app-docker.service /etc/systemd/system/
 
-cat <<EOT >> /etc/default/flexydial-app
+cat <<EOT > /etc/default/flexydial-app
 PYTHONUNBUFFERED=1
 FREESWITCH_HOST=telephony
 WEB_SOCKET_HOST=web:3232

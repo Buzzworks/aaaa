@@ -7,7 +7,7 @@ Requires=docker.service
 TimeoutStartSec=0
 Restart=always
 RestartSec=1
-ExecStartPre=/usr/bin/docker pull vedakatta/flexydial-app
+#ExecStartPre=/usr/bin/docker pull vedakatta/flexydial-app
 ExecStart=/usr/bin/docker run --rm --env-file /etc/default/flexy-app --name flexydial-cdr vedakatta/flexydial-app python manage.py cdrd
 ExecStop=/usr/bin/docker stop flexydial-cdr
 

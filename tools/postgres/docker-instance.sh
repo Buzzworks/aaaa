@@ -11,7 +11,7 @@ docker pull postgres:14
 cp postgres-docker.service /etc/systemd/system/
 cp docker-postgres.sql /opt/
 
-cat <<EOT >> /etc/default/flexydial-db
+cat <<EOT > /etc/default/flexydial-db
 DATABASE_HOST=127.0.0.1
 POSTGRES_USER=flexydial
 POSTGRES_PASSWORD=flexydial
