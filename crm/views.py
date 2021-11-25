@@ -22,7 +22,7 @@ from rest_framework import generics
 from scripts.pagination import DatatablesPageNumberPagination
 from scripts.renderers import DatatablesRenderer
 
-import pandas as pd 
+import pandas as pd
 import numpy as np
 import json
 import louie
@@ -198,7 +198,7 @@ class CrmCreatePhonebookApiView(LoginRequiredMixin, APIView):
 					valid = all(elem in column_names for elem in phonebook_columns)
 				if valid:
 					if not data.empty:
-						if os.access(os.path.join(settings.BASE_DIR, 'static/'),os.W_OK | os.X_OK) == True:
+						if os.access(os.path.join(settings.MEDIA_ROOT, 'upload/'),os.W_OK | os.X_OK) == True:
 							if phone_inst.exists():
 								if not request.POST.get("campaign", "") == phone_inst.first().campaign:
 									update_camp = True
@@ -451,7 +451,7 @@ class CrmPhonebookStatusApiView(APIView):
 			if request.GET['is_refresh']=='true' and PHONEBOOK_STATUS['is_refresh']:
 				PHONEBOOK_STATUS['is_refresh'] = False
 				settings.R_SERVER.set(request.GET['key'], pickle.dumps(PHONEBOOK_STATUS))
-				
+
 		return Response(PHONEBOOK_STATUS)
 
 class ValidatePhoneBookUploadApiView(APIView):
@@ -479,7 +479,7 @@ class ValidatePhoneBookUploadApiView(APIView):
 						converters={'numeric': str})
 					is_xls = True
 					data = data.replace(np.NaN, "")
-				column_names = data.columns.tolist() 
+				column_names = data.columns.tolist()
 				valid = all(elem in column_names for elem in phonebook_columns)
 				if valid:
 					if os.access(os.path.join(settings.BASE_DIR, 'static/'),os.W_OK | os.X_OK) == True:
@@ -488,7 +488,7 @@ class ValidatePhoneBookUploadApiView(APIView):
 						response_data = {}
 						response_data["errors"] = 'Permission Denied For Media Folder'
 						response_data["column_id"] = "#phonebook-err-msg"
-						return JsonResponse(response_data, status=500)	
+						return JsonResponse(response_data, status=500)
 				else:
 					response_data = {}
 					response_data["column_err_msg"] = 'File must contains these '+','.join(phonebook_columns)+' columns'
@@ -527,7 +527,7 @@ class GetSamplePhonebookApiView(APIView):
 			truncate_file(file_name)
 			if campaign.portifolio:
 				cols.insert(0, 'user')
-			data = pd.read_csv(file_name, na_filter=False, index_col=0, names=cols) 
+			data = pd.read_csv(file_name, na_filter=False, index_col=0, names=cols)
 			data.to_csv(file_name)
 
 		return JsonResponse({"file_name":final_file})
@@ -568,7 +568,7 @@ class CustomCrmFieldApiView(LoginRequiredMixin, APIView):
 		if page_info["search_by"] and page_info["column_name"]:
 			if page_info["column_name"] == "campaign":
 				crm_fields = crm_fields.filter(campaign__name__istartswith=page_info["search_by"])
-			else:			
+			else:
 				crm_fields = crm_fields.filter(**{page_info["column_name"]+"__iexact": page_info["search_by"]})
 
 		crm_fields = crm_fields.order_by('-id')
@@ -606,7 +606,7 @@ class CheckCampaignAvailApiView(APIView):
 		if crm_field.exists():
 			crm_field = crm_field.first()
 			if crm_field.name != crm_name:
-				return JsonResponse({'camp_exist':'This campaign is already assigned to other crm'})	
+				return JsonResponse({'camp_exist':'This campaign is already assigned to other crm'})
 		return JsonResponse({'msg':'Valid Campaign'})
 
 
@@ -729,9 +729,9 @@ class UploadCremFieldApiView(APIView):
 	This view is used to upload crm fields in crmfield model
 	"""
 	def post(self, request, format=None):
-		
+
 		upload_crm(request)
-		
+
 		return JsonResponse({"msg": "file removed successfully"})
 
 class ValidateUploadedCrmField(APIView):
@@ -754,7 +754,7 @@ class ValidateUploadedCrmField(APIView):
 				data = pd.read_excel(crm_file, dtype = {"section_priority" : "str", "field_size": "str",
 					"field_priority":"str"})
 
-			column_list = data.columns.tolist() 
+			column_list = data.columns.tolist()
 			expected_col_list = ["section_name", "section_priority", "field", "field_type", "field_size", "options",
 			"editable","field_priority", "field_status" ]
 			valid = set(expected_col_list).issubset(set(column_list))
@@ -765,7 +765,7 @@ class ValidateUploadedCrmField(APIView):
 				response_data["column_err_msg"] = 'File must contains these '+','.join(expected_col_list)+' columns'
 				response_data["column_id"] = "#crm-err-msg"
 		return JsonResponse(response_data)
-		
+
 
 @method_decorator(check_read_permission, name='get')
 class ContactInfoApiView(LoginRequiredMixin, APIView):
@@ -853,7 +853,7 @@ class ContactInfoApiView(LoginRequiredMixin, APIView):
 			if disposition:
 				contacts = contacts.filter(disposition__in=disposition)
 			if uniqueid:
-				contacts = contacts.filter(uniqueid=uniqueid)				
+				contacts = contacts.filter(uniqueid=uniqueid)
 			page = self.paginate_queryset(contacts, paginator)
 			if page is not None:
 				serializer = self.serializer_class(page, many=True)
@@ -861,7 +861,7 @@ class ContactInfoApiView(LoginRequiredMixin, APIView):
 			serializer = self.serializer_class(contacts, many=True)
 			return Response(serializer.data)
 		return Response({'error':'Select atleast one campaign'})
-		
+
 	def filter_queryset(self, queryset):
 		for backend in list(self.filter_backends):
 			queryset = backend().filter_queryset(self.request, queryset, self)
@@ -931,7 +931,7 @@ class ContactInfoEditApiView(LoginRequiredMixin, APIView):
 @method_decorator(check_read_permission, name='get')
 class ConnectedCallStatusApiView(LoginRequiredMixin, APIView):
 	"""
-	This view is used to show all contacts and do some 
+	This view is used to show all contacts and do some
 	filteration by columns, campaign and phonebook
 	"""
 
@@ -1073,7 +1073,7 @@ class SaveAgentBreakApiView(LoginRequiredMixin, APIView):
 		updated_agent_dict[request.user.extension].update(AGENTS[request.user.extension])
 		settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
 
-		if request.POST.get("break_time", "") : 
+		if request.POST.get("break_time", "") :
 			activity_dict["break_type"] = request.POST.get("break_type")
 			activity_dict["break_time"] =  datetime.strptime(request.POST.get("break_time"), '%H:%M:%S').time()
 		else:
@@ -1104,7 +1104,7 @@ class LeadListChurnAPI(LoginRequiredMixin, APIView):
 				if campaign.vbcampaign.first().voice_blaster and 'vb_dtmf' in campaign.vbcampaign.first().vb_data:
 					dispo_list = dispo_list + list(campaign.vbcampaign.first().vb_data['vb_dtmf'].values())
 		return JsonResponse({"dispo_list":dispo_list, "camp_all_users":camp_all_users},status=200)
-		
+
 	def post(self, request, pk=""):
 		churn_count = request.POST.get("leadchurn-count","")
 		churn_list = request.POST.getlist("leadchurn",list)
@@ -1146,7 +1146,7 @@ class LeadListChurnAPI(LoginRequiredMixin, APIView):
 				if final_count > 0:
 					PhonebookBucketCampaign.objects.filter(id=campaign_obj.id).update(is_contact=True)
 			return JsonResponse({'updated_count':final_count},status=200)
-				
+
 def DownloadCrmFields(request,pk,format=None):
 	""" crm fields download data which is created"""
 	crm_field_inst = get_object(pk, "crm", "CrmField")
@@ -1311,7 +1311,7 @@ class DownloadAPIView(LoginRequiredMixin,APIView):
 		download_ids = list(queryset.values_list("id", flat=True))
 		queryset = get_paginated_object(queryset, page_info["page"], page_info["paginate_by"])
 		pagination_dict = data_for_vue_pagination(queryset)
-		paginate_by_columns = (('report', 'ReportName'),)		
+		paginate_by_columns = (('report', 'ReportName'),)
 		context = { "id_list": download_ids, "paginate_by_columns":paginate_by_columns}
 		context = {**context, **page_info, **pagination_dict}
 		if request.is_ajax():
