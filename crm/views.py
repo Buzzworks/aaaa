@@ -482,7 +482,7 @@ class ValidatePhoneBookUploadApiView(APIView):
 				column_names = data.columns.tolist()
 				valid = all(elem in column_names for elem in phonebook_columns)
 				if valid:
-					if os.access(os.path.join(settings.BASE_DIR, 'static/'),os.W_OK | os.X_OK) == True:
+					if os.access(os.path.join(settings.MEDIA_ROOT, 'upload/'),os.W_OK | os.X_OK) == True:
 						response_data = validate_uploaded_phonebook(data=data, campaign=campaign, duplicate_check=duplicate_check, is_xls=is_xls)
 					else:
 						response_data = {}
