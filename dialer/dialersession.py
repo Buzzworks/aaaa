@@ -43,7 +43,7 @@ def twinkle_session(*args,**kwargs):
 		user = UserVariable.objects.get(extension=kwargs['extension'])
 		kwargs['SERVER'].freeswitch.api("callcenter_config",
 			"agent set contact %s %s/%s@%s" % (user.extension, user.contact,
-				user.extension, user.domain.ip_address))
+				user.extension, args[0]))
 		hold_music = "local_stream://moh"
 		ori_uuid = uuid.uuid4()
 		campvar_inst = CampaignVariable.objects.get(campaign__name=kwargs['campaign_name']).hold_music
