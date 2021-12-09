@@ -10,3 +10,4 @@ docker
 Dockerfile
 static
 .dockerignore
+.github
