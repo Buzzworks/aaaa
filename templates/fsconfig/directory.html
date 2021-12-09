@@ -5,8 +5,8 @@
 		{% set domain = "" %}
 		{% set end_domain = 0 %}
 		{% for i in profile %}
-			{% if i.domain__ip_address != domain %}
-				{% set domain = i.domain__ip_address %}
+			{% if ip_address != domain %}
+				{% set domain = ip_address %}
 				{% if end_domain == 1 %}
 			 	    </users>
 					</group>
