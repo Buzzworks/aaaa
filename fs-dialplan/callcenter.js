@@ -424,8 +424,13 @@ inbound_server.on('CONNECT', function (req) {
 				})
 	 			inbound.inboundcall_del_alert(dialed_uuid)
 	 		}
+			 if( req.body['variable_transfer_status']=='true'){
+								io.emit("OUTBOUND_CHANNEL_HANGUP",{"sip_extension":req.body['Other-Leg-Orig-Caller-ID-Number']})
+								return util.log('INBOUND_TRANSFERED_CHANNEL_HANGUP',req.body['Other-Leg-Orig-Caller-ID-Number']);
+			 }else{
 	 		// console.log({"sip_extension":req.body['variable_cc_agent'],"ibc_popup":req.body['variable_ibc_popup'],"queue_call":req.body['variable_queue_call']})
-			io.emit("INBOUND_CHANNEL_HANGUP",{"sip_extension":req.body['variable_cc_agent'],"ibc_popup":req.body['variable_ibc_popup'],"queue_call":req.body['variable_queue_call']})
+						io.emit("INBOUND_CHANNEL_HANGUP",{"sip_extension":req.body['variable_cc_agent'],"ibc_popup":req.body['variable_ibc_popup'],"queue_call":req.body['variable_queue_call']})
+			}
 			return util.log('INBOUND_CHANNEL_HANGUP');
 		})
 
@@ -484,8 +489,13 @@ autodial_server.on('CONNECT', function (req) {
 				})
 
 				req.on('CHANNEL_HANGUP', function (req) {
+						if( req.body['variable_transfer_status']=='true'){
+							io.emit("OUTBOUND_CHANNEL_HANGUP",{"sip_extension":req.body['Other-Leg-Orig-Caller-ID-Number']})
+							return util.log('AUTODIAL_TRANSFERED_CHANNEL_HANGUP',req.body['Other-Leg-Orig-Caller-ID-Number']);
+						}else{
 						io.emit("AUTODIAL_CHANNEL_HANGUP",{"sip_extension":req.body['variable_cc_agent']})
 						return util.log('CHANNEL_HANGUP');
+						}
 				});
 
 				req.on('CHANNEL_CALLSTATE', function (req) {
