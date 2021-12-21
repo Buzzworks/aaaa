@@ -8,7 +8,7 @@ TimeoutStartSec=0
 Restart=always
 RestartSec=1
 #ExecStartPre=/usr/bin/docker pull vedakatta/flexydial-app
-ExecStart=/usr/bin/docker run -p 0.0.0.0:8001:8001 --rm -v /var/lib/flexydial/media:/var/lib/flexydial/media --env-file /etc/default/flexydial-app --name flexydial-app vedakatta/flexydial-app uwsgi --ini uwsgi.ini
+ExecStart=/usr/bin/docker run -p 0.0.0.0:8001:8001 --rm -v /var/lib/flexydial/media:/var/lib/flexydial/media --env-file /etc/default/flexydial-app --name flexydial-app vedakatta/flexydial-app uwsgi --ini uwsgi-unix.ini
 ExecStop=/usr/bin/docker stop flexydial-app
 
 [Install]
