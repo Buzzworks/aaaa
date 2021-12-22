@@ -2,8 +2,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<title>Flexydial | {% block title %}{% endblock title %}</title>    
-	<link rel="shortcut icon" href="/static/images/flexydial-logo.png" />   
+	<title>Flexydial | {% block title %}{% endblock title %}</title>
+	<link rel="shortcut icon" href="/static/images/flexydial-logo.png" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<!-- All css files will come here -->
 	{% block stylesheets %}
@@ -24,16 +24,16 @@
 	<link rel="stylesheet" href="{% static '/css/common.css' %}">
 	<link rel="stylesheet" href="{% static '/css/custom.css' %}">
 	<link rel="stylesheet" href="{% static '/css/preloader.css' %}">
-	{% endblock stylesheets %} 
+	{% endblock stylesheets %}
 	{% block extra-stylesheets %}
-	{% endblock extra-stylesheets %} 
+	{% endblock extra-stylesheets %}
 </head>
 
 <body class="sidebar-dark sidebar-fixed">
 
 	<!-- Body content will come here -->
 	<!-- Navbar Data -->
-	
+
 	<div class="container-scroller">
 		<div class="preloader" style="">
 			<!-- <div class="float-right close-preloader" style="">
@@ -167,7 +167,7 @@
 						<div class="nav-link" style="background: #182142; font-weight:600">
 						  Menu
 						</div>
-					</li> 
+					</li>
 					<!-- <li class="nav-item">
 						<a class="nav-link" href="{% url 'dashboard' %}">
 						  <i class="fa fa-home menu-icon"></i>
@@ -406,13 +406,13 @@
 		$.validate({
 		  modules: 'security'
 		});
-		var nodejs_port = '3232';
-		socket = io(server_ip  + ':' + nodejs_port, {
+		//var nodejs_port = '3232';
+		socket = io(server_ip , {
 			'reconnection': true,
 			'reconnectionDelay': 1000,
 			'reconnectionDelayMax': 5000,
 			'reconnectionAttempts': 5
-		});	
+		});
 		socketevents()
 	})
 

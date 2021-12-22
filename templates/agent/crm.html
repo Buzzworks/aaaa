@@ -559,7 +559,7 @@
 										<b>Mobile Number<span class="star">*</span> : </b>
 									</label>
 									<div class="col-md-4">
-										<input type="text" class="form-control" name="customer_mo_no" id="customer_mo_no"  placeholder="Customer Mobile Number" v-model="customer_mo_no" required disabled/>  
+										<input type="text" class="form-control" name="customer_mo_no" id="customer_mo_no"  placeholder="Customer Mobile Number" v-model="customer_mo_no" required disabled/>
 									</div>
 								</div>
 								<div class="form-group row mb-2 px-4 px-sm-0">
@@ -596,7 +596,7 @@
 										<b>To<span class="star">*</span> : </b>
 									</label>
 									<div class="col-md-4">
-										<input type="email" class="form-control" v-model="customer_email"  placeholder="customer email address" required/>  
+										<input type="email" class="form-control" v-model="customer_email"  placeholder="customer email address" required/>
 									</div>
 								</div>
 								<div class="form-group row mb-2 px-4 px-sm-0">
@@ -984,7 +984,7 @@
 											<option value="50">50</option>
 											<option value="100">100</option>
 										</select>
-										
+
 									</div>
 								</div>
 								<div class="col-sm-3">
@@ -1321,7 +1321,7 @@
 							<div class="col-8">
 								<select class="form-control" id="transfer-type-select">
 									<option value=""> select tranfer type </option>
-									<option value="attr-transfer">Attr Transfer</option>
+									<option value="attr-transfer">Attended Transfer</option>
 									<option value="three-way-calling">3-Way Calling</option>
 								</select>
 							</div>
@@ -1345,14 +1345,14 @@
 									</label>
 								</div>
 							</div>
-							<div class="col-4 d-none" id="queue_div">
+							<!-- <div class="col-4 d-none" id="queue_div">
 								<div class="form-check form-check-inline">
 									<label class="form-check-label">
 										<input class="form-check-input" type="radio" name="my-radio" id="queue-radio" value="queue">Queue
 										<i class="input-helper"></i>
 									</label>
 								</div>
-							</div>                            
+							</div>                             -->
 						</div>
 					</div>
 					<div class="clearfix sec-div d-none" id="internal-sec-div">
@@ -1365,7 +1365,7 @@
 							 <div class="col-4">
 								<button type="button" value="dial" id="internal-dial-btn" class="btn btn-inverse-success btn-icon-text" >
 									<i class="fa fa fa-phone fa-rotate-90 btn-icon-prepend"></i>
-									Dial 
+									Dial
 								</button>
 							</div>
 						</div>
@@ -1391,7 +1391,7 @@
 					<div class="clearfix sec-div d-none" id="external-sec-div">
 						<div class="form-group row">
 							<div class="col-8">
-								<input type="text" class="form-control" id="dial-number-text"  placeholder="Dial Number" onkeypress="return isNumber(event)" required/>  
+								<input type="text" class="form-control" id="dial-number-text"  placeholder="Dial Number" onkeypress="return isNumber(event)" required/>
 							</div>
 							 <div class="col-4">
 								<button type="button" value="dial" id="external-dial-btn" class="btn btn-inverse-success btn-icon-text" >
@@ -1440,7 +1440,7 @@
 						</audio>
 						<audio id="autodial_agent_beep">
 							<source src="{% static 'audio_files/beep.mp3' %}" type="audio/mpeg">
-						</audio>						
+						</audio>
 						<audio id="Transfer-Busy">
 							<source src="{% static 'audio_files/Busy.mp3' %}" type="audio/mpeg">
 						</audio>
@@ -1523,7 +1523,7 @@
 			></disposition-component>
 		</div>
 		<div v-else-if="sub_dispo.type =='checkbox'" class="row">
-			<disposition-component v-if="selected_children" 
+			<disposition-component v-if="selected_children"
 									v-for="child,index in sub_dispo.children"
 									:sub_dispo="child"
 									:key="index"
@@ -1541,7 +1541,7 @@
 			></disposition-component>
 		</div>
 		<div v-else class="row">
-			<disposition-component v-if="sub_dispo.children.length != 0" 
+			<disposition-component v-if="sub_dispo.children.length != 0"
 									v-for="child,index in sub_dispo.children"
 									:sub_dispo="child"
 									:key="index"
@@ -1638,7 +1638,7 @@
 							</div>
 						</div>
 					</div>
-				</div>				
+				</div>
 			</div>
 			<div class="modal-footer makecall_footer_div d-none">
 				<button type="button" class="btn btn-success contact-make-call">Make Call</button>
@@ -1866,7 +1866,7 @@
 		if ($(e.target).data('toggle') !== 'popover'
 		&& $(e.target).parents('[data-toggle="popover"]').length === 0
 		&& $(e.target).parents('.popover.fade').length === 0
-		&& !$(e.target).hasClass('remove-alternate') && !$(e.target).hasClass('add-alternate')) { 
+		&& !$(e.target).hasClass('remove-alternate') && !$(e.target).hasClass('add-alternate')) {
 			$('[data-toggle="popover"]').popover('hide');
 		}
 	})
