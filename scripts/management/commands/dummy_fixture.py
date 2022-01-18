@@ -122,27 +122,7 @@ class Command(BaseCommand):
                 i.save()
 
             Daemons.objects.all().delete()
-            os_type = platform.linux_distribution()
-            if "Ubuntu" in os_type:
-                webserver = 'apache2'
-            else:
-                webserver = 'httpd'
-            Daemons.objects.bulk_create(
-                [Daemons(service_name="freeswitch", status=True), Daemons(service_name="flexydial-cdrd", status=True), Daemons(service_name="flexydial-autodial", status=True), Daemons(service_name="flexydial-fs-dialplan", status=True), Daemons(service_name="postgresql", status=True), Daemons(service_name="redis", status=True), Daemons(service_name="postgresql", status=True), Daemons(service_name=webserver, status=True)])
-            sshpassword_field = None
-            while sshpassword_field is None:
-                password = getpass.getpass("Enter SSH root Password: ")
-                password2 = getpass.getpass('Password (again): ')
-                if password != password2:
-                    self.stderr.write(
-                        "Error: Your passwords didn't match.")
-                    # Don't validate passwords that don't match.
-                    continue
-                else:
-                    sshpassword_field = [password]
-            cwd = os.path.join(settings.BASE_DIR, 'static/')
-            np.save('{}.sshpassword.npy'.format(cwd), np.char.encode(
-                sshpassword_field, encoding='cp037'))
+            
             print("*********************************************************")
             print("!!!!!!!!!!  DUMMY DATA CREATED SUCCEFULLY  !!!!!!!!!!")
             print("*********************************************************")

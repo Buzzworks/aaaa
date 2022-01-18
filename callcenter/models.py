@@ -53,6 +53,12 @@ class Switch(models.Model):
 				)
 
 signals.post_save.connect(fs_switch_action, sender=Switch)
+class WebSocket(models.Model):
+	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
+			on_delete=models.SET_NULL,null=True)
+	name = models.CharField(max_length = 50)
+	ip_address = models.CharField(max_length =20, db_index=True, unique=True)
+	port = models.IntegerField(default=3232, null=True)
 
 class DialTrunk(models.Model):
 	""" This table is used to store the Dialtrunk infromation of the freeswitch """
