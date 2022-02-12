@@ -232,7 +232,7 @@ SESSION_COOKIE_AGE = 60
 # resetting the password url valid days
 PASSWORD_RESET_TIMEOUT_DAYS = 1
 
-WEB_SOCKET_HOST = pickle.loads(R_SERVER.get("WEB_SOCKET_HOST") or pickle.dumps({}))
+WEB_SOCKET_HOST = os.environ.get('WEB_SOCKET_HOST')
 FREESWITCH_IP_ADDRESS = os.environ.get('FREESWITCH_HOST')
 SOURCE = 'FLEXY'
 LOCATION = 'Mumbai'

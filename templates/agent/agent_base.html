@@ -3,8 +3,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Flexydial</title>  
-	<link rel="shortcut icon" href="/static/images/flexydial-logo.png" /> 
+	<title>Flexydial</title>
+	<link rel="shortcut icon" href="/static/images/flexydial-logo.png" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<!-- All css files will come here -->
 	{% block agent-stylesheets %}
@@ -31,9 +31,9 @@
 	<link rel="stylesheet" href="{% static 'css/audioplayer.css'%}">
 	<link rel="stylesheet" type="text/css" href="{% static 'css/Chart.min.css'%}">
 	<!-- <link rel="stylesheet" href="{% static '/css/counttimer.css' %}"> -->
-	{% endblock agent-stylesheets %} 
+	{% endblock agent-stylesheets %}
 	{% block agent-extra-stylesheets %}
-	{% endblock agent-extra-stylesheets %} 
+	{% endblock agent-extra-stylesheets %}
 	<style>
 	.modal-dialog-trans{
 		max-width: 650px;
@@ -44,7 +44,7 @@
 		padding:34px 3px 0 0 !important;
 		margin-left:-15px;
 	}
-	
+
 	.tran-marg{
 	margin: 34px 0 0 -18px;
 	}
@@ -52,7 +52,7 @@
 		margin-left: -30px;
 	}
 	 .pass-colorbar {
-	 background-image: url({% static "images/passwordstrength.jpg" %}); 
+	 background-image: url({% static "images/passwordstrength.jpg" %});
 	}
 	.mode_count{
 		padding: 0px 6px 2px 6px;
@@ -122,13 +122,13 @@
 				<ul class="navbar-nav navbar-nav-right ml-auto">
 					<li v-cloak id="agent_info_vue">
 						<div v-show="show_camp" class="nav-item badge mx-0">
-							<span class="text-white">Campaign :</span>
+							<span class="text-strongbrand">Campaign :</span>
 							<strong class="text-info">${camp_name}</strong>
 						</div>
 						<div class="nav-item dropdown badge mx-0">
 							<div class="nav-link" style="font-size:0.8125rem;">
 								<span class="dropdown-toggle" id="state_dropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" v-bind:style="[state == 'Idle' || state=='' ? {'cursor':'pointer'} : {'pointer-events':'none'} ]">
-									<span class="text-white">Status :</span>
+									<span class="text-strongbrand">Status :</span>
 									<strong :class="[show_camp ? 'text-success':'text-danger']">${selected_status}</strong>
 									<div class="dropdown-menu navbar-dropdown" aria-labelledby="state_dropdown">
 										<a v-if="show_camp" class="dropdown-item">Ready</a>
@@ -142,21 +142,21 @@
 						<div class="nav-item dropdown badge mx-0">
 							<div class="nav-link" style="font-size:0.8125rem;">
 								<span class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-									<span class="text-white">Break Wise Timing</span>
+									<span class="text-strongbrand">Break Wise Timing</span>
 									<div class="dropdown-menu navbar-dropdown" aria-labelledby="state_dropdown">
 
 										<div class="dropdown-divider"></div>
-										<a v-for="value,key in break_timing" class="dropdown-item"><strong>${key}:</strong> ${value}</a>
+										<a v-for="value,key in break_timing" class="dropdown-item"><strong>${key} :&nbsp; </strong> ${value}</a>
 									</div>
 								</span>
 							</div>
 						</div>
 						<div v-show="show_camp" class="nav-item badge mx-0">
-							<span class="text-white">State :</span>
+							<span class="text-strongbrand">State :</span>
 							<strong class="text-warning">${state}</strong>
 						</div>
 						<div v-show="!show_camp && on_break " class="nav-item badge mx-0">
-							<span class="text-white">State :</span>
+							<span class="text-strongbrand">State :</span>
 							<strong class="text-warning">${state}</strong>
 						</div>
 					</li>
@@ -197,7 +197,7 @@
 									</a>
 								</template>
 							</div>
-						</div>	
+						</div>
 					</li>
 					<li id="broadcast_messages" class="nav-item dropdown">
 						<a class="nav-link count-indicator dropdown-toggle" id="messageDropdown" href="#" data-toggle="dropdown" aria-expanded="false">
@@ -229,7 +229,7 @@
 					<li class="nav-item nav-profile dropdown mr-0 ml-0">
 						<a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown" id="profileDropdown">
 							<img  src="{% static '/images/buzzworks-logo.jpeg' %}" alt="profile"/>
-							<span class="d-none d-md-inline ml-sm-1">{{request.user}}</span>
+							<span class="d-none d-md-inline ml-sm-1 text-strongbrand">{{request.user}}</span>
 						</a>
 						<div class="dropdown-menu dropdown-menu-right navbar-dropdown profile-dropdown" aria-labelledby="profileDropdown">
 							<a class="dropdown-item" href="" id="c_password_link" data-toggle="modal" data-target="#c_password_modal">
@@ -257,7 +257,7 @@
 				</ul>
 			</div>
 		</nav>
-	
+
 		<!-- Navbar data ends -->
 		<!-- main container strats -->
 		<div class="container-fluid page-body-wrapper">
@@ -287,7 +287,7 @@
 			<!-- agent sidebar start -->
 			{% include "agent/agent_sidebar.html" %}
 			<!-- agent sidebar end -->
-			
+
 			<!-- main panel start -->
 			<div class="main-panel">
 				<div class="content-wrapper pt-0 px-0 px-sm-3">
@@ -350,7 +350,7 @@
 											<span id="blended_timer_display" class="pl-1">00:00</span>
 										</span>
 									</p>
-								</h5>							
+								</h5>
 								<div class="skip_btn_div mr-2 d-none" id="pause_pro_div">
 									<button type="button" class="btn btn-inverse-warning btn-sm py-1 px-2" id="pause_pro_btn" data-toggle="tooltip" title="Pause Progressive Timer" data-placement="bottom" >
 										<i class="fa fa-pause"></i>
@@ -539,7 +539,7 @@
 									<div v-bind:class="[snooze_show ? 'd-none' : 'd-flex' ,'flex-row']">
 									<button v-if="selected_noti_type != 'Abandonedcall'" type="button" class="btn btn-inverse-info btn-sm mr-auto btn-icon-text" @click="snooze_show = true">Snooze
 									<i class="fas fa-bell btn-icon-append"></i></button>
-									
+
 									<button type="button" class="btn btn-inverse-success btn-sm btn-icon-text" @click="makeCbcall()">Make Call
 										<i class="fa fa-phone fa-rotate-90 btn-icon-append"></i></button>
 									</div>
@@ -606,7 +606,7 @@
 									<div v-bind:class="[snooze_show ? 'd-none' : 'd-flex' ,'flex-row']">
 									<button type="button" class="btn btn-inverse-info btn-sm mr-auto btn-icon-text" @click="snooze_show = true">Snooze
 									<i class="fas fa-bell btn-icon-append"></i></button>
-									
+
 									<button type="button" class="btn btn-inverse-success btn-sm btn-icon-text" @click="makeCbcall()">Make Call
 										<i class="fa fa-phone fa-rotate-90 btn-icon-append"></i></button>
 									</div>
@@ -668,7 +668,7 @@
 								</button>
 							</div>
 						</div>
-					</div>	
+					</div>
 					<div class="modal fade" id="broadcast_model" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel-3" style="display: none, padding-right: 17px;" aria-hidden="true">
                     <div class="modal-dialog modal-sm" role="document">
                       <div class="modal-content">
@@ -749,7 +749,7 @@
 				initiate_agent_timer("#hold_timer", agent_timer_data)
 				initiate_agent_timer("#transfer_timer", agent_timer_data)
 				initiate_agent_timer("#inbound_timer", agent_timer_data)
-				initiate_agent_timer("#blended_timer", agent_timer_data)			
+				initiate_agent_timer("#blended_timer", agent_timer_data)
 			if (window.IsDuplicate() == false) {
 				$("#idle_timer").countimer('start');
 				$("#app_timer").countimer('start');
@@ -769,7 +769,7 @@
 	</script>
 	<script type="text/javascript">
 		$(document).ready(function(){
-			
+
 			agent_info_vue.agent_breaks = {{breaks|safe}}
 			// $('#new_password').password({
 			// 	animate: true,
@@ -787,7 +787,7 @@
 			}else{
 				$('#show-agent-assigned-calls').addClass('d-none')
 			}
-		});	
+		});
 	</script>
 	<script type="text/javascript">
 		$(window).on('beforeunload', function(){
@@ -796,7 +796,7 @@
 				alert("Do you really want to refresh page? Current data will loss")
 
 				common_function_before_page_unload("Window Reload")
-				
+
 			}
 		});
 		$(document).ready(function () {
