@@ -8,6 +8,5 @@ docker
 .gitignore
 .gitignore.py
 Dockerfile
-static
 .dockerignore
 .github
