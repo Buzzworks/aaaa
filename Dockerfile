@@ -29,11 +29,11 @@ FROM ubuntu:20.04 AS Release
 
 USER root
 
-ARG FLEXYDIAL_VERSION="6.0"
-ARG FLEXYDIAL_BRANCH="main"
-ARG COMMIT_SHA="0"
-ARG FLEXYDIAL_IMAGE_REPOSITORY="https://github.com/Buzzworks/flexydial"
-ARG FLEXYDIAL_IMAGE_DATE_CREATED="2021-11-17"
+ARG FLEXYDIAL_VERSION="6.0" \
+    FLEXYDIAL_BRANCH="main" \
+    COMMIT_SHA="0" \
+    FLEXYDIAL_IMAGE_REPOSITORY="https://github.com/Buzzworks/flexydial" \
+    FLEXYDIAL_IMAGE_DATE_CREATED="2021-11-17"
 
 RUN mkdir -p /home/app && mkdir -p /var/lib/flexydial/media/upload && chmod -R 755 /var/lib/flexydial && cd /home/app/
 
@@ -48,7 +48,10 @@ RUN apt-get update \
 
 ENV VIRTUAL_ENV=/home/app/flexydialenv \
     DEBIAN_FRONTEND=noninteractive LANGUAGE=C.UTF-8 LANG=C.UTF-8 LC_ALL=C.UTF-8 LC_CTYPE=C.UTF-8 LC_MESSAGES=C.UTF-8 \
-    TZ=Asia/Kolkata
+    TZ=Asia/Kolkata PYTHONUNBUFFERED="1" DEBUG="False" FREESWITCH_HOST=telephony REDIS_HOST=redis REDIS_PORT=6379 \
+    CRM_DB_PORT=5432 FLEXYDIAL_DB_PORT=5432 \
+    CRM_DB_USER=postgres FLEXYDIAL_DB_USER=postgres \
+    FLEXYDIAL_DB_NAME=flexydial CRM_DB_NAME=crm
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 

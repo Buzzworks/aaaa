@@ -28,7 +28,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '*^gyxflla@kwhnj6$o)n=ihi2-ntcy-)t7phnc^%p!9_a&al&!'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = int(os.environ.get('DEBUG', default=False))
+DEBUG = os.environ.get('DEBUG', default=False)
 LOGIN_URL = '/'
 ALLOWED_HOSTS = ['*']
 
@@ -179,6 +179,7 @@ USE_L10N = True
 
 USE_TZ = False
 
+##Variable not in use
 NODEJS_SOCKET_PORT = 3232
 WEB_LIVE_STATUS_CHANNEL = 'flexydial-dashboard'
 
