@@ -3,19 +3,39 @@
 # Flexydial WebSocket Docker Installation script
 # Version: 1.0
 # Author: Ganapathi Chidambaram < ganapathi.chidambaram@flexydial.com >
-# Supports : Ubuntu,CentOS, Redhat
+# Supports : Ubuntu,Debian,CentOS, Redhat
 ###################################################################################
 
-printf "To Authenticate enter Personal Access Token to pull docker image.\n"
+##Redirect the console error and output
+exec > ~/websocket-install.log 2>&1
 
-docker login -u vedakatta ## Enter Personal Access Token at prompt
+##load global Environment variable
+source /etc/environment
+
+docker login -u vedakatta -p ${DOCKER_TOKEN}
 docker pull vedakatta/flexydial-websocket
 
-cp flexydial-websocket-docker.service /etc/systemd/system/
+cat <<EOT > /etc/systemd/system/flexydial-websocket-docker.service
+[Unit]
+Description=Flexydial Websocket Container
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+Restart=always
+RestartSec=1
+#ExecStartPre=/usr/bin/docker pull vedakatta/flexydial-websocket
+ExecStart=/usr/bin/docker run --rm -p 0.0.0.0:3233:3233 -p 0.0.0.0:8084-8087:8084-8087 --env-file /etc/default/flexydial-websocket -v /var/lib/flexydial/media:/var/lib/flexydial/media --name flexydial-websocket vedakatta/flexydial-websocket
+ExecStop=/usr/bin/docker stop flexydial-websocket
+
+[Install]
+WantedBy=multi-user.target
+EOT
 
 cat <<EOT >> /etc/default/flexydial-websocket
-HOST_URL=web
-REDIS_URL=redis
+HOST_URL=${APP_HOST}
+REDIS_URL=${REDIS_HOST}
 REDIS_PORT=6379
 EOT
 

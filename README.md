@@ -8,6 +8,29 @@
 - Python3.8
 - Docker CE Stable
 
+
+## Installation Steps/Hints:
+- Go to tools folder and find the category based folder for the installation. Almost every instance required *docker-install.sh* before running those script.
+- On Each instance export all these variables in-case if each instance running on different machine. Don't forgot to export environment variables even for standalone instance also.
+- To make sure source command working before running script, so that it would load environment variable while installation.
+
+```
+echo APP_HOST=enter_ip_of_app >> /etc/environment
+echo REDIS_HOST=enter_ip_of_app >> /etc/environment
+echo DB_HOST=enter_ip_of_app >> /etc/environment
+echo SOCKET_HOST=enter_ip_of_app >> /etc/environment
+echo TELEPHONY_HOST=enter_ip_of_app >> /etc/environment
+```
+
+- Don't store token into environment. export into current session for ImagePull from Docker
+
+```
+export DOCKER_TOKEN=enter_docker_authentication
+```
+- *flexydial-manager-docker* service which is part of *app* should run only one instance and able to run on any standalone machine as well without any other dependencies.
+
+- Freeswitch installation also through repository which is currently supported for ubuntu 20.04, Debian 11, Redhat 8.5. Also freeswitch instance required cdrd and autodial on the same instance as of now.
+
 ## Application Components
 
 
@@ -133,3 +156,4 @@ Telephony Engine which our application using it complete calling workflow for en
 Ports Used:
 * 7443
 * 5080 - External SIP
+
