@@ -518,8 +518,7 @@ class DashBoardApiView(LoginRequiredMixin, APIView):
 		down_count = DownloadReports.objects.filter(status=False,view=False).count()
 		trunk_status = pickle.loads(settings.R_SERVER.get("trunk_status") or pickle.dumps({}))
 		trunks_data = list(DialTrunk.objects.filter(status='Active').values('id','name','channel_count',free_channels=F('channel_count')))
-		if not settings.WEB_SOCKET_HOST:
-				settings.WEB_SOCKET_HOST = getWebSocketHost()            
+		            
 		for trunk in trunks_data:
 			trunk['consumed_channels'] = 0
 			if str(trunk['id']) in trunk_status:
@@ -765,8 +764,7 @@ class UsersListApiView(LoginRequiredMixin, ListAPIView):
 		id_list = list(queryset.values_list("id",flat=True))
 		queryset = get_paginated_object(queryset, page, paginate_by)
 		pagination_dict = data_for_vue_pagination(queryset)
-		if not settings.WEB_SOCKET_HOST:
-				settings.WEB_SOCKET_HOST = getWebSocketHost()
+		
 		user_group = list(UserRole.objects.values("id", "name"))
 		paginate_by_columns = (('username', 'username'),
 				('properties__extension', 'extension'),
