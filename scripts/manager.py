@@ -15,7 +15,7 @@ from django.db.models import Q, Count, F
 from callcenter.utility import (get_current_users, download_call_detail_report, download_agent_perforance_report, campaignwise_performance_report,
 	download_agent_mis, download_agent_activity_report, download_campaignmis_report, download_callbackcall_report,
 	download_abandonedcall_report,set_download_progress_redis, download_call_recordings, download_contactinfo_report, download_phonebookinfo_report,
-	download_billing_report, camp_list_users, DownloadCssQuery, download_call_recording_feedback_report,download_management_performance_report,download_alternate_contact_report, freeswicth_server)
+	download_billing_report, camp_list_users, DownloadCssQuery, download_call_recording_feedback_report,download_management_performance_report,download_alternate_contact_report, freeswicth_server,download_pendingcontacts_report)
 from dialer.dialersession import fs_administration_hangup
 
 ENABLE = False
@@ -178,6 +178,8 @@ def generate_report():
 				download_management_performance_report(filters=i.filters, user=i.user, col_list=i.col_list,download_report_id=i.id)
 			if "Lead List" in i.report:
 				download_phonebookinfo_report(filters=i.filters, user=i.user, col_list=i.col_list,download_report_id=i.id)
+			if i.report == 'Pending Contact':
+				download_pendingcontacts_report(filters=i.filters, user=i.user, col_list=i.col_list,download_report_id=i.id)
 def phonebook_data_bucket():
 	"""
 	This function is use to reach the campaign hopper level of contacts in tempcontact_info table.
@@ -315,7 +317,9 @@ def phonebook_data_bucket():
 											order_by = "id"
 										elif phone.order_by == "Desc":
 											order_by = "-id"
-										if order_by:
+										if 'lead_api_campaign' in campaign['dial_method'] and campaign['dial_method']['lead_api_campaign'] == True:
+											contacts = phone.contacts.filter(status="NotDialed").filter(created_date__date__gte=datetime.today()).order_by('-id','priority')[:fetch_data_count]
+										elif order_by:
 											contacts = phone.contacts.filter(status="NotDialed").order_by(order_by,'priority')[:fetch_data_count]
 										else:
 											contacts = phone.contacts.filter(status="NotDialed").order_by('?','priority')[:fetch_data_count]

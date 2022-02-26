@@ -2140,6 +2140,7 @@ function campaign_pre_save_validation (form) {
     dial_method["sticky_agent_map"] = $("#sticky_id").prop("checked")
 	dial_method["ivr"] = $("#ivr").prop("checked")
     dial_method['no_agent_audio'] = $("#no_agent_audio").prop("checked")
+    dial_method['lead_api_campaign'] = $("#lead_api_campaign").prop("checked")
 	if ($("#camp_outbound_check").prop("checked") == false) {
 		dial_method["outbound"] = false
 	}
@@ -4005,8 +4006,31 @@ $(".contact_info_download").click(function() {
     is_download = true;
     var col_title = ""
     var col_name = ""
-    var columns = contact_info_table.settings().init().columns
-    contact_info_table.columns().every(function(index) {
+    if($(this).hasClass('pending_contacts')){
+        var columns = pending_contact_table.settings().init().columns
+        pending_contact_table.columns().every(function(index) {
+            if (this.visible()) {
+                if (columns[index].title != 'Action') {
+                    if (col_title) {
+                        col_title = col_title + ',' + columns[index].title
+                    } else {
+                        col_title = columns[index].title
+                    }
+                    if (col_name) {
+                        col_name = col_name + ',' + columns[index].data
+                    } else {
+                        col_name = columns[index].data
+                    }
+                }
+            }
+        })
+        $('#col_title_list').val(col_title)
+        $('#col_name_list').val(col_name)
+        $('#contact_info_download_val').val('download')
+        var form = $("#pending_report_form");
+    }else{
+        var columns = contact_info_table.settings().init().columns
+        contact_info_table.columns().every(function(index) {
         if (this.visible()) {
             if (columns[index].title != 'Action') {
                 if (col_title) {
@@ -4021,12 +4045,13 @@ $(".contact_info_download").click(function() {
                 }
             }
         }
-    })
-    $('#col_title_list').val(col_title)
-    $('#col_name_list').val(col_name)
-    $('#contact_info_download_val').val('download')
-    $('#contact_info_download_type').val($(this).attr('id'))
-    var form = $("#report_form");
+        })
+        $('#col_title_list').val(col_title)
+        $('#col_name_list').val(col_name)
+        $('#contact_info_download_val').val('download')
+        $('#contact_info_download_type').val($(this).attr('id'))
+        var form = $("#report_form");
+    }
      $.ajax({
         type: 'post',
         headers: {
@@ -7433,3 +7458,186 @@ $('#edit-third_party_user_campaign').click(function(){
         });  
     }
  })
+ $('#filter_pending_contacts').click(function() {
+    $.ajax({
+        type: 'get',
+        headers: {
+            "X-CSRFToken": csrf_token
+        },
+        url: '/CallReports/pending-contacts/',
+        data: {
+            "phonebook": $('#contact_phonebook_select').val(),
+            "campaign": $("#contact_campaign_select").val()
+        },
+        success: function(data) {
+            var columns_list = []
+            $.each(data['columns_list'], function(index, value) {
+                var column_dict = {}
+                if (value == 'created_date'){
+                    column_dict['title'] = 'Flexydial Insert Date'
+                }else{
+                    column_dict['title'] = value.replace('_', ' ')    
+                }
+                column_dict['data'] = value
+                column_dict['name'] = value
+                column_dict['className'] = value
+                columns_list.push(column_dict)
+            })
+            $.each(data['crm_fields'], function(index, value) {
+                var column_dict = {}
+                var data = value.replace(/  +/g, ' ').replace(/ /g, "_").replace(':', '.').toLowerCase();
+                column_dict['data'] = 'contact_info.' + data
+                column_dict['title'] = value
+                columns_list.push(column_dict)
+            })
+            columns_list.push({
+                'data': 'id',
+                'title': 'Action'
+            })
+            if ($.fn.DataTable.isDataTable('#pending-contact-table')) {
+                pending_contact_table.clear().destroy();
+                $('#pending-contact-table').empty()
+            }
+            pending_contact_table = $('#pending-contact-table')
+            if(data["report_visible_cols"].length > 0) {
+                pending_contact_table = PendingContacts(table, columns_list, data["report_visible_cols"])
+            }
+            else {
+                pending_contact_table = PendingContacts(table, columns_list)
+
+            }
+
+        }
+    })
+})
+$('#pending-contact-table').on('processing.dt', function(e, settings, processing) {
+    if (!processing) {
+         if (pending_contact_table.data().any()) {
+            $('#contact_info_download').removeClass('d-none')
+        }
+    }
+})
+/* pending contacts display js */
+function PendingContacts(table, column_data, col_list=[]) {
+    // var id = '#'+ table.attr('id');
+    console.log(column_data,"dataaaaaaaa")
+    var table_instance = table.DataTable({
+        "scrollX": true,
+        "serverSide": true,
+        "processing": true,
+        "searching": false,
+        "ajax": {
+            "url": '/CallReports/pending-contacts/',
+            "headers": {
+                "X-CSRFToken": csrf_token
+            },
+            "type": "POST",
+            "data": function(d) {
+                d.format = "datatables"
+                d.campaign = $('#contact_campaign_select').val()
+                d.phonebook = $('#contact_phonebook_select').val()
+                d.numeric = $('#destination_extension').val()
+                d.disposition = $('#disposition').val()
+                d.start_date = $('#start-date input').val()
+                d.end_date = $('#end-date input').val()
+            },
+        },
+        "columns": column_data,
+        columnDefs: [{
+            "targets": '_all',
+           "defaultContent": " ",
+       }, {
+           targets: [0],
+            render: function(data, type, row) {
+                return '<a class="name-el" href="/CallReports/pending-contacts/' + row.id + '/">' + data + '</a>'
+            }
+
+        }, {
+            targets: [-1],
+            orderable: false,
+            data: 'id',
+            render: function(data) {
+                return `<div class="dropdown show">
+                    <button class="btn btn-secondary dropdown-toggle table-dropdown" role="button" id="dropdownMenuLink"'
+                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Choose Action</button>
+                    <div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+                    <a class="dropdown-item" href="/CallReports/pending-contacts/`+data+`/">Modify</a></div></div>`
+                }
+            },
+        ],
+        dom: 'Bfrtip',
+        lengthMenu: [
+            [ 10, 25, 50, -1 ],
+            [ '10 rows', '25 rows', '50 rows', 'Show all' ]
+        ],
+        buttons:{
+            dom:{
+                button:{
+                    tag:'button',
+                    className:''
+                }
+            }
+        },
+        buttons: [
+        {
+            extend: 'pageLength',
+            className: 'btn-outline-dark',
+        },
+        {
+           extend: 'colvis',
+           className: 'btn-outline-dark',
+       },
+       {
+       text: 'Save column visibility',
+       className: 'btn-outline-dark',
+       action: function ( e, dt, node, config ) {
+           var col_name = []
+           var report_name = $("#report_name").val()
+           $(".dataTables_scrollHeadInner th").each(function(index) {
+               temp_name = $(this).attr("class").split(" ")
+               if (temp_name) {
+                   col_name.push(temp_name[0])
+               }
+           });
+           console.log(col_name,"col nameeee")
+           $.ajax({
+               type: 'post',
+                headers: {
+                    "X-CSRFToken": csrf_token
+                },
+                url: '/api/save-column-visibility/',
+                data: {'col_name':col_name, 'report_name':report_name},
+                success: function(data) {
+                     showInfoToast("Column Visiility Saved Successfully", 'top-center')
+                },
+                error: function(data) {
+                    console.log(data);
+                }
+            })
+                   
+            }
+        }
+        ]
+        // pageLength: 2
+    });
+    if(col_list.length>0) {
+        $(".dataTables_scrollHeadInner th").each(function(index) {
+            temp_name = $(this).attr("class").split(" ")
+            if (temp_name) {
+                temp_name = temp_name[0]
+                if ($.inArray(temp_name, col_list) == -1) {
+                    // report_table.column(index).visible(true)
+                   table_instance.column(index).visible(false)   
+                }
+
+            }
+            
+        });
+
+    }
+    return table_instance
+}
+$("#cancel-ndnc-upload, #cancel-priority-upload, #cancel-contact-upload").click(function() {
+    showSwal('success-message', 'Upload Operation Cancelled')
+    $(".dropify-clear").click()
+})

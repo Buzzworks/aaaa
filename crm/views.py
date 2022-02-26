@@ -42,7 +42,7 @@ from callcenter.serializers import DispositionSerializer
 from .utility import (save_contact, validate_uploaded_phonebook, truncate_file,
 	connected_contact_status, get_crm_fields, get_customizable_crm_fields,
 	get_customize_customer_data, get_user_crm_data, upload_crm, validate_uploaded_crm,download_contactinfo_csv,
-	download_crmfields_csv, crm_field_value_schema)
+	download_crmfields_csv, crm_field_value_schema,get_customizable_crm_fields_with_datatype,crm_field_datatype_validation)
 from callcenter.utility import (get_object, create_agentactivity, get_formatted_agent_activities,
 	get_model_data,set_agentReddis,get_report_visible_column, get_campaign_users, check_non_admin_user)
 from callcenter.decorators import (check_read_permission,
@@ -1361,3 +1361,98 @@ class GetEditContactInfoApiView(APIView):
 		data["crm_data"] = raw_data
 		data["alt_numeric"] = data['contact']['alt_numeric']
 		return Response(data)
+
+class ContactUploadDataApiView(APIView):
+	permission_classes = [AllowAny]
+	def post(self, request):
+		uniqueid = None
+		data_dict = {}
+		crm_field_dict = {}
+		error_dict ={}
+		phonebook_id = None
+		contact_col_list = ["numeric","alt_numeric","first_name","last_name","user","email", "priority"]
+		campaign = request.data.get("campaign")
+		numeric = request.data.get("numeric")
+		if campaign and numeric:
+			campaign = Campaign.objects.filter(name=campaign)
+			if campaign.exists():
+				campaign = campaign.first()
+				if not Phonebook.objects.filter(slug=campaign.name+"_phonebook",campaign=campaign.id).exists():
+					if Phonebook.objects.filter(slug=campaign.name+"_phonebook").exists():
+						return JsonResponse({"msg":"LeadList is Created, But Assigned to Another Campaign",'status':'error'},status=500)
+				phonebook_obj,created = Phonebook.objects.get_or_create(campaign=campaign.id,slug=campaign.name+"_phonebook",defaults={"name":campaign.name+"_phonebook","campaign":campaign.id,"slug":campaign.name+"_phonebook","created_by":'API'})
+				if phonebook_obj:
+					phonebook_id = phonebook_obj.id
+				PhonebookBucketCampaign.objects.filter(id=campaign.id).update(is_contact=True)
+				crm_field_list = get_customizable_crm_fields_with_datatype(campaign.name)
+				row = request.data
+				api_crm_keys = []
+				database_crm_fields =[]
+				# print(crm_field_list,"---------------------")
+				for key,value in row.items():
+					if key.find(":") != -1:
+						if crm_field_list:
+							for field in crm_field_list:
+								section_name = field["field_name"].split(':')[0].replace(' ','_').lower()
+								field_name = field["field_name"].split(':')[1].replace(' ','_').lower()
+								check_field = field["field_name"]
+								database_crm_fields.append(check_field)
+						if key not in database_crm_fields:
+							api_crm_keys.append(key)
+						elif crm_field_list == []:
+							api_crm_keys.append(key)
+				if crm_field_list:
+					for field in crm_field_list:
+						section_name = field["field_name"].split(':')[0].replace(' ','_').lower()
+						field_name = field["field_name"].split(':')[1].replace(' ','_').lower()
+						check_field = field["field_name"]
+						data_dict, row = crm_field_datatype_validation(check_field, row, data_dict, field)
+						if section_name not in crm_field_dict:
+							crm_field_dict[section_name] = {}
+						crm_field_dict[section_name][field_name] = repr(row.get(check_field, "")).replace("'", "")
+						if crm_field_dict[section_name][field_name] =='':
+							crm_field_dict[section_name][field_name] = None
+				if api_crm_keys:
+					for custom_fields in api_crm_keys:
+						sep_col_field = custom_fields.split(":")
+						if sep_col_field[0] not in crm_field_dict:
+							crm_field_dict[sep_col_field[0]] ={}
+							crm_field_dict[sep_col_field[0]][sep_col_field[1]] = row.get(custom_fields)
+						crm_field_dict[sep_col_field[0]][sep_col_field[1]] = row.get(custom_fields)
+							
+				if not data_dict:
+					crm_field_obj = CrmField.objects.filter(campaign__name=campaign.name)
+					if crm_field_obj.exists():
+						unique_field = crm_field_obj.first().unique_fields
+						if unique_field:
+							unique_field = unique_field[0]
+							uniqueid = row.get(unique_field,None)
+				if data_dict:
+					return JsonResponse({"msg": "","status":"error","data":data_dict}, status=500)
+				query = ''
+				contact_dict = { update_key: str(row[update_key]) for update_key in contact_col_list if update_key in row }		
+				contact_dict["campaign"] = campaign.name
+				priority = row.get("priority","")
+				# if "alt_numeric" in row:
+					# alt_numeric = create_alt_num_dict(str(row.get("alt_numeric", "")))
+					# contact_dict["alt_numeric"] = alt_numeric
+				if row.get("priority","") == "":
+					priority = None
+				else:
+					priority = int(priority)
+				contact_dict["priority"] = priority
+				contact_dict["customer_raw_data"] = crm_field_dict
+				contact_dict["uniqueid"] = uniqueid
+				contact_dict["phonebook_id"] =phonebook_id
+				try:
+					contact = Contact.objects.create(**contact_dict)
+				except Exception as e:
+					return JsonResponse({"msg": str(e),"status":"error","data":{}}, status=500)
+				if error_dict:
+					return JsonResponse({"msg": "Data successfully created","status":"success","data":contact_dict, 'crm_error':error_dict})
+				else:
+					return JsonResponse({"msg": "Data successfully created","status":"success","data":contact_dict})
+			else:
+				return JsonResponse({"msg":"Campaign is not Present",'status':'error'},status=500)		
+		else:
+			return JsonResponse({"msg":"Missing Mandatory Field Campaign and Numeric","status":"failed"})

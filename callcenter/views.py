@@ -58,8 +58,8 @@ from flexydial.constants import (Status, REPORTS_LIST, TRUNK_TYPE, UserStatus, D
 
 from crm.models import (CrmField, TempContactInfo, Phonebook,
 						Contact,CrmField,ContactInfo, DownloadReports, LeadBucket, AlternateContact)
-from crm.serializers import (AgentCrmFieldSerializer,TempContactInfoSerializer, ContactSerializer,CssContactSerializer, AssignedContactInfoSerializer, ContactListSerializer, LeadBucketSerializer, AlternateContactSerializer)
-from crm.utility import crm_field_value_schema, get_customizable_crm_fields,get_customizable_crm_fields_for_template
+from crm.serializers import (SetContactSerializer,AgentCrmFieldSerializer,TempContactInfoSerializer, ContactSerializer,CssContactSerializer, AssignedContactInfoSerializer, ContactListSerializer, LeadBucketSerializer, AlternateContactSerializer)
+from crm.utility import crm_field_value_schema,get_user_crm_data, get_customizable_crm_fields,get_customizable_crm_fields_for_template
 from flexydial.views import (check_permission, get_paginated_object, data_for_pagination, get_active_campaign,
 		data_for_vue_pagination, sendSMS, csvDownloadTemplate, create_admin_log_entry, sendsmsparam)
 from callcenter.signals import (fs_pre_del_user)
@@ -8317,3 +8317,216 @@ class PasswordManagementApiView(LoginRequiredMixin,APIView):
 			else:
 				print(serializer_obj.errors)
 		return JsonResponse({"msg":"posting info server"})
+
+""" pending contacts info show start here """
+@method_decorator(check_read_permission, name='get')
+class PendingContactAPIView(LoginRequiredMixin, APIView):
+	"""
+	This view is used to show all contacts and cntact information
+	and do some filteration by columns, campaign and phonebook
+	"""
+
+	login_url = '/'
+	renderer_classes = [TemplateHTMLRenderer,DatatablesRenderer]
+	template_name    = "contacts/pending_contacts.html"
+	serializer_class = ContactListSerializer
+	paginator = DatatablesPageNumberPagination
+
+	def get(self, request, **kwargs):
+		add_crm_field = True
+		file_path = ''
+		campaign_list = Campaign.objects.values("name", "id")
+		phonebook = list(Phonebook.objects.values(
+		"id", "name", "campaign", "status"))
+		improper_file_is_exists = DataUploadLog.objects.filter(job_id='pending_contacts_improper_file')
+		if improper_file_is_exists.exists():
+			improper_file =  improper_file_is_exists.first().improper_file.name
+			file_path = os.path.basename(improper_file)
+		context = {"request":request,"campaign_list":campaign_list,"phonebook_list":phonebook, 'improper_file':file_path}
+		camp_name, active_camp, noti_count = get_active_campaign(request)
+		context["noti_count"] = noti_count
+		context = {**context, **kwargs['permissions']}
+		if request.is_ajax():
+			report_visible_cols = get_report_visible_column("10",request.user)
+			filter_by_phonebook = request.GET.get("phonebook", "")
+			filter_by_campaign = request.GET.get("campaign", "")
+			crm_fields = []
+			if add_crm_field and filter_by_campaign:
+				campaign = Campaign.objects.get(id=filter_by_campaign).name
+				crm_fields = get_customizable_crm_fields(campaign)
+			columns_list = ['campaign','phonebook','user','numeric','alt_numeric','first_name','last_name','email',
+			'disposition','status','uniqueid','Customer_full_name','pincode','lead_creation_date','created_date']
+			data = {"columns_list": columns_list}
+			data['report_visible_cols'] = report_visible_cols
+			data["crm_fields"] = list(set(crm_fields))
+			data = {**data, **kwargs['permissions']}
+			return JsonResponse(data)
+		return Response(context)
+
+	def post(self,request):
+		download_csv = request.POST.get('contact_info_download', '')
+		if download_csv:
+			col_list = request.POST.get('col_name_list',[])
+			if col_list:
+				col_list = col_list.split(',')
+			filters = request.POST.dict()
+			filters['phonebook'] = request.POST.getlist("phonebook", [])
+			filters['campaign'] = request.POST.getlist("campaign", [])
+			filters['download_type'] = request.POST.get('contact_info_download_type','csv')
+			DownloadReports.objects.create(report='Pending Contact',filters=filters, user=request.user.id, serializers=self.serializer_class, col_list=col_list, status=True)
+			return JsonResponse({"message":"Your Download request is created, will notify in download notification once completed."})
+		contacts = Contact.objects.none()
+		paginator = self.paginator()
+		filter_by_phonebook = request.POST.getlist("phonebook[]", "")
+		filter_by_campaign = request.POST.getlist("campaign[]", "")
+		numeric = request.POST.get('numeric','')
+
+		if request.POST.get('format', None) == 'datatables':
+			paginator.is_datatable_request = True
+		else:
+			paginator.is_datatable_request = False
+
+		if filter_by_campaign:
+			filter_by_campaign = list(Campaign.objects.filter(id__in=filter_by_campaign).values_list("name", flat=True))
+			contacts = Contact.objects.filter(Q(campaign__in=filter_by_campaign), Q(user=None)| Q(user=''), 
+					Q(created_date__date__lt=datetime.today()),Q(status='NotDialed'))
+			campaign_column = True
+			if filter_by_phonebook:
+				contacts = contacts.filter(phonebook__id__in=filter_by_phonebook)
+			if numeric:
+				contacts = contacts.filter(numeric=numeric)
+			# if disposition:
+			# 	contacts = contacts.filter(disposition__in=disposition)
+			page = self.paginate_queryset(contacts, paginator)
+			if page is not None:
+				serializer = self.serializer_class(page, many=True)
+				return self.get_paginated_response(serializer.data, paginator)
+			serializer = self.serializer_class(contacts, many=True)
+			return Response(serializer.data)
+		return Response({'error':'Select atleast one campaign'})
+		
+	def filter_queryset(self, queryset):
+		for backend in list(self.filter_backends):
+			queryset = backend().filter_queryset(self.request, queryset, self)
+		return queryset
+
+	def paginate_queryset(self, queryset, paginator):
+		if self.paginator is None:
+			return None
+		return self.paginator.paginate_queryset(queryset=queryset, request=self.request, self=paginator)
+
+	def get_paginated_response(self, data, paginator):
+		assert self.paginator is not None
+		return self.paginator.get_paginated_response(paginator, data)
+
+	def put(self,request):
+		uploaded_file = request.FILES.get("delta_file", "")
+		error = []
+		incorrect_count = 0
+		if uploaded_file:
+			if uploaded_file.name.endswith('.csv'):
+				data = pd.read_csv(uploaded_file, na_filter=False, encoding = "unicode_escape", escapechar='\\')
+			else:
+				data = pd.read_excel(uploaded_file, encoding = "unicode_escape")
+				data = data.replace(np.NaN, "")
+			column_names = data.columns.tolist()
+			table_columns = ['id','user']
+			valid = all(elem in column_names for elem in table_columns)
+			users_list = list(User.objects.values_list('username',flat=True))
+			job_id = 'pending_contacts_improper_file'
+			job_id_check = list(set(DataUploadLog.objects.filter(job_id=job_id).values_list('job_id', flat=True)))
+			if job_id_check:
+				DataUploadLog.objects.filter(job_id__in=job_id_check).delete()
+			if valid:
+				number = 0
+				contact_list = []
+				improper_contact = []
+				contacts_data = pd.read_sql_query("select id from crm_contact", connections['crm'])
+				for index, row in data.iterrows():
+					number +=1
+					c_info = contacts_data.loc[contacts_data.id==row.get("id","")]
+					if len(c_info)>0:
+						setattr(row,'pk',row.id)
+						if type(row.user) == np.float64: # if all the rows are float then it will validate 
+							if str(int(row.user)) in users_list:
+								contact_list.append(row)
+							else:
+								if row.user == np.NaN:
+									row['Description'] = 'User should not be empty'
+								elif row.user not in users_list:
+									row['Description'] = 'User is not present in the Database'
+								improper_contact.append(row)
+						else:
+							if str(row.user) in users_list:
+									contact_list.append(row)
+							else:
+								incorrect_count = incorrect_count + 1
+								if row.user == np.NaN:
+									row['Description'] = 'User should not be empty'
+								elif str(row.user) not in users_list:
+									row['Description'] = 'User is not present in the Database'
+								improper_contact.append(row)
+				Contact.objects.bulk_update(contact_list,['user'],batch_size=100)
+				if improper_contact:
+					print("improper file has been created again ")
+					data_upload_log, _ = DataUploadLog.objects.get_or_create(job_id=job_id)
+					total_data = len(data)
+					data_upload_log.status = 0
+					data_upload_log.save()
+					df =  pd.DataFrame(improper_contact)
+					df.to_csv(cwd+"csv_files/pending_contacts_improper_file.csv",index=False)
+					incorrect_file_path = "csv_files/pending_contacts_improper_file.csv"
+					f = open(cwd+incorrect_file_path, 'rb')
+					save_file_as = "pending_contacts_improper_file.csv"
+					data_upload_log.improper_file.save(save_file_as, File(f), save=True)
+					data_upload_log.incorrect_count = incorrect_count
+					f.close()
+			else:
+				return JsonResponse({"msg":"Contact column is not found "+str(table_columns)},status=500)
+		if error:
+			return JsonResponse({"msg":error},status=500)
+		return Response({"msg":"Pending Contact uploaded Successfully"})
+
+
+# @method_decorator(check_update_permission, name='get')
+class PendingContactEditAPIView(LoginRequiredMixin, APIView):
+	""" 
+		This view is used to edit the pending contacts info  
+	"""
+
+	renderer_classes = [TemplateHTMLRenderer]
+	template_name    = "contacts/pending_contacts_edit.html"
+	login_url = '/'
+
+	def get(self, request, pk, format=None):
+		data = {}
+		contact = get_object(pk, "crm", "Contact")
+		data["phonebook_list"] = get_user_crm_data(request.user, "crm", "Phonebook").filter(status="Active")
+		data["can_update"] = True
+		data["contact_status"] = CONTACT_STATUS
+		data["contact"] = contact
+		if CrmField.objects.filter(campaign__name=contact.campaign).exists():
+			crm_fields = CrmField.objects.get(campaign__name=contact.campaign)
+			data['crm_fields'] = crm_fields.crm_fields
+		else:
+			data['crm_fields'] = []
+		raw_data = contact.customer_raw_data
+		data["crm_data"] = raw_data
+		data['all_users'] = User.objects.filter(user_role__access_level='Agent')
+		return Response(data)
+
+	def post(self, request, pk, format=None):
+		contact = get_object(pk, "crm", "Contact")
+		contact_serializer = SetContactSerializer(contact, data=request.POST)
+		if contact_serializer.is_valid():
+			customer_raw_data = json.loads(request.POST.get("customer_raw_data", "{}"))
+			contact = contact_serializer.save(alt_numeric=json.loads(request.POST.get("alt_numeric","{}")),
+				user=request.POST.get("user",""), customer_raw_data=customer_raw_data,created_date=datetime.now())
+			temp_contact = TempContactInfo.objects.filter(id=pk)
+			if temp_contact.exists():
+				temp_contact.update(user=contact.user, numeric=contact.numeric, alt_numeric=contact.alt_numeric,
+						email=contact.email,created_date=datetime.now())
+		else:
+			print(contact_serializer.errors)
+		return JsonResponse({"msg":"Contact Detail Saved Successfully"}, status=200)
+""" pending contacts code end here """

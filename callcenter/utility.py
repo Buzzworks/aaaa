@@ -2776,6 +2776,58 @@ def download_contactinfo_report(filters, user, col_list, download_report_id):
 			set_download_progress_redis(download_report_id, 100.0, is_refresh=True)
 		print("contatinfo error ",e)
 
+def download_pendingcontacts_report(filters, user, col_list, download_report_id):
+	try:
+		filter_by_phonebook = filters.get("phonebook", "")
+		logged_in_user = User.objects.get(id=user)
+		filter_by_campaign = filters.get("campaign", "")
+		numeric = filters.get('numeric','')
+		filter_by_campaign = list(Campaign.objects.filter(id__in=filter_by_campaign).values_list("name", flat=True))
+		queryset = Contact.objects.filter(Q(campaign__in=filter_by_campaign), Q(user=None)| Q(user=''),Q(created_date__date__lt=datetime.today()),Q(status="NotDialed"))
+		campaign_column = True
+		if filter_by_phonebook:
+			queryset = queryset.filter(phonebook__id__in=filter_by_phonebook)
+		if numeric:
+			queryset = queryset.filter(numeric=numeric)
+		col_list = ['id','user','numeric','uniqueid'] + col_list
+		csv_file = []
+		if 'created_date' in col_list:
+			col_list.remove('created_date')
+			col_list.append('flexydial_insert_date')
+		if "" in col_list:
+			col_list.remove("")
+		csv_file.append(col_list)
+		count = 0
+		for c_info in queryset.iterator():
+			row = []
+			data = ContactListSerializer(c_info).data
+			for field in col_list:
+				field = field.split('.')
+				if "flexydial_insert_date" in field:
+					row.append(data.get('created_date',''))
+				else:
+					if len(field) > 1:
+						if field[1] in data['contact_info']:
+							if field[2] in data['contact_info'][field[1]]: 
+								row.append(data['contact_info'][field[1]][field[2]])
+							else:
+								row.append('')
+						else:
+							row.append('')
+					else:
+						row.append(data.get(field[0],''))
+			csv_file.append(row)
+			count +=1
+			percentage = ((count)/queryset.count())*100
+			set_download_progress_redis(download_report_id, round(percentage,2))
+		save_file(csv_file, download_report_id, 'call-info', logged_in_user)
+	except Exception as e:
+		print("Exception occures from Contact Info Download",e)
+		set_download_progress_redis(download_report_id, 100)
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
+
 def download_billing_report(filters, user, col_list, download_report_id):
 	"""
 	this is the function for download billing report download

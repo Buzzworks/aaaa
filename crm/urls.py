@@ -33,5 +33,6 @@ urlpatterns = [
         path('api/perform-action-on-entry/', views.PerformActionOnSelectedEntry.as_view(), name="perform-action-on-entry"),
         path('api/get-edit-contact/<int:pk>/', views.GetEditContactInfoApiView.as_view(), name="get-edit-contact"),
         path('api/download-phonebook/',views.DownloadPhonebook.as_view(),name="download_phoenbook"),
+        path('api/upload-crm-data/',views.ContactUploadDataApiView.as_view(), name="upload-crm-api-data"),
 ]
 

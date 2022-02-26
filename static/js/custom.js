@@ -539,6 +539,7 @@ function session_campaign_detail(dial_method) {
     if (dial_method["outbound"] == false) {
         $("#btnDialHangup, #btnNextCall").addClass("d-none")
         $("#LeadPreview").prop("checked", false)
+        sessionStorage.setItem("lead_api_campaign",dial_method["lead_api_campaign"])
     }
     agent_info_vue_mode.mode_list = list_of_modes
 }

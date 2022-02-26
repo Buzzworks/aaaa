@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getattribute %}
+{% load dict_value_list %}
+{% block title %}Edit Contact{% endblock title %}
+
+{% block header %}Pending Calls<small>Edit pending calls</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'pending_contacts' %}">Pending Calls</a></li>
+<li class="breadcrumb-item active" aria-current="page">Modify</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_update %}
+<div class="row" id="contact_info">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Edit Pending Calls</legend>
+				<form id="edit-pending-contact-info">
+					{% csrf_token %}
+					<div class="card">
+						<div class="card-body">
+							<div class="row">
+								<div class="col-md-6">
+									<div class="form-group row">
+										<label for="" class="col-sm-4 col-form-label">Phonebook</label>
+										<div class="col-sm-8">
+											<select class="form-control" name="phonebook">
+												<option value="">Select Phonebook</option>
+												{% for phonebook in phonebook_list %}
+													{% if phonebook.id == contact.phonebook.id %}
+														<option value="{{ phonebook.id }}" selected>{{ phonebook.name }}</option>
+													{% else %}
+														<option value="{{ phonebook.id }}">{{ phonebook.name }}</option>
+													{% endif %}
+												{% endfor %}
+											</select>
+										</div>
+									</div>
+								</div>
+								<div class="col-md-6">
+									<div class="form-group row">
+										<label for="user" class="col-sm-4 col-form-label">User :</label>
+										<div class="col-sm-8">
+											<select  class='form-control' id=user name=user> 
+												{% for user in all_users %}
+													{% if user.username == contact.user %}
+														<option value="{{ user.username }}" selected>{{ user.username }}</option>
+													{% else %}
+														<option value="{{ user.username }}" >{{ user.username }}</option>
+													{% endif%}
+												{% endfor %}
+											</select>
+											<!-- <input type="text" class="form-control" id="user" placeholder="user" name="user" value="{{ contact.user}}"> -->
+										</div>
+									</div>
+									
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-md-6">
+									<div class="form-group row">
+										<label for="first_name" class="col-sm-4 col-form-label">First Name :</label>
+										<div class="col-sm-8">
+											<input type="text" class="form-control" id="first_name" placeholder="" name="first_name" value="{{contact.first_name}}">
+										</div>
+									</div>
+									
+								</div>
+								<div class="col-md-6">
+									<div class="form-group row">
+										<label for="last_name" class="col-sm-4 col-form-label">Last Name:</label>
+										<div class="col-sm-8">
+											<input type="text" class="form-control" id="alt_number" placeholder="" name="last_name" value="{{ contact.last_name}}">
+										</div>
+									</div>
+									
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-md-6">
+									<div class="form-group row">
+										<label for="number" class="col-sm-4 col-form-label">Number :</label>
+										<div class="col-sm-8">
+											<input type="number" class="form-control" id="number" placeholder="" name="numeric" value="{{contact.numeric}}" data-validation="required">
+										</div>
+									</div>
+									
+								</div>
+								<div class="col-md-6">
+									<div class="form-group row">
+										<label for="alt_number" class="col-sm-4 col-form-label">Alternate Number:</label>
+										<div class="col-sm-8 ">
+											<div class="input-group">
+											<select class="form-control">
+												<option v-for="alt_num in alt_numeric" :value="alt_num['alt_value']">${alternateNameNumber(alt_num)}</option>
+											</select>
+											<div class="input-group-append">
+												<button class="btn btn-outline-secondary" data-toggle="popover" data-placement="bottom" title="Add Alternate Number" data-html="true" type="button">
+													<i class="fas fa-plus fa-sm text-dark"></i>
+												</button>
+											</div>
+										</div>
+										</div>
+									</div>
+									<div id="popper-content" class="popper-content d-none" style="white-space: nowrap;">
+										<div v-for="alt_num,index in alt_numeric" class="mb-1" v-bind="index">
+											<span>${index+1}.</span>
+											<div class="editable-input" style="width:125px">
+												<input type="text" class="form-control form-control-sm p-1" v-model="alt_num['alt_label']">
+											</div>
+											<div class="editable-input" style="width:125px">
+												<input type="text" class="form-control form-control-sm p-1" v-model="alt_num['alt_value']" onkeypress="return isNumber(event)">
+											</div>
+											<div class="editable-buttons">
+												<span v-if="alt_numeric.length > 1" @click="removeAlternateNumber(index)" style="font-size: 18px; cursor: pointer;">
+													<i class="fas fa-times-circle text-danger remove-alternate"></i>
+												</span>
+												<span v-if="index+1 == alt_numeric.length && index+1 < 5" @click="addAlternateNumber(index+1)" style="font-size: 18px; cursor: pointer;">
+													<i class="fa fa-plus-circle text-success add-alternate"></i>
+												</span>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="row mb-2">
+								<div class="col-md-6">
+									<div class="form-group row">
+										<label for="email" class="col-sm-4 col-form-label">Email:</label>
+										<div class="col-sm-8">
+											<input type="text" class="form-control" id="email" placeholder="" name="email" value="{{contact.email}}">
+										</div>
+									</div>
+									
+								</div>
+								<div class="col-md-6">
+									<div class="form-group row">
+										<label for="" class="col-sm-4 col-form-label">Status</label>
+										<div class="col-sm-8">
+											{% if contact.status == 'Queued' %}
+											<select class="form-control" name="status" readonly style="pointer-events: none;">
+											{% else %}
+											<select class="form-control" name="status">
+											{% endif %}
+												{% for status in contact_status %}
+													{% if status.0 == contact.status %}
+														<option value="{{ status.0 }}" selected>{{ status.1 }}</option>
+													{% elif status.0 == 'Queued' %}
+														<option value="{{ status.0 }}" disabled="disabled">{{ status.1 }}</option>
+													{% else %}
+														<option value="{{ status.0 }}">{{ status.1 }}</option>
+													{% endif %}
+												{% endfor %}
+											</select>
+										</div>
+									</div>
+								</div>
+							</div>
+							<crm-fields :field_schema="fields" :field_data="field_data"></crm-fields>
+							<div class="row">
+								<div class="col-sm-6">
+									<div class="alert alert-danger d-none" id="contact-err-msg"></div>
+								</div>
+								<div class="col-sm-6">
+									<div class="float-right">
+										<button type="button" class="btn btn-success mr-sm-2" v-on:click="updatePendingContact({{ contact.id }})">Update</button>
+										<button type="button" class="btn btn-light" id="" onclick="showSwal('warning-message-and-cancel','OK', '/CallReports/pending-contacts/')">Cancel</button>
+									</div>
+								</div>
+							</div>
+							<input type="hidden" name="customer_raw_data" id="customer_raw_data">
+							<input type="hidden" name="alt_numeric" id="alt_num_input">
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/crmField_component.js' %}"></script>
+<script type="text/javascript">
+	{% if can_update %}
+		$.validate({
+			form:'#edit-pending-contact-info',
+		});
+		var fields = {{crm_fields|convert_in_json|safe}}
+		var field_data = {}
+		{% if crm_data %}
+			field_data = {{crm_data|convert_in_json|safe}}
+		{% endif %}
+		var contact_info_vue = new Vue({
+			el: "#contact_info",
+			delimiters: ['${', '}'],
+			data :{
+				fields : fields,
+				field_data: field_data,
+				alt_numeric: [],
+			},
+			methods:{
+				updatePendingContact(id){
+					var vm = this
+					var alt_numeric_dict = {}
+					custom_raw_data = {}
+					vm.alt_numeric.filter(function(val,index){
+						if(val['alt_label'] == ''){
+							val['alt_label'] = 'alt_num_'+(index+1)
+						}
+						alt_numeric_dict[val['alt_label']] = val['alt_value']
+					})
+					$('#alt_num_input').val(JSON.stringify(alt_numeric_dict))
+					$("#customer_raw_data").val(JSON.stringify(vm.field_data))
+					var form = $("#edit-pending-contact-info").serialize()
+					if( $("#edit-contact-info").isValid()) {
+						$.ajax({
+							type: 'post',
+							headers: {"X-CSRFToken": csrf_token},
+							url: '/CallReports/pending-contacts/'+id+'/',
+							data: form,
+							success: function (data) {
+								showSwal('success-message', 'Pending Contact Detail Updated', '/CallReports/pending-contacts/')
+							},
+							error: function (data) {
+								
+							}
+						});
+					}
+				},
+				createAlternateDict(value){
+					let vm = this
+					$.each(value, function(key,val){
+						let temp_dict = {}
+						temp_dict['alt_label'] = key
+						temp_dict['alt_value'] = val
+						vm.alt_numeric.push(temp_dict)
+					})
+				},
+				addAlternateNumber(index){
+					let check_input = this.alt_numeric.filter(val=>val['alt_label'] == '' || val['alt_value'] == '')
+					if (check_input.length >= 1) 
+					return
+					this.alt_numeric.push({'alt_label':'alt_num_'+(index+1),'alt_value':''})
+				},
+				removeAlternateNumber(index){
+					this.alt_numeric.splice(index,1)
+				},
+				alternateNameNumber(alt_num_dict){
+		            return alt_num_dict['alt_label'] + ' : ' + alt_num_dict['alt_value']
+				},
+			}
+		})
+		contact_info_vue.createAlternateDict({{contact.alt_numeric|safe}})
+		$( document ).ready(function() {
+			$('[data-toggle="popover"]').popover({
+				html: true,
+				content: $('#popper-content')
+			}).on('show.bs.popover', function() {
+				$('#popper-content').removeClass('d-none')
+				if(contact_info_vue.alt_numeric.length == 0){
+						contact_info_vue.addAlternateNumber(0)
+				}
+			}).on('hide.bs.popover', function() {
+				contact_info_vue.alt_numeric = contact_info_vue.alt_numeric.filter(item => item.alt_value != '')
+			})
+		})
+	$('body').on('click', function (e) {
+		if ($(e.target).data('toggle') !== 'popover'
+		&& $(e.target).parents('[data-toggle="popover"]').length === 0
+		&& $(e.target).parents('.popover.fade').length === 0
+		&& !$(e.target).hasClass('remove-alternate') && !$(e.target).hasClass('add-alternate')) { 
+			$('[data-toggle="popover"]').popover('hide');
+		}
+	})
+	{% else %}
+		PermissionDeny();
+
+	{% endif %}
+</script>
+{% endblock extra-js %}

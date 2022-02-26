@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% load static %}
+{% load getcrmdata %}
+{% block title %}Pending Contacts{% endblock title %}
+
+{% block extra-stylesheets %}
+<link rel="stylesheet" href="{% static 'css/jquery.dataTables.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/dataTables.bootstrap4.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/responsive.bootstrap4.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/select.dataTables.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/form-validator.css' %}" type="text/css">
+<link rel="stylesheet" href="{% static 'css/datatablecss/buttons.bootstrap4.min.css' %}">
+{% endblock extra-stylesheets %}
+
+{% block header %}Pending Calls<small>Contact</small>{% endblock header %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Pending Contacts</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% if can_read %}
+<div class="row">
+	<div class="col-md-12 grid-margin stretch-card">
+		<div class="card">
+			<div class="card-body">
+				<legend>Pending Contact</legend>
+				<!-- crm list tab and table -->
+				<form method="post" id="pending_report_form">
+					{% csrf_token %}
+					<div class="row">
+						<div class="col-sm-6 col-md-2">
+							<div class="form-group">
+								<label for="extension" class="col-form-label mb-0">Campaign:</label>
+								<select class="form-control "  id="contact_campaign_select" name="campaign" multiple>
+									{% for campaign in campaign_list %}
+										<option value="{{ campaign.id}}">{{ campaign.name }}</option>
+									{% endfor %}
+								</select>
+							</div>
+						</div>
+						<div class="col-sm-6 col-md-2 contact-filter-div ">
+							<div class="form-group">
+								<label for="username" class="col-form-label mb-0">Phonebook:</label>
+								<select class="form-control"  id="contact_phonebook_select" name="phonebook" multiple>
+								</select>
+							</div>
+						</div>
+						<div class="col-sm-6 col-md-2 contact-filter-div ">
+							<div class="form-group">
+								<label class="col-form-label mb-0">Numeric</label>
+								<input type="text" class="form-control" name="customer_cid" id="destination_extension" placeholder="Phone Number">
+							</div>
+						</div>
+						<div class="form-group">
+                            <label class="col-form-label"></label>
+                            <div>
+                                <button type="button" class="btn btn-success btn-sm btn-icon-text mt-2 mr-2" id="filter_pending_contacts">
+                                    <i class="fas fa-filter"></i>Filter
+                                </button>
+                            </div>
+                        </div>
+						<div class="form-group">
+							<label class="col-form-label"></label> 
+							<div>
+								<button type="button" id="contact_info_download" class=" btn btn-primary btn-sm mr-sm-2 pending_contacts d-none mt-2 contact_info_download" title="Download Reports"><i class="fa fa-download" aria-hidden="true"></i></button>
+							</div>
+						</div>
+						<div class="form-group">
+							<label class="col-form-label"></label> 
+							<div>
+								<button type="button" class=" btn btn-primary btn-sm mr-sm-2 pending_contacts mt-2" title="Upload Assigned Contact" data-toggle="modal" data-target="#upload-pending-assign-contact"><i class="fa fa-upload" aria-hidden="true"></i></button>
+							</div>
+						</div>
+					</div>
+					{% if improper_file%}
+					<a href="/media/upload/{{ improper_file }}" download><i class="fa fa-download" aria-hidden="true"></i>Improper File</a>
+					{% endif %}
+					<input type="hidden" name="col_name_list" id="col_name_list">
+					<input type="hidden" name="col_title_list" id="col_title_list">
+					<input type="hidden" name="contact_info_download" id="contact_info_download_val">
+					<hr>
+				</form>
+				<div class="row">
+					<div class="col-12">
+						<table id="pending-contact-table" class="table display table-striped nowrap">
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="app_name" value="crm">
+	<input type="hidden" id="model_name" value="Contact">
+	<input type="hidden" name="report_name" id="report_name" value="10"> 
+</div>
+
+<!-- model forms  -->
+<div class="modal fade" id="upload-pending-assign-contact" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="ModalLabel">
+					<i class="fa fa-info-circle" title="A step by step wizard that allows you to create users."></i>
+					<b>Pending Assign Contact » Upload</b>
+				</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">×</span>
+				</button>
+			</div>
+			<div class="modal-body pt-3">
+				<form id="ndnc-upload-form" class="wizard-validation-form" action="{% url 'pending_contacts' %}" method="PUT">
+					{% csrf_token %}
+					<div>
+						<section>
+							<div class="row">
+								<div class="col-6 mt-2">
+									<input type="file" class="dropify" id="uploaded-file" name="delta_file"/>
+								</div>
+							</div>
+
+							<div class="row">
+								<a id="proper-data" class="d-none upload-css text-info" download>
+									<span class="fa fa-download download-file-css"></span>
+									<span class="msg"></span>
+								</a>
+							</div>
+							<div class="row">
+								<a id="improper-data" class="d-none upload-css text-danger" download>
+									<span class="fa fa-download download-file-css"></span>
+									<span class="msg"></span>
+								</a>
+							</div>
+							<div class="row pull-right">
+								<div class="upload-css">
+									<button type="button" class="btn btn-dark btn-fw d-none" id="upload-priority">Upload</button>
+									<button type="button" class="btn btn-light btn-fw" id="cancel-contact-upload">Cancel</button>
+								</div>
+							</div>
+							<div class="form-group">
+								<p id="csv-error" class="text-danger">{{ msg }}</p>
+							</div>
+						</section>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}
+{% endblock content %}
+{% block extra-js %}
+<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% static 'js/dropify.js' %}"></script>
+<script type="text/javascript">
+	var pending_contact_table
+	$('#upload-pending-assign-contact').on('hidden.bs.modal', function() {
+	    $('#ndnc-upload-form')[0].reset()
+	});
+	
+	$(document).ready(function() {
+		{% if can_read %}
+			table = $('#pending-contact-table')
+			$('#start-date').datetimepicker({
+				format: 'YYYY-MM-DD',
+				useCurrent: true,
+				defaultDate: new Date(),
+				maxDate: new Date()
+			})
+			$('#end-date').datetimepicker({
+				format: 'YYYY-MM-DD',
+				useCurrent: true,
+				defaultDate: new Date(),
+				maxDate: new Date()
+			})
+			$("#start-date").on("change.datetimepicker", function (e) {
+				$('#end-date').datetimepicker('minDate', e.date);
+			});
+			$("#end-date").on("change.datetimepicker", function (e) {
+				$('#start-date').datetimepicker('maxDate', e.date);
+			});
+		{% else %}
+			PermissionDeny();
+		{% endif %}
+	});
+	
+</script>
+{% endblock extra-js %}
