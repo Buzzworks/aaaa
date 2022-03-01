@@ -237,7 +237,7 @@ inbound_server.on('CONNECT', function (req) {
 		destination_number = req.body['Caller-Caller-ID-Number'].slice(-10)
 		caller_id = req.body['Caller-Destination-Number']
 		dialed_uuid = req.body['Unique-ID']
-		server = req.body['variable_sip_to_host']
+		server = req.body['FreeSWITCH-IPv4']
 		date_time = '${strftime(%d-%m-%Y-%H-%M)}'
 		var callback = ""
 		audio_played = false
