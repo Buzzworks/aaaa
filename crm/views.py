@@ -198,6 +198,8 @@ class CrmCreatePhonebookApiView(LoginRequiredMixin, APIView):
 					valid = all(elem in column_names for elem in phonebook_columns)
 				if valid:
 					if not data.empty:
+						if not os.path.isdir(os.path.join(settings.MEDIA_ROOT, 'upload/')):
+							os.makedirs(settings.MEDIA_ROOT+'/upload')
 						if os.access(os.path.join(settings.MEDIA_ROOT, 'upload/'),os.W_OK | os.X_OK) == True:
 							if phone_inst.exists():
 								if not request.POST.get("campaign", "") == phone_inst.first().campaign:
@@ -1419,7 +1421,7 @@ class ContactUploadDataApiView(APIView):
 							crm_field_dict[sep_col_field[0]] ={}
 							crm_field_dict[sep_col_field[0]][sep_col_field[1]] = row.get(custom_fields)
 						crm_field_dict[sep_col_field[0]][sep_col_field[1]] = row.get(custom_fields)
-							
+
 				if not data_dict:
 					crm_field_obj = CrmField.objects.filter(campaign__name=campaign.name)
 					if crm_field_obj.exists():
@@ -1430,7 +1432,7 @@ class ContactUploadDataApiView(APIView):
 				if data_dict:
 					return JsonResponse({"msg": "","status":"error","data":data_dict}, status=500)
 				query = ''
-				contact_dict = { update_key: str(row[update_key]) for update_key in contact_col_list if update_key in row }		
+				contact_dict = { update_key: str(row[update_key]) for update_key in contact_col_list if update_key in row }
 				contact_dict["campaign"] = campaign.name
 				priority = row.get("priority","")
 				# if "alt_numeric" in row:
@@ -1453,6 +1455,6 @@ class ContactUploadDataApiView(APIView):
 				else:
 					return JsonResponse({"msg": "Data successfully created","status":"success","data":contact_dict})
 			else:
-				return JsonResponse({"msg":"Campaign is not Present",'status':'error'},status=500)		
+				return JsonResponse({"msg":"Campaign is not Present",'status':'error'},status=500)
 		else:
 			return JsonResponse({"msg":"Missing Mandatory Field Campaign and Numeric","status":"failed"})
