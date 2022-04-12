@@ -7,9 +7,9 @@ from django.db.models import signals
 import os
 import json
 import uuid
-from django.conf  import settings
 from callcenter.models import (Campaign,DataUploadLog, CALLBACK_MODE)
 from flexydial.constants import (Status, CONTACT_STATUS, ORDER_BY)
+from crm.s3_fileoperations import fileTransferToS3, s3fileDownloadToServer
 
 # Create your models here.
 short_uuid = str(uuid.uuid4())[:8]
@@ -330,11 +330,26 @@ class LeadBucket(models.Model):
 	verified_to = models.CharField(max_length=100,null=True,blank=True)
 	reverify_lead = models.BooleanField(default=False)
 
+class FIleModelField(models.FileField):
+	def pre_save(self, model_instance, add,**kwargs):
+		file = super().pre_save(model_instance, add)
+		if file and not file._committed:
+			# Commit the file to storage prior to saving the model
+			file.save(file.name, file.file, save=False)
+		try:
+			if settings.S3_PHONEBOOK_BUCKET_NAME:
+				if add:
+					fileTransferToS3(self,file.name,file.name)
+				else:
+					s3fileDownloadToServer(self,file.name,file.name)
+		except Exception as e:
+			print("Error :: File Upload/Download in S3",e)
+		return file
 class PhoneBookUpload(models.Model):
 	""" This model is used to the phonebook upload status"""
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
 			on_delete=models.SET_NULL,null=True)	
-	phonebook_file = models.FileField(upload_to='upload', blank=True)
+	phonebook_file = FIleModelField(upload_to='upload', blank=True)
 	phone_inst = models.ForeignKey(Phonebook, related_name="phonebook_upload", null=True,
 		on_delete=models.CASCADE, blank=True)
 	duplicate_check = models.CharField(max_length=100,null=True,blank=True)
@@ -344,6 +359,8 @@ class PhoneBookUpload(models.Model):
 	created_date = models.DateTimeField(auto_now_add=True)
 	created_by = models.CharField(max_length=100,null=True)
 	is_start = models.BooleanField(default=False)
+
+
 
 class AlternateContact(models.Model):
 	""" 
