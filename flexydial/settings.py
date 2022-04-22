@@ -238,6 +238,12 @@ FREESWITCH_IP_ADDRESS = os.environ.get('FREESWITCH_HOST')
 S3_PHONEBOOK_BUCKET_NAME = os.environ.get('S3_PHONEBOOK_BUCKET_NAME',"")
 S3_ACCESS_KEY = os.environ.get('S3_ACCESS_KEY',"")
 S3_SECRET_KEY = os.environ.get('S3_SECRET_KEY',"")
+API_CAMPAIGN_FIELD = os.environ.get('API_CAMPAIGN_FIELD',"campaign")
+API_NUMERIC_FIELD = os.environ.get('API_NUMERIC_FIELD',"numeric")
+REPLACE_API_KEY = os.environ.get('REPLACE_API_KEY',"")
+REPLACE_API_VALUE = os.environ.get('REPLACE_API_VALUE',"")
+XML_INSERT_KEY = os.environ.get("XML_INSERT_KEY","")
+XML_UPDATE_KEY = os.environ.get("XML_UPDATE_KEY","")
 
 SOURCE = 'FLEXY'
 LOCATION = 'Mumbai'

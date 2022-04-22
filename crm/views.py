@@ -1,4 +1,4 @@
-import os
+import os,re
 import pickle
 import os.path
 from functools import reduce
@@ -13,7 +13,7 @@ from django.contrib.auth import logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import method_decorator
 from django.template.loader import render_to_string
-
+from rest_framework_xml.parsers import XMLParser
 from rest_framework.views import APIView
 from rest_framework.permissions import BasePermission, AllowAny,IsAuthenticated
 from rest_framework.renderers import TemplateHTMLRenderer
@@ -1365,7 +1365,10 @@ class GetEditContactInfoApiView(APIView):
 		return Response(data)
 
 class ContactUploadDataApiView(APIView):
+	parser_classes = [XMLParser]
 	permission_classes = [AllowAny]
+	def get(self,request):
+		return JsonResponse({"msg": "Testing for Get"})
 	def post(self, request):
 		uniqueid = None
 		data_dict = {}
@@ -1373,8 +1376,21 @@ class ContactUploadDataApiView(APIView):
 		error_dict ={}
 		phonebook_id = None
 		contact_col_list = ["numeric","alt_numeric","first_name","last_name","user","email", "priority"]
-		campaign = request.data.get("campaign")
-		numeric = request.data.get("numeric")
+		data = json.dumps(request.data)
+		data = re.sub("\{http.*?}",'',data)
+		data = json.loads(data)
+		data = data.get('Body',data)
+		if settings.XML_INSERT_KEY in data:
+			action = "insert"
+			data = data.get(settings.XML_INSERT_KEY,data)
+		elif settings.XML_UPDATE_KEY in data:
+			action = "update"
+			data = data.get(settings.XML_UPDATE_KEY,data)
+
+		if settings.REPLACE_API_KEY and settings.REPLACE_API_VALUE:
+			data =  {k.replace(settings.REPLACE_API_KEY,settings.REPLACE_API_VALUE).lower(): v for k, v in data.items()}
+		campaign = data.get(settings.API_CAMPAIGN_FIELD)
+		numeric = data.get(settings.API_NUMERIC_FIELD)		
 		if campaign and numeric:
 			campaign = Campaign.objects.filter(name=campaign)
 			if campaign.exists():
@@ -1387,10 +1403,9 @@ class ContactUploadDataApiView(APIView):
 					phonebook_id = phonebook_obj.id
 				PhonebookBucketCampaign.objects.filter(id=campaign.id).update(is_contact=True)
 				crm_field_list = get_customizable_crm_fields_with_datatype(campaign.name)
-				row = request.data
+				row = data
 				api_crm_keys = []
 				database_crm_fields =[]
-				# print(crm_field_list,"---------------------")
 				for key,value in row.items():
 					if key.find(":") != -1:
 						if crm_field_list:
@@ -1398,11 +1413,33 @@ class ContactUploadDataApiView(APIView):
 								section_name = field["field_name"].split(':')[0].replace(' ','_').lower()
 								field_name = field["field_name"].split(':')[1].replace(' ','_').lower()
 								check_field = field["field_name"]
-								database_crm_fields.append(check_field)
 						if key not in database_crm_fields:
 							api_crm_keys.append(key)
 						elif crm_field_list == []:
 							api_crm_keys.append(key)
+					else:
+						api_crm_keys.append(key)
+				if not data_dict:
+					crm_field_obj = CrmField.objects.filter(campaign__name=campaign.name)
+					if crm_field_obj.exists():
+						unique_field = crm_field_obj.first().unique_fields
+						if unique_field:
+							unique_field = unique_field[0]
+				uniqueid = row.get(unique_field,None)
+				if uniqueid is not None:								
+					update_contact = Contact.objects.filter(campaign=campaign.name,uniqueid=uniqueid).first()
+					if action == "update":
+						if update_contact:
+							crm_field_dict = update_contact.customer_raw_data
+						else:
+							return JsonResponse({"msg":"No matching data found for update.",'status':'error'},status=500)	
+					else:
+						if update_contact:
+							return JsonResponse({"msg":"Respected data already present Cant create the New Data,Use Update Structure to update the data",'status':'error'},status=500)
+				else:
+					return JsonResponse({"msg":"Mandatory unique field is missing",'status':'error'},status=500)
+				
+
 				if crm_field_list:
 					for field in crm_field_list:
 						section_name = field["field_name"].split(':')[0].replace(' ','_').lower()
@@ -1414,30 +1451,32 @@ class ContactUploadDataApiView(APIView):
 						crm_field_dict[section_name][field_name] = repr(row.get(check_field, "")).replace("'", "")
 						if crm_field_dict[section_name][field_name] =='':
 							crm_field_dict[section_name][field_name] = None
+				
 				if api_crm_keys:
 					for custom_fields in api_crm_keys:
+						if unique_field == custom_fields:
+							uniqueid = row.get(custom_fields,None)
+							 
 						sep_col_field = custom_fields.split(":")
-						if sep_col_field[0] not in crm_field_dict:
-							crm_field_dict[sep_col_field[0]] ={}
-							crm_field_dict[sep_col_field[0]][sep_col_field[1]] = row.get(custom_fields)
-						crm_field_dict[sep_col_field[0]][sep_col_field[1]] = row.get(custom_fields)
+						if sep_col_field[0].lower() not in crm_field_dict and len(sep_col_field) == 2:
+							crm_field_dict[sep_col_field[0].lower()] ={}
+						if len(sep_col_field) == 2:
+							crm_field_dict[sep_col_field[0].lower()][sep_col_field[1].lower()] = row.get(custom_fields)
+						elif len(sep_col_field) == 1:
+							if "extra_information" not in crm_field_dict:
+								crm_field_dict["extra_information"] = {}	
+							crm_field_dict["extra_information"][sep_col_field[0].lower()] = row.get(custom_fields)
+							# crm_field_dict
+						# crm_field_dict[sep_col_field[0].lower()][sep_col_field[1].lower()] = row.get(custom_fields)
+							
 
-				if not data_dict:
-					crm_field_obj = CrmField.objects.filter(campaign__name=campaign.name)
-					if crm_field_obj.exists():
-						unique_field = crm_field_obj.first().unique_fields
-						if unique_field:
-							unique_field = unique_field[0]
-							uniqueid = row.get(unique_field,None)
 				if data_dict:
 					return JsonResponse({"msg": "","status":"error","data":data_dict}, status=500)
 				query = ''
-				contact_dict = { update_key: str(row[update_key]) for update_key in contact_col_list if update_key in row }
+				row['numeric'] = numeric
+				contact_dict = { update_key: str(row[update_key]) for update_key in contact_col_list if update_key in row }		
 				contact_dict["campaign"] = campaign.name
 				priority = row.get("priority","")
-				# if "alt_numeric" in row:
-					# alt_numeric = create_alt_num_dict(str(row.get("alt_numeric", "")))
-					# contact_dict["alt_numeric"] = alt_numeric
 				if row.get("priority","") == "":
 					priority = None
 				else:
@@ -1447,14 +1486,20 @@ class ContactUploadDataApiView(APIView):
 				contact_dict["uniqueid"] = uniqueid
 				contact_dict["phonebook_id"] =phonebook_id
 				try:
-					contact = Contact.objects.create(**contact_dict)
+					if action == "insert":
+						Contact.objects.create(**contact_dict)
+					else:
+						update_contact.customer_raw_data = crm_field_dict
+						update_contact.numeric = row['numeric']
+						update_contact.save()
 				except Exception as e:
 					return JsonResponse({"msg": str(e),"status":"error","data":{}}, status=500)
 				if error_dict:
 					return JsonResponse({"msg": "Data successfully created","status":"success","data":contact_dict, 'crm_error':error_dict})
 				else:
-					return JsonResponse({"msg": "Data successfully created","status":"success","data":contact_dict})
+					msg = "created" if action == "insert" else "updated"
+					return JsonResponse({"msg": "Data successfully "+msg,"status":"success","data":contact_dict})
 			else:
-				return JsonResponse({"msg":"Campaign is not Present",'status':'error'},status=500)
+				return JsonResponse({"msg":"Campaign is not Present",'status':'error'},status=500)		
 		else:
-			return JsonResponse({"msg":"Missing Mandatory Field Campaign and Numeric","status":"failed"})
+			return JsonResponse({"msg":"Missing Mandatory Field Campaign and Numeric","status":"failed","a":request.data})
