@@ -34,7 +34,7 @@ class Switch(models.Model):
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
 			on_delete=models.SET_NULL,null=True)
 	name = models.CharField(max_length = 50)
-	ip_address = models.CharField(max_length =20, db_index=True, unique=True)
+	ip_address = models.CharField(max_length =50, db_index=True, unique=True)
 	status = models.CharField(default='Active',choices=Status, max_length=10)
 	created_date = models.DateTimeField(auto_now_add=True)
 	sip_udp_port = models.IntegerField(default=45060, null=True)
