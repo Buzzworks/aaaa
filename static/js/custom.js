@@ -767,8 +767,10 @@ $('#btnLogMeOut').click(function() {
                     $('#crm-agent-logout,#agent_to_admin_switchscreen').attr("style","")
                     $("#agent-breaks-div").addClass("d-none")
                     if (call_type == 'webrtc') {
-                        if (sipStack) {
-                            sipStack.stop()
+                        if(sipStack){
+                            sipStack.stop();
+                        }else if (session){
+                            hangupCall()
                         }
                         SIPml["b_initialized"] = false
                     }

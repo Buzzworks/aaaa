@@ -574,8 +574,10 @@
 <!-- </script> -->
 
 {% if request.user.call_type == 'webrtc' %}
-<script src="{% static 'webrtc/sip.js' %}"></script>
-<script src="{% static 'webrtc/sip_session.js' %}"></script>
+<!-- <script src="{% static 'webrtc/sip.js' %}"></script>
+<script src="{% static 'webrtc/sip_session.js' %}"></script> -->
+<script src="{% static 'webrtc/jssip.min.js' %}"></script>
+<script src="{% static 'webrtc/jssip_session.js' %}"></script>
 {% endif %}
 
 <script type="text/javascript">
@@ -658,6 +660,13 @@ $(document).ready(function(){
 						sipStack.stop()
 					}
 					SIPml["b_initialized"] = false
+				}else if (session){
+					sip_login = false
+					if(sipStack){
+						sipStack.stop();
+					}else{
+						hangupCall()
+					}
 				}
 				console.log("Bye now!");
 				session_details = {}

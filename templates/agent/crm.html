@@ -1743,8 +1743,10 @@
 	var non_agent_user 		= {% if non_agent_user or request.user.is_superuser  %} true {% else %} false {% endif %}
 </script>
 {% if user.call_type == 'webrtc' %}
-<script src="{% static 'webrtc/sip.js' %}"></script>
-<script src="{% static 'webrtc/sip_session.js' %}"></script>
+<!--<script src="{% static 'webrtc/sip.js' %}"></script>
+<script src="{% static 'webrtc/sip_session.js' %}"></script>-->
+<script src="{% static 'webrtc/jssip.min.js' %}"></script>
+<script src="{% static 'webrtc/jssip_session.js' %}"></script>
 {% endif %}
 <script src="{% static 'js/audioplayer.js'%}"></script>
 <script src="{% static 'js/agent_datatable.js'%}"></script>

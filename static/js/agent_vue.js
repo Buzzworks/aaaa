@@ -1388,7 +1388,12 @@ var agent_info_vue = new Vue({
                 sessionStorage.setItem("break_time",'0:0:0');
             }
             if(agent_activity_data['event']==="Start Break" &&  call_type==='webrtc' && sip_login===true && vm.selected_status!=='Ready' && vm.selected_status!=='NotReady'){
-                sipStack.stop();
+                if(sipStack){
+                    sipStack.stop();
+                }else if (session){
+                    hangupCall()
+                }
+                // 
             }
 
             agent_activity_data['uuid'] = uuid;

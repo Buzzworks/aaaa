@@ -49,8 +49,10 @@ function prepare_data_to_store() {
 	sessionStorage.setItem("predictive_time", "0:0:0");
 	sessionStorage.setItem("break_time", "0:0:0");
 	if (call_type == 'webrtc') {
-		if (sipStack) {
-			sipStack.stop()
+		if(sipStack){
+			sipStack.stop();
+		}else{
+			hangupCall()
 		}
 		SIPml["b_initialized"] = false
 	} else {
