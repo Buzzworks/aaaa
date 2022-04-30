@@ -228,8 +228,8 @@ INTERNAL_IPS = [IP_ADDRESS, "127.0.0.1"]
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_IDLE_TIMEOUT = 60*100
-SESSION_COOKIE_AGE = 60
+SESSION_IDLE_TIMEOUT = 180*100
+SESSION_COOKIE_AGE = 180
 # resetting the password url valid days
 PASSWORD_RESET_TIMEOUT_DAYS = 1
 
@@ -238,6 +238,12 @@ FREESWITCH_IP_ADDRESS = os.environ.get('FREESWITCH_HOST')
 S3_PHONEBOOK_BUCKET_NAME = os.environ.get('S3_PHONEBOOK_BUCKET_NAME',"")
 S3_ACCESS_KEY = os.environ.get('S3_ACCESS_KEY',"")
 S3_SECRET_KEY = os.environ.get('S3_SECRET_KEY',"")
+API_CAMPAIGN_FIELD = os.environ.get('API_CAMPAIGN_FIELD',"campaign")
+API_NUMERIC_FIELD = os.environ.get('API_NUMERIC_FIELD',"numeric")
+REPLACE_API_KEY = os.environ.get('REPLACE_API_KEY',"")
+REPLACE_API_VALUE = os.environ.get('REPLACE_API_VALUE',"")
+XML_INSERT_KEY = os.environ.get("XML_INSERT_KEY","")
+XML_UPDATE_KEY = os.environ.get("XML_UPDATE_KEY","")
 
 SOURCE = 'FLEXY'
 LOCATION = 'Mumbai'
