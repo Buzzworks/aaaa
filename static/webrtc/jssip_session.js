@@ -1,6 +1,6 @@
 var ua;
 var	wss_host; 
-
+var sip_host;
 var session;
 var header
 var text;
