@@ -631,6 +631,7 @@ $('#scSubmit').click(function() {
                 sip_identity = `sip:${extension}@${host}`
                 websocket_proxy_url = `wss://${host}:`+data['wss_port'];
                 outbound_proxy_url = `udp://${host}:`+data['sip_udp_port'];
+                sip_host = `${host}`;
                 sipInitialize();
                 reset_agent_login_dialer()
             }
