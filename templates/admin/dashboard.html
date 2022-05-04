@@ -579,6 +579,10 @@
 <script src="{% static 'webrtc/sip_session.js' %}"></script> -->
 <script src="{% static 'webrtc/jssip.min.js' %}"></script>
 <script src="{% static 'webrtc/jssip_session.js' %}"></script>
+<script>
+	var jssip = true;
+	var sipml5 = false; 
+</script>
 {% endif %}
 
 <script type="text/javascript">
@@ -614,8 +618,14 @@ $(document).ready(function(){
 		// socketevents()
 	})
 	$(window).on('beforeunload', function(){
-		if(ocallSession != ''){
-			ocallSession.hangup()
+		if(sipml5){
+			if(ocallSession != ''){
+				ocallSession.hangup()
+			}
+		}else(jssip){
+			if(session){
+				hangupCall()
+			}
 		}
 		console.log("Bye now!");
 	});
@@ -623,7 +633,7 @@ $(document).ready(function(){
 		if ($(this).prop("checked") == true){
 			if (socket.connected){
 				if(call_type == "webrtc"){
-					if(ocallSession == ''){
+					if(ocallSession == '' || session == ""){
 						sip_login = true
 						sipInitialize();
 					}

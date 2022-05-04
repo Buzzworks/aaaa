@@ -49,11 +49,7 @@ function prepare_data_to_store() {
 	sessionStorage.setItem("predictive_time", "0:0:0");
 	sessionStorage.setItem("break_time", "0:0:0");
 	if (call_type == 'webrtc') {
-		if(sipStack){
-			sipStack.stop();
-		}else{
-			hangupCall()
-		}
+		sipSessionHangup();
 		SIPml["b_initialized"] = false
 	} else {
 		agent_activity_data['call_protocol'] = call_type

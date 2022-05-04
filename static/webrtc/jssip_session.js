@@ -1,10 +1,12 @@
 var ua;
 var	wss_host; 
 var sip_host;
-var session;
+var session = "";
 var header
 var text;
 var fs_ip;
+var sipStack=false;
+var SIPml;
 function sipInitialize(){
     JsSIP.debug.enable('JsSIP:*');
 
@@ -20,11 +22,10 @@ function sipInitialize(){
     
     ua.start();
     
-    
     navigator.mediaDevices.getUserMedia({ audio: true })
     ua.on('connected',function(e){
         console.log('connected...'+e)
-        makeCall()
+        createSipSession()
     });
     
     ua.on('newRTCSession', function(e){ 
@@ -50,11 +51,12 @@ function sipInitialize(){
         e.session.on('confirmed', function(e) {
             console.log('session: confirmed');
             $('.preloader').fadeOut('slow')
-            
         });
     });
 }
-
+function createSipSession(){
+    makeCall("11119916")
+}
 
 function updateheaderParam(key,value){
     header.setParam(key,value)
@@ -74,7 +76,7 @@ function makeCall(dial_number)
         'sessionTimersExpires' : 3600,
         'extraHeaders': [ 'X-Extension: '+extension, 'X-Bar: bar' ],
     };
-    session = ua.call('sip:11119916@'+sip_host, options);
+    session = ua.call('sip:'+dial_number+'@'+sip_host, options);
     if (session) {
         session.connection.addEventListener('addstream', (e) => {
             var audio = document.getElementById('audio_remote')
@@ -108,6 +110,3 @@ var eventHandlers = {
         
 	}
 };
-
-
-

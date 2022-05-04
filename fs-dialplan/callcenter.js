@@ -164,18 +164,20 @@ outbound_server.on('CONNECT', function (req) {
 	var destination_number = req.body['Channel-Caller-ID-Number'].slice(-10)
 	var cc_agent = req.body['variable_cc_agent']
 	var dialed_uuid = req.body['Unique-ID']
-	if (!('wfh_call' in req.body)){
-		req.execute("conference",req.body['variable_agent-Unique-ID']+"@sla")
-	}
-	req.execute('set', `cc_customer=${destination_number}`)
-	req.execute('set', 'RECORD_TITLE=Recording ${dialed_number} ${caller_id_number} ${strftime(%Y-%m-%d %H:%M)');
-	req.execute('set', 'RECORD_COPYRIGHT=(c) Buzzworks, Inc.');
-	req.execute('set', 'RECORD_SOFTWARE=FreeSWITCH');
-	req.execute('set', 'RECORD_ARTIST=Buzzworks');
-	req.execute('set', 'RECORD_COMMENT=Buzz that works');
-	req.execute('set', 'RECORD_DATE=${strftime(%Y-%m-%d %H:%M)}');
-	req.execute('set', 'RECORD_STEREO=true');
-	req.execute("record_session",`/var/spool/freeswitch/default/${date_time}_${destination_number}_${dialed_uuid}.mp3`)
+	setTimeout(()=>{
+			if (!('wfh_call' in req.body)){
+			req.execute("conference",req.body['variable_agent-Unique-ID']+"@sla")
+		}
+		req.execute('set', `cc_customer=${destination_number}`)
+		req.execute('set', 'RECORD_TITLE=Recording ${dialed_number} ${caller_id_number} ${strftime(%Y-%m-%d %H:%M)');
+		req.execute('set', 'RECORD_COPYRIGHT=(c) Buzzworks, Inc.');
+		req.execute('set', 'RECORD_SOFTWARE=FreeSWITCH');
+		req.execute('set', 'RECORD_ARTIST=Buzzworks');
+		req.execute('set', 'RECORD_COMMENT=Buzz that works');
+		req.execute('set', 'RECORD_DATE=${strftime(%Y-%m-%d %H:%M)}');
+		req.execute('set', 'RECORD_STEREO=true');
+		req.execute("record_session",`/var/spool/freeswitch/default/${date_time}_${destination_number}_${dialed_uuid}.mp3`)
+	},3000)
 	console.log("outbound connected");
 	req.on('CHANNEL_ANSWER', function (req) {
 		console.log(req.body['Event-Date-Timestamp'])

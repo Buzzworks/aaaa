@@ -714,7 +714,20 @@ $('#scSubmit').click(function() {
         }
     });
 });
-
+function sipSessionHangup(){
+    if(sipStack){
+        sipStack.stop();
+    }else if (session){
+        hangupCall()
+    }
+}
+function SipSessionCreate(){
+    if(sipStack){
+        sipStack.start();
+    }else{
+        createSipSession();
+    }
+}
 // logout from dialer
 $('#btnLogMeOut').click(function() {
     if (autodial_status != true && manual != true && ibc_status !=true && blndd_status != true ) {
@@ -768,11 +781,7 @@ $('#btnLogMeOut').click(function() {
                     $('#crm-agent-logout,#agent_to_admin_switchscreen').attr("style","")
                     $("#agent-breaks-div").addClass("d-none")
                     if (call_type == 'webrtc') {
-                        if(sipStack){
-                            sipStack.stop();
-                        }else if (session){
-                            hangupCall()
-                        }
+                        sipSessionHangup()
                         SIPml["b_initialized"] = false
                     }
                     session_details[extension] = {};
