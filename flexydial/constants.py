@@ -357,7 +357,9 @@ CDR_DOWNLOAD_COl = {'campaign_name':'callcenter_calldetail.campaign_name as camp
 	'comment':'callcenter_cdrfeedbck.comment as comment',
 	'primary_dispo':'callcenter_cdrfeedbck.primary_dispo as primary_dispo',
 	'sms_sent':"CASE WHEN sms.name IS NULL THEN 'No' WHEN sms.name IS NOT NULL THEN 'Yes' END as sms_sent",
-	'sms_message':'sms.name as sms_message'
+	'sms_message':'sms.name as sms_message',
+	'customer_name':"customer_raw_data -> 'customer_information' ->> 'customer_name' as customer_name",
++	'client_name':"customer_raw_data -> 'customer_information' ->> 'client_name' as client_name"
 	}
 
 QC_FEEDBACK_COL = {
