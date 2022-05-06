@@ -622,8 +622,8 @@ $(document).ready(function(){
 			if(ocallSession != ''){
 				ocallSession.hangup()
 			}
-		}else(jssip){
-			if(session){
+		} else if(jssip){
+			if(session) {
 				hangupCall()
 			}
 		}
