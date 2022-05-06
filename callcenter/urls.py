@@ -125,6 +125,7 @@ urlpatterns = [
 	path('Administration/dnc/', views.DNCListAPIView.as_view(), name="dnc"),
 	path('Administration/dnc-upload/',views.DNCUploadApiView.as_view(), name="dnc-upload"),
 	path('Administration/dnc/create_edit/', views.DNCCreateModifyApiView.as_view(),name="get-dnc"),
+	path('api/third-party-scrub/',views.DNCUpdateApiView.as_view(),name="api-scrub"),
 	path('Administration/modules/', views.ModulesView.as_view(), name="modules"),
 	path('api/adminlivecount/', views.AdminLiveCountApiView.as_view(), name='adminlivecount'),
 	path('api/reset_password/', views.ResetPasswordApiView.as_view(), name='reset_password'),
