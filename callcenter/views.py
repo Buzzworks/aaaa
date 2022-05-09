@@ -73,7 +73,7 @@ from .utility import (redirect_user, get_object, get_pre_campaign_edit_info,
 		get_model_data, validate_uploaded_dnc,upload_dnc_nums,submit_feedback, customer_detials, convert_into_timedelta,
 		total_list_users,camp_list_users,user_hierarchy, user_hierarchy_object, update_contact_on_css, get_transform_key, update_contact_on_portifolio,
 		validate_third_party_token,get_temp_contact,get_contact_data, upload_template_sms,get_crm_fields_dict, channel_trunk_single_call, DownloadCssQuery,get_campaign_did, get_group_did,DownloadCssQuery,diff_time_in_seconds,
-		save_report_column_visibility, get_report_visible_column,save_email_log, get_used_did, get_used_did_by_pk,convert_into_timeformat, email_connection, check_non_admin_user, getDaemonsStatus,upload_holiday_dates,read_status)
+		save_report_column_visibility, get_report_visible_column,save_email_log, get_used_did, get_used_did_by_pk,convert_into_timeformat, email_connection, check_non_admin_user, getDaemonsStatus,upload_holiday_dates,read_status,convert_timedelta_hrs)
 
 from .decorators import (user_validation, group_validation,campaign_validation,
 		campaign_edit_validation, phone_validation, dispo_validation, relationtag_validation,
@@ -2416,7 +2416,7 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 		show_result = request.GET.get("show_result", "")
 		context = {'request': request, 'campaign_list': campaign_list}
 		all_fields = {'diallereventlog':['hangup_cause','hangup_cause_code','dialed_status'],'smslog':['sms_sent','sms_message'],
-		"calldetail":['campaign_name','user','full_name','supervisor_name','phonebook','customer_cid','contact_id','uniqueid',
+		"calldetail":['campaign_name','user','full_name','customer_name','client_name','supervisor_name','phonebook','customer_cid','contact_id','uniqueid',
 		'session_uuid','init_time','ring_time','connect_time','hangup_time','wait_time','ring_duration','hold_time','callflow','callmode',
 		'bill_sec','ivr_duration','call_duration','feedback_time','call_length','hangup_source','internal_tc_number','external_tc_number','progressive_time','preview_time','predictive_wait_time','inbound_wait_time','blended_wait_time'],
 		'cdrfeedback':['primary_dispo','feedback','relationtag']}
@@ -3137,7 +3137,7 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		context["report_visible_cols"] = report_visible_cols
 		context["campaign_list"] =campaign_list
 		context['all_fields'] =  ('username','full_name','supervisor_name','campaign','app_idle_time','dialer_idle_time','pause_progressive_time','progressive_time','preview_time',
-				'predictive_wait_time','inbound_wait_time','blended_wait_time','ring_duration','hold_time','media_time','bill_sec','call_duration','feedback_time','break_time','app_login_time'
+				'predictive_wait_time','inbound_wait_time','blended_wait_time','ring_duration','ring_duration_avg','hold_time','media_time','predictive_wait_time_avg','talk','talk_avg','bill_sec','bill_sec_avg','call_duration','feedback_time','feedback_time_avg','break_time','break_time_avg','app_login_time'
 				) + pause_breaks + ('dialer_login_time','total_login_time','first_login_time','last_logout_time','total_calls','total_unique_connected_calls')
 		context["user_list"] = list(user_list)
 		context = {**context, **kwargs['permissions']}
@@ -3218,6 +3218,7 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 					dialer_idle_time=Cast(Coalesce(Sum('idle_time',filter=dialler_idle_time_filter),default_time),TextField())
 					)
 			break_time_cal= {}
+			total_calls = calldetail.count()
 			break_name = list(PauseBreak.objects.values_list('name',flat=True))
 			for break_cal in break_name:
 				break_time_cal[break_cal] = agentactivity.filter(break_type=break_cal).aggregate(break_time__sum=Cast(Coalesce(Sum('break_time'),default_time),TextField())).get('break_time__sum')
@@ -3225,6 +3226,34 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 			pw_time = convert_into_timedelta(activity_cal['predictive_wait_time']).total_seconds()
 			preview_time = convert_into_timedelta(activity_cal['preview_time']).total_seconds()
 			break_time = convert_into_timedelta(activity_cal['break_time']).total_seconds()
+			talk_call = convert_into_timedelta(calldetail['bill_sec']).total_seconds()
+			ring_duration =convert_into_timedelta(calldetail_cal['ring_duration']).total_seconds()
+			feedback_time =convert_into_timedelta(calldetail_cal['feedback_time']).total_seconds()
+			talk_total = int(talk_call) + int(feedback_time) + int(ring_duration)
+			customer_talk = int(talk_call) + int(ring_duration)
+			calldetail_cal['talk'] = convert_timedelta_hrs(timedelta(seconds=talk_total))
+			calldetail_cal['bill_sec'] = convert_timedelta_hrs(timedelta(seconds=customer_talk)) 
+			if total_calls:
+				break_time_avg = ((convert_into_timedelta(activity_cal['break_time']).total_seconds())/total_calls)
+				talk_avg = ((int(talk_call)+int(feedback_time)+int(ring_duration))/total_calls)
+				feedback_time_avg = ((convert_into_timedelta(calldetail_cal['feedback_time']).total_seconds())/total_calls)
+				customer_avg_talk = ((int(talk_call)+int(ring_duration))/total_calls)
+				pw_wait_avg = (int(pw_time)/total_calls)
+				calldetail_cal['bill_sec_avg'] = convert_timedelta_hrs(timedelta(seconds=customer_avg_talk))
+				wait_avg = ((convert_into_timedelta(calldetail_cal['ring_duration']).total_seconds())/total_calls)
+				calldetail_cal['break_time_avg'] =  convert_timedelta_hrs(timedelta(seconds=break_time_avg))
+				calldetail_cal['talk_avg'] = convert_timedelta_hrs(timedelta(seconds=talk_avg)) 
+				calldetail_cal['feedback_time_avg'] =  convert_timedelta_hrs(timedelta(seconds=feedback_time_avg)) 
+				calldetail_cal['ring_duration_avg'] = convert_timedelta_hrs(timedelta(seconds=wait_avg)) 
+				activity_cal['predictive_wait_time_avg'] = convert_timedelta_hrs(timedelta(seconds=pw_wait_avg)) 
+			else:
+				default_time_delta_sec = timedelta(hours=0,minutes=0,seconds=0).total_seconds()
+				calldetail_cal['break_time_avg'] = time.strftime("%H:%M:%S", time.gmtime(default_time_delta_sec))
+				calldetail_cal['talk_avg'] = time.strftime("%H:%M:%S", time.gmtime(default_time_delta_sec))
+				calldetail_cal['feedback_time_avg'] = time.strftime("%H:%M:%S", time.gmtime(default_time_delta_sec))
+				calldetail_cal['bill_sec_avg'] = time.strftime("%H:%M:%S", time.gmtime(default_time_delta_sec))
+				calldetail_cal['ring_duration_avg'] = time.strftime("%H:%M:%S", time.gmtime(default_time_delta_sec))
+				activity_cal['predictive_wait_time_avg'] = time.strftime("%H:%M:%S", time.gmtime(default_time_delta_sec)) 
 			iw_time = convert_into_timedelta(activity_cal['inbound_wait_time']).total_seconds()
 			bw_time = convert_into_timedelta(activity_cal['blended_wait_time']).total_seconds()
 			ai_time = convert_into_timedelta(activity_cal['app_idle_time']).total_seconds()
