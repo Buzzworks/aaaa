@@ -17,6 +17,8 @@ from crm.models import TempContactInfo, Contact
 import pickle
 from datetime import datetime,timedelta
 from callcenter.utility import trunk_channels_count, set_campaign_channel
+from django.db import connections
+from django.db import transaction
 
 AGENTS={}
 wfh_agents={}
@@ -178,6 +180,10 @@ def fs_voice_blaster(campaign):
 		exc_type, exc_obj, exc_tb = sys.exc_info()
 		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
 		print(exc_type, fname, exc_tb.tb_lineno)
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 
 def fsdial(campaign):
 	"""
@@ -384,3 +390,7 @@ def fsdial(campaign):
 		exc_type, exc_obj, exc_tb = sys.exc_info()
 		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
 		print(exc_type, fname, exc_tb.tb_lineno)
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()

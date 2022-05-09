@@ -49,6 +49,9 @@ def set_ad_campaign_status():
 		print('all campaign set to true in redis for autodial')
 	except Exception as e:
 		print('exception set_ad_campaign_status',e)
+	finally:
+		transaction.commit()
+		connections['default'].close()
 
 def exec_autodial():
 	"""

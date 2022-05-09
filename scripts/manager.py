@@ -47,14 +47,15 @@ def create_tempcontact_data(contacts, status, keep_user_none=False):
 					contact.modified_date = datetime.now()
 			TempContactInfo.objects.bulk_create(data_list)
 			Contact.objects.bulk_update(contacts,['status','modified_date'])
-			transaction.commit()
-			connections["default"].close()
-			connections["crm"].close()
 	except Exception as e:
 		print("Exception occures from create_tempcontact_data",e)
 		exc_type, exc_obj, exc_tb = sys.exc_info()
 		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
 		print(exc_type, fname, exc_tb.tb_lineno)
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 
 def create_tempcontact_data_with_pandas(contacts, status, keep_user_none=False):
 	""" Creating the Temp contact info with portfolio"""
@@ -74,11 +75,13 @@ def create_tempcontact_data_with_pandas(contacts, status, keep_user_none=False):
 						contact_id=contact.contact_id,priority=contact.priority,uniqueid=contact.uniqueid, previous_status=contact.status))
 		TempContactInfo.objects.bulk_create(data_list)
 		Contact.objects.filter(id__in=contacts['contact_id'].tolist()).update(status=status,modified_date=datetime.now())
-		transaction.commit()
-		connections["default"].close()
-		connections["crm"].close()
+
 	except Exception as e:
 		print("Exception occures from create_tempcontact_data",e)
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 
 def fetch_callback_contact(campaign,fetch_count):
 	""" fetching the callback contacts and displaying to the user"""
@@ -134,7 +137,10 @@ def fetch_callback_contact(campaign,fetch_count):
 		return fetch_count
 	except Exception as e:
 		print("Exception occures from fetch_callback_contact",e)
-
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 def generate_report():
 	""" Downloading the reports """
 
@@ -337,12 +343,13 @@ def phonebook_data_bucket():
 					PHONEBOOK_STATUS = pickle.loads(settings.R_SERVER.get("phonebook") or pickle.dumps(PHONEBOOK_STATUS))
 					if not set(phonebook_ids) & set(PHONEBOOK_STATUS.keys()):
 						settings.R_SERVER.hset("pb_campaign_status",campaign['id'], True)
-		transaction.commit()
-		connections["default"].close()
-		connections["crm"].close()
 	except Exception as e:
 		settings.R_SERVER.hset("pb_campaign_status",campaign['id'], True)
 		print("Exception occures from phonebook_data_bucket",e)
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 
 def create_logout_entry(extension):
 	""" Creating the logout entry of the user"""
@@ -387,6 +394,10 @@ def create_logout_entry(extension):
 									action_name='4',event_type='LOGOUT', login_duration=login_duration_time)
 	except Exception as e:
 		print("create_logout_entry :", e)
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 
 def session_expire_check():
 	""" checking the session expry for an agents"""
@@ -421,11 +432,12 @@ def session_expire_check():
 		locked_tmp_data = TempContactInfo.objects.filter(Q(status='Locked')&Q(modified_date__lte = datetime.now() - timedelta(hours=2)))
 		if locked_tmp_data:
 			locked_tmp_data.update(status="NotDialed")
-		transaction.commit()
-		connections['crm'].close()
-		connections['default'].close()
 	except Exception as e:
 		print("Exception occures from session_expire_check",e)
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 
 def create_calldetial_from_diallereventlog(d_obj, uniqueid=None):
 	""" will create missing call details from the dialler eventlog"""
@@ -447,6 +459,10 @@ def create_calldetial_from_diallereventlog(d_obj, uniqueid=None):
 				cdr_feedback.save()
 	except Exception as e:
 		print('Exception from create_calldetial_from_diallereventlog', e)
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 
 def update_queued_contact():
 	""" updating the queued contacts"""
@@ -485,6 +501,10 @@ def update_queued_contact():
 				contact.save()
 	except Exception as e:
 		print("update_queued_contact :", e)
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 
 def create_calldetial_missing_contact():
 	""" creating the missing calldetails from diallervent log"""
@@ -504,7 +524,9 @@ def create_calldetial_missing_contact():
 			create_calldetial_from_diallereventlog(d_obj,uniqueid)
 	except Exception as e:
 		print('Exception in create_calldetial_missing_contact', e)
-
+	finally:
+		transaction.commit()
+		connections["crm"].close()
 
 def phonebook_upload():
 	"""
@@ -569,6 +591,9 @@ def kill_unused_fs_channel():
 			SERVER.freeswitch.api("uuid_kill",uuid)
 	except Exception as e:
 		print('Exception from kill_unused_fs_channel', e)
+	finally:
+		transaction.commit()
+		connections["default"].close()
 
 def set_pb_campaign_status():
 	""" setting true all the pb campaigns in redis"""
@@ -579,6 +604,9 @@ def set_pb_campaign_status():
 		print('all campaign set to true in redis for progressive')
 	except Exception as e:
 		print('exception set_pb_campaign_status',e)
+	finally:
+		transaction.commit()
+		connections["default"].close()
 
 def Execute():
 	""" Script Execution Peridically for Back-end Activities"""

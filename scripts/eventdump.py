@@ -259,6 +259,7 @@ def sticky_agent_delete():
 		print(e)
 	finally:
 		transaction.commit()
+		connections["crm"].close()
 		connections["default"].close()
 		
 connected = False
@@ -364,6 +365,7 @@ def custom_dump(campaign, user, dispo_code, uuid, name, e_type, created):
 		print(exc_type, fname, exc_tb.tb_lineno)
 	finally:
 		transaction.commit()
+		connections["crm"].close()
 		connections["default"].close()
 
 def event_dump(kwargs):
@@ -483,6 +485,10 @@ def event_dump(kwargs):
 			cdr_save(model,kwargs,campaign_obj,user_obj,primary_dispo, campaign_name)
 	except Exception as e:
 		print("erro from event_dump : %s"%(e))
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 
 def cdr_save(model,kwargs,campaign_obj,user_obj,primary_dispo, campaign_name):
 	""" saving the reports into the database thats has been dumped"""
@@ -549,4 +555,5 @@ def cdr_save(model,kwargs,campaign_obj,user_obj,primary_dispo, campaign_name):
 		print("erro from cdr_save : %s"%(e))
 	finally:
 		transaction.commit()
-		connections["default"].close()	
+		connections["crm"].close()
+		connections["default"].close()

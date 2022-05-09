@@ -10,6 +10,9 @@ from crm.models import TempContactInfo,Contact
 from django.conf import settings
 import pickle,sys,os
 from django.db.models import F
+from django.db import transaction
+from django.db import connections
+
 import os,sys
 AGENTS={}
 urllib3.disable_warnings()
@@ -116,6 +119,9 @@ def capture_events(signal, sender, **kwargs):
 			return
 	except Exception as e:
 		print("error from capture_events ",e)
-	
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 for sig in ['CHANNEL_HANGUP_COMPLETE']:
 	louie.connect(capture_events, signal=sig)
