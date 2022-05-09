@@ -634,6 +634,8 @@ class CallDetailReportSerializer(serializers.ModelSerializer):
 	call_length = serializers.SerializerMethodField()
 	cdrfeedback = CdrFeedbckReportSeializer(read_only=True)
 	full_name = serializers.SerializerMethodField()
+	customer_name = serializers.SerializerMethodField()
+	client_name = serializers.SerializerMethodField()
 	smslog = serializers.SerializerMethodField()
 	class Meta:
 		model = CallDetail
@@ -655,6 +657,26 @@ class CallDetailReportSerializer(serializers.ModelSerializer):
 		if obj.user:
 			username = obj.user.first_name + " " + obj.user.last_name
 		return username
+
+	def get_customer_name(self,obj):
+		customer_name = ""
+		contact_inst  = Contact.objects.filter(id=obj.contact_id).first()
+		print(contact_inst)
+		if obj and contact_inst:
+			if contact_inst and contact_inst.customer_raw_data and 'customer_information' in contact_inst.customer_raw_data:
+				if 'customer_name' in contact_inst.customer_raw_data['customer_information']:
+					customer_name = contact_inst.customer_raw_data['customer_information']['customer_name']
+					print(customer_name)
+		return customer_name
+
+	def get_client_name(self,obj):
+		client_name = ""
+		contact_inst  = Contact.objects.filter(id=obj.contact_id).first()
+		if obj and contact_inst:
+			if contact_inst and contact_inst.customer_raw_data and 'customer_information' in contact_inst.customer_raw_data:
+				if 'client_name' in contact_inst.customer_raw_data['customer_information']:
+					client_name = contact_inst.customer_raw_data['customer_information']['client_name']
+		return client_name
 
 	def get_smslog(self,obj):
 		fields_dict = {}
