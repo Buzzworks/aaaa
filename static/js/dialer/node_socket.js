@@ -179,6 +179,21 @@ function socketevents (){
 			errorAlert("Connetion Error","Error occured with Node connetion");
 			$('#btnLogMeOut').click();
 		})
+		socket.on("hangup_client", function(data){
+			data =  JSON.parse(data)
+			if (extension == data.extension){
+				if ($('#btnDialHangup').attr("title") == 'Hangup Call'){
+					$('#btnDialHangup').click()			
+				}
+				setTimeout(()=>{
+					third_party_api_disp = data['disposition']
+					third_party_api_sub_dispo = data['subdisposition']
+					if (third_party_api_disp){
+						$("#submit_customer_info").trigger("click")
+					}
+				},3000)
+			}
+		})
 		socket.on("sip_hangup_client", function(data){
 			if (extension == data){
 				if (user_role =='Agent' || non_agent_user){

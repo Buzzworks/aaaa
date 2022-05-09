@@ -605,6 +605,7 @@ class Campaign(models.Model):
 	inbound_threshold = models.IntegerField(default=0, db_index=True, blank=True)
 	sms_gateway = models.ForeignKey(SMSGateway,on_delete=models.SET_NULL,blank=True, null=True)
 	email_gateway = models.ForeignKey(EmailGateway,on_delete=models.SET_NULL, blank=True, null=True)
+	api_disposition = models.BooleanField(default=False,blank=True, null=True)
 	all_caller_id = JSONField(default=dict)
 
 	class Meta:
@@ -1440,3 +1441,13 @@ class PasswordChangeLogs(models.Model):
 
 	def __str__(self):
 		return self.username
+
+class ThirdPartyApiDisposition(models.Model):
+	unique_id= models.CharField(max_length=50, default='')
+	disposition	= models.CharField(max_length=100, default='')
+	subdisposition	= models.CharField(max_length=100, default='')
+	callback = models.DateTimeField(null=True,blank=True)
+	created = models.DateTimeField(auto_now_add=True)
+
+	def __str__(self):
+		return self.unique_id

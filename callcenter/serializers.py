@@ -986,3 +986,14 @@ class PasswordManagementSerialzer(serializers.ModelSerializer):
 	class Meta:
 		model = PasswordManagement
 		fields ='__all__'
+
+
+class ThirdPartyApiDispositionSerializer(serializers.ModelSerializer):	
+	uniqueid= serializers.CharField(required=True)
+	disposition	= serializers.CharField(required=True)
+	subdisposition	= serializers.CharField(required=False)
+	callback = serializers.DateTimeField(required=False)
+	
+	class Meta:
+		model = ThirdPartyApiDisposition
+		fields ="__all__"

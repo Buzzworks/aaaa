@@ -4593,6 +4593,41 @@ class DNCUploadApiView(APIView):
 			os.remove(cwd+improper_file)
 		return Response({"msg": "file removed successfully"})
 
+class ThirdPartyApiDispositionUpdateView(APIView):
+	def post(self,request):
+		serializer = ThirdPartyApiDispositionSerializer(data=request.data)	
+		if serializer.is_valid():
+			try:
+				serializer.save()
+				uniqueid_filter = Contact.objects.filter(uniqueid=serializer.data['uniqueid'])
+				if not uniqueid_filter:
+					return JsonResponse({"error": f"uniqueid {serializer.data['uniqueid']} is not found contact."}, status=400)
+				mobile_number = uniqueid_filter[0].numeric
+				extension= None
+				agent_status = pickle.loads(settings.R_SERVER.get("agent_status"))
+				for ext in agent_status:
+					if agent_status[ext]['dial_number'] == str(mobile_number):
+						agent_campaign = agent_status[ext]['campaign'] 
+						api_disp = Campaign.objects.get(name = agent_campaign).api_disposition
+						if api_disp:
+							extension = agent_status[ext]['extension']
+							break
+						else:
+							return JsonResponse({"error": f" {agent_campaign} Campaign not having Permission for the API Disposition"}, status=400)			
+				if extension:
+					redis_data = {
+						"extension": extension,
+						"disposition": request.data['disposition'],
+						"subdisposition": request.data['subdisposition']
+					}
+					settings.R_SERVER.publish('api_disp_extension',message=json.dumps(redis_data))	
+					return JsonResponse({"message": "Successfully Registered Dispositions."}, status=200)
+				return JsonResponse({"error": "Call either closed or user refreshed the browser."}, status=400)
+			except Exception as e:
+				return JsonResponse({"error": f"Something Went Wrong, Kindly Contact Administrator. {e}"}, status=400)
+		else:
+			return JsonResponse(serializer.errors, status=400)
+
 class AutodialCustomerDetail(APIView):
 	"""
 	Fetching the autodialing customer details with this view
