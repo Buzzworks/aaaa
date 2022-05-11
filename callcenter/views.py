@@ -1724,7 +1724,6 @@ class CampaignCreateApiView(LoginRequiredMixin, generics.CreateAPIView):
 		data["all_campaign"] = Campaign.objects.values("id", "name")
 		data['api_modes'] = API_MODE
 		data['enable_wfh'] = pickle.loads(settings.R_SERVER.get('enable_wfh') or pickle.dumps(False))
-		extension_exist = CampaignVariable.objects.all().values_list('extension',flat=True)
 		data['extension'] = 'NEW'
 		data['trunk_group'] = list(DiaTrunkGroup.objects.all().values("id","name"))
 		data = {**data, **kwargs['permissions']}
