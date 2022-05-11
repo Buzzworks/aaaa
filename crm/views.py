@@ -1365,16 +1365,16 @@ class GetEditContactInfoApiView(APIView):
 		return Response(data)
 
 class ContactUploadDataApiView(APIView):
-	parser_classes = [XMLParser]
+	if settings.XML_INSERT_KEY!='':
+		parser_classes = [XMLParser]
 	permission_classes = [AllowAny]
-	def get(self,request):
-		return JsonResponse({"msg": "Testing for Get"})
 	def post(self, request):
 		uniqueid = None
 		data_dict = {}
 		crm_field_dict = {}
 		error_dict ={}
 		phonebook_id = None
+		action = "insert"
 		contact_col_list = ["numeric","alt_numeric","first_name","last_name","user","email", "priority"]
 		data = json.dumps(request.data)
 		data = re.sub("\{http.*?}",'',data)
@@ -1387,10 +1387,10 @@ class ContactUploadDataApiView(APIView):
 			action = "update"
 			data = data.get(settings.XML_UPDATE_KEY,data)
 
-		if settings.REPLACE_API_KEY and settings.REPLACE_API_VALUE:
+		if settings.REPLACE_API_KEY != "" and settings.REPLACE_API_VALUE != "":
 			data =  {k.replace(settings.REPLACE_API_KEY,settings.REPLACE_API_VALUE).lower(): v for k, v in data.items()}
-		campaign = data.get(settings.API_CAMPAIGN_FIELD)
-		numeric = data.get(settings.API_NUMERIC_FIELD)		
+		campaign = data.get(settings.API_CAMPAIGN_FIELD,"")
+		numeric = data.get(settings.API_NUMERIC_FIELD,"")		
 		if campaign and numeric:
 			campaign = Campaign.objects.filter(name=campaign)
 			if campaign.exists():
@@ -1425,8 +1425,9 @@ class ContactUploadDataApiView(APIView):
 						unique_field = crm_field_obj.first().unique_fields
 						if unique_field:
 							unique_field = unique_field[0]
+				
 				uniqueid = row.get(unique_field,None)
-				if uniqueid is not None:								
+				if uniqueid is not None or settings.XML_INSERT_KEY=='':								
 					update_contact = Contact.objects.filter(campaign=campaign.name,uniqueid=uniqueid).first()
 					if action == "update":
 						if update_contact:
@@ -1434,7 +1435,7 @@ class ContactUploadDataApiView(APIView):
 						else:
 							return JsonResponse({"msg":"No matching data found for update.",'status':'error'},status=500)	
 					else:
-						if update_contact:
+						if update_contact and settings.XML_INSERT_KEY!='':
 							return JsonResponse({"msg":"Respected data already present Cant create the New Data,Use Update Structure to update the data",'status':'error'},status=500)
 				else:
 					return JsonResponse({"msg":"Mandatory unique field is missing",'status':'error'},status=500)
@@ -1462,13 +1463,10 @@ class ContactUploadDataApiView(APIView):
 							crm_field_dict[sep_col_field[0].lower()] ={}
 						if len(sep_col_field) == 2:
 							crm_field_dict[sep_col_field[0].lower()][sep_col_field[1].lower()] = row.get(custom_fields)
-						elif len(sep_col_field) == 1:
+						elif len(sep_col_field) == 1 and sep_col_field[0].lower() not in contact_col_list:
 							if "extra_information" not in crm_field_dict:
 								crm_field_dict["extra_information"] = {}	
 							crm_field_dict["extra_information"][sep_col_field[0].lower()] = row.get(custom_fields)
-							# crm_field_dict
-						# crm_field_dict[sep_col_field[0].lower()][sep_col_field[1].lower()] = row.get(custom_fields)
-							
 
 				if data_dict:
 					return JsonResponse({"msg": "","status":"error","data":data_dict}, status=500)
