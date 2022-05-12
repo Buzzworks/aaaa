@@ -473,7 +473,7 @@ autodial_server.on('CONNECT', function (req) {
 					req.execute('set','disposition=Connected')
 					io.emit("AUTODIAL_CHANNEL_BRIDGE",{"sip_extension":req.body['Other-Leg-Orig-Caller-ID-Number'],
 											"customer_number":req.body['variable_cc_customer'],"dialed_uuid":req.body['Unique-ID'],
-											"call_timestamp":req.body['Event-Date-Timestamp'],"contact_id":contact_id})
+												"call_timestamp":req.body['Event-Date-Timestamp'],"contact_id":contact_id,"variable_cc_agent_uuid":req.body['variable_cc_agent_uuid']})
 							console.log('Bridging');
 				});
 				req.on('CALL_UPDATE', function (req) {

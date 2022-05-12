@@ -341,7 +341,7 @@ function socketevents (){
 		})
 		socket.on("AUTODIAL_CHANNEL_BRIDGE", function(autodial_data){
 			var sip_extension = autodial_data["sip_extension"]
-			if (sip_extension == extension) {
+			if (sip_extension == extension || session_details[extension]['Unique-ID'] == autodial_data['variable_cc_agent_uuid']) {
 				agent_hangup = false
 				close_agent_sidebar()
 				$("#wait_timer").countimer('stop')
