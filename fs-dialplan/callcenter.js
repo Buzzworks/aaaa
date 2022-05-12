@@ -90,10 +90,17 @@ server.on('CONNECT', function (req) {
 			if (('variable_sip_from_host' in req.body)==false){
 				server_ip = req.body['FreeSWITCH-IPv4']
 			}
-			io.emit('sip_session_details',{'Unique-ID':req.body['Unique-ID'],
-				'Caller-Caller-ID-Number':req.body['Channel-Orig-Caller-ID-Number'],
-				'variable_sip_from_host': server_ip
-			});
+			if('variable_wfh_app' in req.body & req.body['variable_wfh_app'] == 'true'){
+				io.emit('sip_session_details',{'Unique-ID':req.body['Unique-ID'], 
+					'Caller-Caller-ID-Number':req.body['variable_cc_agent'],
+					'variable_sip_from_host': server_ip
+				});
+			}else{
+				io.emit('sip_session_details',{'Unique-ID':req.body['Unique-ID'], 
+					'Caller-Caller-ID-Number':req.body['Channel-Orig-Caller-ID-Number'],
+					'variable_sip_from_host': server_ip
+				});
+			}
 			req.execute("transfer","00019916 XML default")
 		}
 		req.on('DTMF', function (req) {
@@ -139,6 +146,9 @@ server.on('CONNECT', function (req) {
 				if (req.body['variable_usertype'] == 'wfh-agent-req-dial'){
 					req.execute("transfer","12345 XML default2")
 				}
+			}
+			if('variable_wfh_app' in req.body & req.body['variable_wfh_app'] == 'true'){
+				io.emit("wfh_answer_app",req.body['variable_cc_agent'])
 			}
 		})
 		req.on('CHANNEL_HANGUP', function (req) {

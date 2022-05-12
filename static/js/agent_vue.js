@@ -1527,6 +1527,9 @@ var agent_info_vue = new Vue({
                 $('#break_timer').countimer('stop');    
                 $('#idle_timer').countimer('start');
                 $(".agent-break-status").addClass("d-none")
+                if(call_type=='2'){
+                    $("#btnLogMeOut").trigger('click')
+                }
             }
 
         }

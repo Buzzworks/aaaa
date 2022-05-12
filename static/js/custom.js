@@ -624,17 +624,17 @@ $('#scSubmit').click(function() {
             $('#campain_name_div,#camp_name_div').removeClass('d-none')
             $('#campain_name_display,#campain_name_disp').text(campaign_name)
             sip_login = true
-            if (data['call_type'] == 'softcall' | data['call_type']== '2') {
+            if (data['call_type'] == 'softcall') {
                 $('.preloader').fadeOut('slow');
-                reset_agent_login_dialer()
+                
+            }else if(data['call_type'] == '2'){
             } else {
                 sip_identity = `sip:${extension}@${host}`
                 websocket_proxy_url = `wss://${host}:`+data['wss_port'];
                 outbound_proxy_url = `udp://${host}:`+data['sip_udp_port'];
-                sip_host = `${host}`;
                 sipInitialize();
-                reset_agent_login_dialer()
             }
+            reset_agent_login_dialer()
             var rpc_port = data['rpc_port']
             dispo_vue.dispo_schema = data['not_on_call_dispostion'];
             dispo_vue.on_call_dispositions = data['on_call_dispositions']
@@ -2476,7 +2476,11 @@ $("#submit_customer_info").click(function() {
                     set_agent_dashboard_count()
                     $('#feedback-tab').removeClass('active show')
                     $('#feedback-tab').addClass('hide')
-
+                    if(agent_hangup_status == true){
+                        $('#btnLogMeOut').click();
+                        agent_hangup_status = false
+                        return
+                    }
                     // view is used to reset agent availability status
                     if (call_reset_agent_status == true && (blndd_status == true||
                         autodial_status == true || ibc_status == true)) {

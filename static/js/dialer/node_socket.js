@@ -3,6 +3,8 @@ inbound_hangup = false
 blended_hangup = false
 var dap_details_data = ""
 var admin_socket = '';
+var agent_hangup_status = false
+
 // var nodejs_port = '3233';
 // admin_socket = io('https://'+server_ip + ':' + nodejs_port, {
 //     'reconnection': true,
@@ -195,8 +197,14 @@ function socketevents (){
 								data: agent_activity_data,
 								success: function(data){ }
 							})
+							if(call_type == "2"){
+								$('#btnLogMeOut').click();
+							}
 						}
 						else {
+							if(call_type == "2"){
+								agent_hangup_status = true
+							}
 							if (Object.keys(dummy_session_details) ==0){
 								dummy_session_details = {...session_details[extension]}
 							}
@@ -230,6 +238,11 @@ function socketevents (){
 						$('#eavesdrop_session').prop('checked',false)
 					}
 				}
+			}
+		})
+		socket.on('wfh_answer_app',function(data){
+			if(extension == data){
+				$('.preloader').fadeOut('slow');
 			}
 		})
 		socket.on("OUTBOUND_CHANNEL_ANSWER", function(data){

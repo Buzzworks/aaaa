@@ -63,8 +63,13 @@ def twinkle_session(*args,**kwargs):
 					hold_music = campvar_inst.audio_file.path
 			if user and user.wfh_numeric:
 				camp_obj = Campaign.objects.get(name=kwargs['campaign_name'])
-				dial_string = Template(camp_obj.trunk.dial_string).safe_substitute(destination_number=user.wfh_numeric)				
-				status = kwargs['SERVER'].freeswitch.api("originate","{usertype='agent',wfh_app='true',origination_uuid=%s,origination_caller_id_number=%s,cc_agent=%s,hold_music=%s,campaign=%s,cc_export_vars=wfh_app,cc_agent,campaign}%s 11119916" %(ori_uuid,kwargs['extension'],kwargs['extension'],hold_music,kwargs['campaign_name'],dial_string))
+				trunk_id , dial_string, caller_id, country_code = channel_trunk_single_call(camp_obj)
+				if country_code:
+					cn_numeric = country_code+str(user.wfh_numeric)
+				else:
+					cn_numeric = str(user.wfh_numeric)
+				dial_string = Template(camp_obj.trunk.dial_string).safe_substitute(destination_number=cn_numeric)	
+				status = kwargs['SERVER'].freeswitch.api("originate","{usertype='agent',wfh_app='true',origination_uuid=%s,origination_caller_id_number=%s,cc_agent=%s,hold_music=%s,campaign=%s,cc_export_vars=wfh_app,cc_agent,campaign}%s 11119916" %(ori_uuid,caller_id,kwargs['extension'],hold_music,kwargs['campaign_name'],dial_string))
 				if '-ERR' in status:
 					return {"error":"user mobile number is not rechable.."}
 			else:
