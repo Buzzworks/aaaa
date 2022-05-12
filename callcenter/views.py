@@ -4580,7 +4580,7 @@ class DNCCreateModifyApiView(APIView):
 				return Response({"success":"Dnc updated successfully"})
 
 class DNCUpdateApiView(APIView):
-	permission_classes = [AllowAny]
+	# permission_classes = [AllowAny]
 
 	def post(self,request):
 		uniqueid = request.data.get("uniqueid","")
