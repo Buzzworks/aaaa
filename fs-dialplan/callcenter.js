@@ -87,9 +87,9 @@ server.on('CONNECT', function (req) {
 			}
 		}else{
 			server_ip = req.body['variable_sip_from_host']
-			if (('variable_sip_from_host' in req.body)==false){
-				server_ip = req.body['FreeSWITCH-IPv4']
-			}
+			// if (('variable_sip_from_host' in req.body)==false){
+			server_ip = req.body['FreeSWITCH-IPv4']
+			// }
 			if('variable_wfh_app' in req.body & req.body['variable_wfh_app'] == 'true'){
 				io.emit('sip_session_details',{'Unique-ID':req.body['Unique-ID'], 
 					'Caller-Caller-ID-Number':req.body['variable_cc_agent'],
