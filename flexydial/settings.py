@@ -244,6 +244,7 @@ REPLACE_API_KEY = os.environ.get('REPLACE_API_KEY',"")
 REPLACE_API_VALUE = os.environ.get('REPLACE_API_VALUE',"")
 XML_INSERT_KEY = os.environ.get("XML_INSERT_KEY","")
 XML_UPDATE_KEY = os.environ.get("XML_UPDATE_KEY","")
+API_DEST_CAMP = os.environ.get('API_DEST_CAMP','')
 
 SOURCE = 'FLEXY'
 LOCATION = 'Mumbai'
