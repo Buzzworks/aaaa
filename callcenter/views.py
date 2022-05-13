@@ -69,7 +69,7 @@ from .utility import (redirect_user, get_object, get_pre_campaign_edit_info,
 		validate_uploaded_users_file, upload_users, get_current_users, set_agentReddis,
 		create_agentactivity, get_formatted_agent_activities, get_campaign_users, get_agent_mis,get_campaign_mis,
 		dummy_agent_activity,group_add_user_rpc, get_user_group, get_user_role, get_user_switch,
-		get_user_dialtrunk, get_user_disposition, get_user_pausebreak, get_user_campaignschedule,getWebSocketHost,
+		get_user_dialtrunk, get_user_disposition, get_user_pausebreak, get_user_campaignschedule,
 		get_model_data, validate_uploaded_dnc,upload_dnc_nums,submit_feedback, customer_detials, convert_into_timedelta,
 		total_list_users,camp_list_users,user_hierarchy, user_hierarchy_object, update_contact_on_css, get_transform_key, update_contact_on_portifolio,
 		validate_third_party_token,get_temp_contact,get_contact_data, upload_template_sms,get_crm_fields_dict, channel_trunk_single_call, DownloadCssQuery,get_campaign_did, get_group_did,DownloadCssQuery,diff_time_in_seconds,
@@ -539,20 +539,6 @@ class DashBoardApiView(LoginRequiredMixin, APIView):
 			return JsonResponse(context)
 		context['request'] = request
 		return Response(context)
-
-class createWebSocketHostApiView(APIView):
-	permission_classes = [AllowAny]
-	def post(self,request):
-		name = request.POST.get('name','')
-		ip_address = request.POST.get('ip_address','')
-		port = request.POST.get('port','')
-		if name and ip_address and port:
-			WebSocket.objects.all().delete()
-			WebSocket.objects.create(name=name, ip_address=ip_address,port=port)
-			getWebSocketHost()
-		else:
-			return JsonResponse({"msg":"Name, Ip Address and port are mandatory","status":"Failed"})
-		return JsonResponse({"msg":"Successfully WebSocket Inserted","status":"success"})
 
 class EavesdropSessionApiView(LoginRequiredMixin, APIView):
 	"""
@@ -3753,8 +3739,6 @@ class AgentHomeApiView(LoginRequiredMixin, APIView):
 		campaigns = Campaign.objects.filter(Q(users=request.user)|Q(group__in=request.user.group.all())).filter(status='Active')
 		camp_name = list(campaigns.values_list('name',flat=True))
 		breaks = PauseBreak.objects.filter(campaign__name__in=camp_name).distinct()
-		if not settings.WEB_SOCKET_HOST:
-			settings.WEB_SOCKET_HOST = getWebSocketHost()
 		pause_breaks= json.dumps(AgentPauseBreakSerializer(breaks.values('name','break_time','inactive_on_exceed'), many=True).data)
 		total_agentcalls = CallDetail.objects.filter(user=request.user).exclude(cdrfeedback=None).aggregate(total_agentcalls_today=Count('id', filter=Q(created__date=date.today())),total_agentcalls_month=Count('id', filter=Q(created__month=datetime.now().month)))
 		total_agent_assigned_calls = Contact.objects.filter(user=request.user, campaign__in=camp_name).count()

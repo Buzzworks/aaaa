@@ -3603,12 +3603,4 @@ def PasswordChangeAndLockedReminder():
 					break
 	except Exception as e:
 		print("Error in sending password change reminder and locked mails",e)
-def getWebSocketHost():
-	try:
-		web_sock = WebSocket.objects.first()
-		if web_sock:
-			settings.WEB_SOCKET_HOST = web_sock.ip_address+':'+str(web_sock.port)
-			settings.R_SERVER.set("WEB_SOCKET_HOST", pickle.dumps(settings.WEB_SOCKET_HOST))
-		return settings.WEB_SOCKET_HOST
-	except Exception as e:
-		print('Error in getting WebSocket Host')
+
