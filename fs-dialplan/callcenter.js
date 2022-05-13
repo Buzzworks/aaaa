@@ -505,8 +505,9 @@ autodial_server.on('CONNECT', function (req) {
 							io.emit("OUTBOUND_CHANNEL_HANGUP",{"sip_extension":req.body['Other-Leg-Orig-Caller-ID-Number']})
 							return util.log('AUTODIAL_TRANSFERED_CHANNEL_HANGUP',req.body['Other-Leg-Orig-Caller-ID-Number']);
 						}else{
-						io.emit("AUTODIAL_CHANNEL_HANGUP",{"sip_extension":req.body['variable_cc_agent']})
-						return util.log('CHANNEL_HANGUP');
+							util.log('sip_extension :: '+req.body['variable_cc_agent']+" variable_cc_agent_uuid :: "+req.body['variable_cc_agent_uuid'])
+							io.emit("AUTODIAL_CHANNEL_HANGUP",{"sip_extension":req.body['variable_cc_agent'],"variable_cc_agent_uuid":req.body['variable_cc_agent_uuid']})
+							return util.log('CHANNEL_HANGUP');
 						}
 				});
 

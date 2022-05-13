@@ -431,7 +431,7 @@ function socketevents (){
 		})
 
 		socket.on("AUTODIAL_CHANNEL_HANGUP", function(data){
-			if (extension == data["sip_extension"] && agent_hangup == false){
+			if ((extension == data["sip_extension"] ||  session_details[extension]['Unique-ID'] == data['variable_cc_agent_uuid']) && agent_hangup == false){
 				close_agent_sidebar()
 				hangup_time = new Date($.now());
 				var previous_number = sessionStorage.getItem('previous_number','')
