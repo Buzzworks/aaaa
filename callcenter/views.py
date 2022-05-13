@@ -261,6 +261,7 @@ class LoginAPIView(APIView):
 					AGENTS[user.extension]['name'] = user.first_name + ' ' + user.last_name
 					AGENTS[user.extension]['screen'] = 'AgentScreen'
 					AGENTS[user.extension]['login_time'] = datetime.now().strftime('%H:%M:%S')
+					AGENTS[user.extension]['login_date_time']=datetime.now()
 					AGENTS[user.extension]['call_count'] = CallDetail.objects.filter(user__username=user.username,created__date=date.today()).count()
 					updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
 					updated_agent_dict[user.extension] = AGENTS[user.extension]
@@ -639,8 +640,10 @@ class LoginAgentLiveDataView(LoginRequiredMixin, APIView):
 					tdelta = datetime.strptime(datetime.now().strftime('%H:%M:%S'), '%H:%M:%S') - datetime.strptime(data['event_time'], '%H:%M:%S')
 					data["event_time"] = ':'.join(str(tdelta).split(':')[:3])
 				if 'login_time' in data and data["login_time"]:
-					tdelta = datetime.strptime(datetime.now().strftime('%H:%M:%S'), '%H:%M:%S') - datetime.strptime(data['login_time'], '%H:%M:%S')
-					data["login_duration"] = ':'.join(str(tdelta).split(':')[:3])
+					today_date_time=datetime.now()
+					redis_login_date_time=data['login_date_time']
+					tdelta=(today_date_time-redis_login_date_time)
+					data['login_duration']=str(tdelta)
 				if 'name' not in data:
 					data['name'] = ''
 				data['extension'] = agent
@@ -894,6 +897,11 @@ class UsersEditApiView(LoginRequiredMixin, APIView):
 		'''
 		user = get_object(pk, "callcenter", "User")
 		serializer = self.serializer(user, data=request.data)
+		user_obj=request.data['extension']
+		agent_status_data=pickle.loads(settings.R_SERVER.get("agent_status"))
+		if agent_status_data.__contains__(user_obj):
+			agent_status_data[user_obj]['name']=request.data['first_name']+" "+request.data['last_name']
+			settings.R_SERVER.set("agent_status",pickle.dumps(agent_status_data))
 		user_variable_serializer = UserVariableSerializer(
 				user.properties, data=request.data)
 		if serializer.is_valid():
