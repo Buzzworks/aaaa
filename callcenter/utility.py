@@ -29,7 +29,7 @@ from .models import (CampaignSchedule, Switch, DialTrunk, User, Group,
 	UserRole, Script, User, AgentActivity, Campaign, DiallerEventLog, CallDetail,DNC,CSS, CdrFeedbck,
 	CallBackContact, CurrentCallBack, SnoozedCallback, Abandonedcall, ThirdPartyApiUserToken, SMSTemplate, SMSGateway,
 	DiaTrunkGroup,EmailScheduler,AdminLogEntry, ReportColumnVisibility, CallRecordingFeedback, InGroupCampaign, SkilledRouting,
-	EmailGateway,CampaignVariable, SkilledRoutingCallerid,Daemons,Holidays,PasswordManagement,PasswordChangeLogs,WebSocket)
+	EmailGateway,CampaignVariable, SkilledRoutingCallerid,Daemons,Holidays,PasswordManagement,PasswordChangeLogs)
 from flexydial.constants import (Status,CALL_MODE, CAMPAIGN_STRATEGY_CHOICES, DIAL_RATIO_CHOICES, CDR_DOWNLOAD_COl,QC_FEEDBACK_COL,PasswordChangeType)
 from .serializers import (GroupSerializer,CallDetailSerializer, CallBackContactSerializer,
 	SetCallBackContactSerializer, DncSerializer, CallDetailReportSerializer, AgentActivityReportSerializer, CurrentCallBackSerializer, AbandonedcallSerializer, CallRecordingFeedbackSerializer)
