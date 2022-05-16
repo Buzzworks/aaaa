@@ -639,11 +639,14 @@ class LoginAgentLiveDataView(LoginRequiredMixin, APIView):
 				if data["event_time"]:
 					tdelta = datetime.strptime(datetime.now().strftime('%H:%M:%S'), '%H:%M:%S') - datetime.strptime(data['event_time'], '%H:%M:%S')
 					data["event_time"] = ':'.join(str(tdelta).split(':')[:3])
-				if 'login_time' in data and data["login_time"]:
+				if 'login_date_time' in data and data["login_date_time"]:
 					today_date_time=datetime.now()
 					redis_login_date_time=data['login_date_time']
 					tdelta=(today_date_time-redis_login_date_time)
 					data['login_duration']=str(tdelta)
+				elif 'login_time' in data and data["login_time"]:
+					tdelta = datetime.strptime(datetime.now().strftime('%H:%M:%S'), '%H:%M:%S') - datetime.strptime(data['login_time'], '%H:%M:%S')
+					data["login_duration"] = ':'.join(str(tdelta).split(':')[:3])
 				if 'name' not in data:
 					data['name'] = ''
 				data['extension'] = agent
