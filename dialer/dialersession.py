@@ -749,6 +749,7 @@ def enable_wfh_user(*args,**kwargs):
 		AGENTS[kwargs['extension']]['username'] = user.user.username
 		AGENTS[kwargs['extension']]['login_status'] = True
 		AGENTS[kwargs['extension']]['login_time'] = datetime.now().strftime('%H:%M:%S')
+		AGENTS[kwargs['extension']]['login_date_time']=datetime.now()
 		AGENTS[kwargs['extension']]['campaign'] = kwargs['campaign']
 		AGENTS[kwargs['extension']]['dialer_login_status'] = True
 		AGENTS[kwargs['extension']]['dialer_login_time'] = event_time

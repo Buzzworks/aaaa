@@ -3861,6 +3861,7 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 				AGENTS[extension]['extension']= request.user.extension
 				AGENTS[extension]['login_status'] = True
 				AGENTS[extension]['login_time'] = datetime.now().strftime('%H:%M:%S')
+				AGENTS[extension]['login_date_time']=datetime.now()
 				AGENTS[extension]['call_type'] = ''
 				AGENTS[extension]['dial_number'] = ''
 				AGENTS[extension]['call_timestamp'] = ''
