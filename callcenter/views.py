@@ -643,6 +643,7 @@ class LoginAgentLiveDataView(LoginRequiredMixin, APIView):
 					today_date_time=datetime.now()
 					redis_login_date_time=data['login_date_time']
 					tdelta=(today_date_time-redis_login_date_time)
+					tdelta = str(tdelta).split(".")[0]
 					data['login_duration']=str(tdelta)
 				elif 'login_time' in data and data["login_time"]:
 					tdelta = datetime.strptime(datetime.now().strftime('%H:%M:%S'), '%H:%M:%S') - datetime.strptime(data['login_time'], '%H:%M:%S')
