@@ -813,8 +813,7 @@ class UsersCreateApiView(LoginRequiredMixin, APIView):
 		if check_non_admin_user(request.user):
 			group_obj = group_obj.filter(Q(user_group=request.user)|Q(created_by=request.user)).distinct()
 		groups = group_obj.values("id", "name", 'color_code')
-		extension_exist = UserVariable.objects.all().values_list('extension',flat=True)
-		latest_extension = sorted(list(set(four_digit_number) - set(extension_exist)))[0]
+		latest_extension="NEW"
 		user_timezone = USER_TIMEZONE
 		enable_wfh = pickle.loads(settings.R_SERVER.get('enable_wfh') or pickle.dumps(False))
 		switch_list = Switch.objects.filter().values("id","name")
@@ -1737,9 +1736,7 @@ class CampaignCreateApiView(LoginRequiredMixin, generics.CreateAPIView):
 		data["all_campaign"] = Campaign.objects.values("id", "name")
 		data['api_modes'] = API_MODE
 		data['enable_wfh'] = pickle.loads(settings.R_SERVER.get('enable_wfh') or pickle.dumps(False))
-		extension_exist = CampaignVariable.objects.all().values_list('extension',flat=True)
-		latest_extension = sorted(list(set(three_digits_list) - set(extension_exist)))[0]
-		data['extension'] = latest_extension
+		data['extension'] = 'NEW'
 		data['trunk_group'] = list(DiaTrunkGroup.objects.all().values("id","name"))
 		data = {**data, **kwargs['permissions']}
 		return Response(data)
@@ -1758,7 +1755,9 @@ class CampaignCreateApiView(LoginRequiredMixin, generics.CreateAPIView):
 				camp = CampaignVariable.objects.get(campaign__id=existing_campaign)
 				camp.pk = None
 			camp.campaign = campaign
-			camp.extension = request.POST["extension"]
+			extension_exist = CampaignVariable.objects.all().values_list('extension', flat=True)
+			latest_extension = sorted(list(set(three_digits_list) - set(extension_exist)))[0]
+			camp.extension=latest_extension
 			# camp.caller_id = request.POST["caller_id"]
 			camp.dial_ratio = request.POST["dial_ratio"]
 			camp.wfh_caller_id = request.POST["wfh_caller_id"]
