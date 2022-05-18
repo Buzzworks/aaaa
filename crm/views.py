@@ -1388,7 +1388,7 @@ class ContactUploadDataApiView(APIView):
 			data = data.get(settings.XML_UPDATE_KEY,data)
 
 		if settings.REPLACE_API_KEY and settings.REPLACE_API_VALUE:
-			data =  {k.replace(settings.REPLACE_API_KEY,settings.REPLACE_API_VALUE).lower(): v for k, v in data.items()}
+			data =  {k.replace(settings.REPLACE_API_KEY,settings.REPLACE_API_VALUE,1).lower(): v for k, v in data.items()}
 		campaign = settings.API_DEST_CAMP if settings.API_DEST_CAMP != "" else data.get(settings.API_CAMPAIGN_FIELD)
 		numeric = data.get(settings.API_NUMERIC_FIELD)
 		if campaign and numeric:
