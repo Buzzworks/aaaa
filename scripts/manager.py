@@ -569,9 +569,7 @@ def kill_unused_fs_channel():
 	""" killing unused channels in the freewitch"""
 	try:
 		kill_uuid = []
-		print('aaaa')
 		server_ip_list = Switch.objects.filter(status="Active")
-		print(server_ip_list)
 		for server_ip in server_ip_list:
 			SERVER = freeswicth_server(server_ip.ip_address)
 			channels = SERVER.freeswitch.api("show","channels")
