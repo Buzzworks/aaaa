@@ -569,26 +569,27 @@ def kill_unused_fs_channel():
 	""" killing unused channels in the freewitch"""
 	try:
 		kill_uuid = []
-		server_ip = Switch.objects.filter(status="Active").first().ip_address
-		SERVER = freeswicth_server(server_ip)
-		channels = SERVER.freeswitch.api("show","channels")
-		channel_df = pd.DataFrame([x.split(',') for x in channels.split('\n')[:-3]])
-		if not channel_df.empty:
-			channel_df.columns = channel_df.iloc[0]
-			channel_df = channel_df[1:]
-			channel_df = channel_df.loc[channel_df.state.isin(['CS_EXCHANGE_MEDIA','CS_EXECUTE']) & (channel_df.cid_num.str.len() <5)]['uuid']
-
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps({}))
-		if not channel_df.empty and AGENTS.values():
-			agent_redis_df = pd.DataFrame.from_dict(AGENTS.values())
-			agent_redis_df = agent_redis_df[agent_redis_df.dialerSession_uuid.astype(bool)] #To remove blank uuids from redis
-			uuid_in_redis = agent_redis_df.dialerSession_uuid.values
-
-			kill_uuid = channel_df[~channel_df.isin(uuid_in_redis)].values
-		elif not channel_df.empty:
-			kill_uuid = channel_df.values
-		for uuid in kill_uuid:
-			SERVER.freeswitch.api("uuid_kill",uuid)
+		print('aaaa')
+		server_ip_list = Switch.objects.filter(status="Active")
+		print(server_ip_list)
+		for server_ip in server_ip_list:
+			SERVER = freeswicth_server(server_ip.ip_address)
+			channels = SERVER.freeswitch.api("show","channels")
+			channel_df = pd.DataFrame([x.split(',') for x in channels.split('\n')[:-3]])
+			if not channel_df.empty:
+				channel_df.columns = channel_df.iloc[0]
+				channel_df = channel_df[1:]
+				channel_df = channel_df.loc[channel_df.state.isin(['CS_EXCHANGE_MEDIA','CS_EXECUTE']) & (channel_df.cid_num.str.len() <5)]['uuid']
+			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps({}))
+			if not channel_df.empty and AGENTS.values():
+				agent_redis_df = pd.DataFrame.from_dict(AGENTS.values())
+				agent_redis_df = agent_redis_df[agent_redis_df.dialerSession_uuid.astype(bool)] #To remove blank uuids from redis
+				uuid_in_redis = agent_redis_df.dialerSession_uuid.values
+				kill_uuid = channel_df[~channel_df.isin(uuid_in_redis)].values
+			elif not channel_df.empty:
+				kill_uuid = channel_df.values
+			for uuid in kill_uuid:
+				SERVER.freeswitch.api("uuid_kill",uuid)
 	except Exception as e:
 		print('Exception from kill_unused_fs_channel', e)
 	finally:
