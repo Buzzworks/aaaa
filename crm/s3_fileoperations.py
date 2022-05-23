@@ -51,7 +51,7 @@ def gcp_download_server(s3_location_file_name,dest_path):
     try:
         if not os.path.exists(dest_path):
             os.makedirs(dest_path)
-        blob = getGCloudBucket(s3_location_file_name)
+        blob = getGCloudBucket(dest_path+"/"+s3_location_file_name)
         blob.download_to_filename(dest_path+"/"+s3_location_file_name)
     except Exception as e:
         print("Errro at download GCP", e)
