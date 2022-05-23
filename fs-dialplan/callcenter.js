@@ -16,6 +16,9 @@ var socket_server = https.createServer(options);
 var io = require('socket.io')(socket_server);
 socket_server.listen(3233,'0.0.0.0')
 
+const redis_adapter = require("socket.io-redis")
+io.adapter(redis_adapter({host : process.env.REDIS_URL, port : process.env.REDIS_PORT}))
+
 var redis = require('redis');
 leadlist_details_data = redis.createClient({host: process.env.REDIS_URL,port: process.env.REDIS_PORT});
 leadlist_details_data.subscribe('lead-details');
