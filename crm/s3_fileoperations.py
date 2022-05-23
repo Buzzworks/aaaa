@@ -35,7 +35,7 @@ def upload_to_s3(file_name,s3_location_file_name,src_path):
 def upload_to_gcp(source_file_name, destination_blob_name,src_path):
     """Uploads a file to the bucket."""
     try:
-        blob = getGCloudBucket(destination_blob_name)
+        blob = getGCloudBucket(src_path+'/'+destination_blob_name)
         
         blob.upload_from_filename(src_path+'/'+source_file_name)
         print(
