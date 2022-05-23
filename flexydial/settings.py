@@ -90,19 +90,19 @@ WSGI_APPLICATION = 'flexydial.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': os.environ.get('FLEXYDIAL_DB_NAME'),
-        'USER': os.environ.get('FLEXYDIAL_DB_USER'),
-        'PASSWORD': os.environ.get('FLEXYDIAL_DB_PASS'),
-        'HOST': os.environ.get('FLEXYDIAL_DB_HOST'),
-        'PORT': os.environ.get('FLEXYDIAL_DB_PORT'),
+        'NAME': os.environ.get('FLEXYDIAL_DB_NAME','flexydial'),
+        'USER': os.environ.get('FLEXYDIAL_DB_USER','flexydial'),
+        'PASSWORD': os.environ.get('FLEXYDIAL_DB_PASS','flexydial'),
+        'HOST': os.environ.get('FLEXYDIAL_DB_HOST','127.0.0.1'),
+        'PORT': os.environ.get('FLEXYDIAL_DB_PORT',5432),
     },
     'crm': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': os.environ.get('CRM_DB_NAME'),
-        'USER': os.environ.get('CRM_DB_USER'),
-        'PASSWORD': os.environ.get('CRM_DB_PASS'),
-        'HOST': os.environ.get('CRM_DB_HOST'),
-        'PORT': os.environ.get('CRM_DB_PORT'),
+        'NAME': os.environ.get('CRM_DB_NAME','crm'),
+        'USER': os.environ.get('CRM_DB_USER','flexydial'),
+        'PASSWORD': os.environ.get('CRM_DB_PASS','flexydial'),
+        'HOST': os.environ.get('CRM_DB_HOST','127.0.0.1'),
+        'PORT': os.environ.get('CRM_DB_PORT',5432),
     },
 }
 DATABASE_ROUTERS = ['crm.router.DbRouter','callcenter.router.DbRouter']
@@ -245,7 +245,7 @@ REPLACE_API_VALUE = os.environ.get('REPLACE_API_VALUE',"")
 XML_INSERT_KEY = os.environ.get("XML_INSERT_KEY","")
 XML_UPDATE_KEY = os.environ.get("XML_UPDATE_KEY","")
 API_DEST_CAMP = os.environ.get('API_DEST_CAMP','')
-
+S3_GCLOUD_BUCKET_NAME = os.environ.get("S3_GCLOUD_BUCKET_NAME","")
 SOURCE = 'FLEXY'
 LOCATION = 'Mumbai'
 
