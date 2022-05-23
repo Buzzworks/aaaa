@@ -1252,13 +1252,7 @@ dialtrunk_update_form.children("div").steps({
         var did_range =start+","+end
         valid_dids= true
         did_list =[]
-        for(did=start; did<end; did++){
-            did_list.push(did)
-            if(did_list.length>100){
-                valid_dids = false
-                break
-          }
-        }
+        
         $("#update_hidden_did_range").val(did_range)
         if (dialtrunk_update_form.isValid() == true && parseInt(start) <= parseInt(end) && valid_dids == true) {
             console.log(dialtrunk_update_form.serialize())
@@ -1292,6 +1286,10 @@ dialtrunk_update_form.children("div").steps({
     }
 });
 
+function check_valid_dids(start,end){
+    return (parseInt(end)-parseInt(start)<=1000)?true:false
+}
+
 var dialtrunk_validation_form = $("#trunk-form");
 dialtrunk_validation_form.children("div").steps({
     headerTag: "h3",
@@ -1302,15 +1300,8 @@ dialtrunk_validation_form.children("div").steps({
         var start=$("#start_did").val()
         var end=$("#end_did").val()
         var did_range =start+","+end
-        valid_dids= true
-        did_list =[]
-        for(did=start; did<end; did++){
-            did_list.push(did)
-          if(did_list.length>100){
-                valid_dids = false
-                break
-          }
-        }
+        valid_dids= check_valid_dids(start,end)
+
         $("#hidden_did_range").val(did_range)
         if (dialtrunk_validation_form.isValid() == true && parseInt(start) <= parseInt(end) && valid_dids == true) {
             $.ajax({
