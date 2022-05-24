@@ -1252,7 +1252,7 @@ dialtrunk_update_form.children("div").steps({
         var did_range =start+","+end
         valid_dids= true
         did_list =[]
-        
+        valid_dids= check_valid_dids(start,end)
         $("#update_hidden_did_range").val(did_range)
         if (dialtrunk_update_form.isValid() == true && parseInt(start) <= parseInt(end) && valid_dids == true) {
             console.log(dialtrunk_update_form.serialize())
@@ -1287,7 +1287,7 @@ dialtrunk_update_form.children("div").steps({
 });
 
 function check_valid_dids(start,end){
-    return (parseInt(end)-parseInt(start)<=1000)?true:false
+    return (parseInt(end)-parseInt(start)<=2000)?true:false
 }
 
 var dialtrunk_validation_form = $("#trunk-form");
