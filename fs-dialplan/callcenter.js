@@ -19,7 +19,7 @@ socket_server.listen(3233,'0.0.0.0')
 var redis = require('redis');
 leadlist_details_data = redis.createClient({host: process.env.REDIS_URL,port: process.env.REDIS_PORT});
 leadlist_details_data.subscribe('lead-details');
-api_disp_extension_data = redis.createClient();
+api_disp_extension_data = redis.createClient({host: process.env.REDIS_URL,port: process.env.REDIS_PORT});
 api_disp_extension_data.subscribe('api_disp_extension');
 api_disp_extension_data.on('message',function(channel, message){
 	io.emit("hangup_client",message)
