@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'django_apscheduler',
     'django.contrib.humanize',
     'django.contrib.postgres',
+    'storages',
     # 'debug_toolbar',
 ]
 SITE_ID = 1
@@ -235,9 +236,20 @@ PASSWORD_RESET_TIMEOUT_DAYS = 1
 
 WEB_SOCKET_HOST = os.environ.get('WEB_SOCKET_HOST',"")
 FREESWITCH_IP_ADDRESS = os.environ.get('FREESWITCH_HOST')
-S3_PHONEBOOK_BUCKET_NAME = os.environ.get('S3_PHONEBOOK_BUCKET_NAME',"")
-S3_ACCESS_KEY = os.environ.get('S3_ACCESS_KEY',"")
-S3_SECRET_KEY = os.environ.get('S3_SECRET_KEY',"")
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME',"")
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+AWS_S3_OBJECT_PARAMETERS = os.environ.get('AWS_S3_OBJECT_PARAMETERS',{'CacheControl': 'max-age=86400'})
+AWS_DEFAULT_ACL = os.environ.get("AWS_DEFAULT_ACL","")
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID',"")
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY',"")
+
+GS_BUCKET_NAME = os.environ.get("GS_BUCKET_NAME","")
+
+if AWS_STORAGE_BUCKET_NAME:
+    DEFAULT_FILE_STORAGE = 'flexydial.storages.MediaStore'
+elif GS_BUCKET_NAME:
+    MEDIA_URL = 'https://storage.googleapis.com/{}/'.format(GS_BUCKET_NAME)
+    DEFAULT_FILE_STORAGE='flexydial.storages.GoogleCloudMediaFileStorage'
 API_CAMPAIGN_FIELD = os.environ.get('API_CAMPAIGN_FIELD',"campaign")
 API_NUMERIC_FIELD = os.environ.get('API_NUMERIC_FIELD',"numeric")
 REPLACE_API_KEY = os.environ.get('REPLACE_API_KEY',"")

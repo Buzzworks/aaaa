@@ -349,7 +349,7 @@ class PhoneBookUpload(models.Model):
 	""" This model is used to the phonebook upload status"""
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
 			on_delete=models.SET_NULL,null=True)	
-	phonebook_file = FIleModelField(upload_to='upload', blank=True)
+	phonebook_file = models.FileField(upload_to='upload', blank=True)
 	phone_inst = models.ForeignKey(Phonebook, related_name="phonebook_upload", null=True,
 		on_delete=models.CASCADE, blank=True)
 	duplicate_check = models.CharField(max_length=100,null=True,blank=True)
