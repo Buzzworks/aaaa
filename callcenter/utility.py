@@ -501,29 +501,77 @@ def get_pre_campaign_edit_info(pk, request):
 	# data["campaign_call_mode"] = [i for i in call_mode_list if i[0] not  in object_data.callback_mode]
 	return data
 
-def validate_data(username, email,wfh_numeric, employee_id=''):
+from flexydial.constants import CALL_TYPE
+def validate_data(username, email,wfh_numeric, employee_id='',reporting_to='',domain='',call_protocol='',user_role=''):
 	"""
 	this is the function defined for validating the user information
 	"""	
 	data = {}
-	if username:
-		is_present = User.objects.filter(username=username.strip()).exists()
-		if is_present:
-			data["username"] = "This Username is already taken"
+
+	username=username.strip()
+	if username=="":
+		data['username']="username should not be empty"
+
 	if email:
-		is_present = User.objects.filter(email=email.strip()).exists()
-		if is_present:
-			data["email"] = "User with this email id is already there"
+		regex_email = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+		if not (re.fullmatch(regex_email, email)):
+			data['email']="enter proper email"
 
-	if wfh_numeric and wfh_numeric != float:
-		is_present = UserVariable.objects.filter(wfh_numeric=str(wfh_numeric).strip()).exists()
-		if is_present:
-			data['wfh_numeric'] = "wfh_numeric is already there"
+	if domain:
+		switches=list(Switch.objects.all().values_list('name',flat=True))
+		if domain not in switches:
+				data['domain']="the domain does not exists"
 
-	if employee_id:
-		is_present = User.objects.filter(employee_id=employee_id.strip()).exists()
-		if is_present:
-			data["employee_id"] = "This employee_id is already taken"
+	if call_protocol:
+		PROTOCOL_CHOICES_list=[]
+		for protocol in CALL_TYPE:
+			PROTOCOL_CHOICES_list.append(protocol[0])
+		if call_protocol not in PROTOCOL_CHOICES_list:
+			data['call_protocol']="the call protocal must be of "+str(PROTOCOL_CHOICES_list)
+
+
+	if wfh_numeric:
+		wfh_numeric=str(wfh_numeric)		
+		if not wfh_numeric.isdigit():
+					data['wfh_numeric']="wfh numeric should be only integers"
+
+	# if employee_id:
+	# 	is_present = User.objects.filter(employee_id=employee_id.strip()).exists()
+	# 	if is_present: # commenting as taking username
+	# 		data["employee_id"] = "This employee_id is already taken"
+
+
+	if reporting_to:
+		try:
+			reporting_to=reporting_to.strip()
+			reporting_user_obj = User.objects.filter(username=reporting_to)
+			if user_role=='admin' and reporting_to:
+				data['reporting_to']='admin cannot report to any'
+			elif user_role=='agent' and reporting_to:
+				if reporting_user_obj.exists():
+					reporting_user_role = reporting_user_obj[0].user_role.access_level.lower()
+					if reporting_user_role in ['agent']:
+						data['reporting_to']='agent cannot report agent'
+				else:
+					data['reporting_to']='given reporting user is not present'
+			elif user_role=='supervisor' and reporting_to:
+				if reporting_user_obj.exists():
+					reporting_user_role = reporting_user_obj[0].user_role.access_level.lower()
+					if reporting_user_role in ['agent','supervisor']:
+						data['reporting_to'] = 'supervisor cannot report agent, supervisor'
+				else:
+					data['reporting_to']='given reporting user is not present'
+			elif user_role=='manager' and reporting_to:
+				if reporting_user_obj.exists():
+					reporting_user_role = reporting_user_obj[0].user_role.access_level.lower()
+					if reporting_user_role in ['agent','supervisor','manager']:
+						data['reporting_to'] = 'manager cannot report agent, supervisor, manager'
+				else:
+					data['reporting_to'] = 'given reporting user is not present'
+		except Exception as e:
+			print("EXCEPTION OCCURED AT def validate_data",e)
+			#this exception will printed only if given reported_to is for admin user
+			#as admin user is superuser and not having any userrole 
 
 	return data
 
@@ -538,20 +586,7 @@ def validate_uploaded_users_file(data):
 	incorrect_list = []
 	duplicate_list = []
 	if not data.empty:
-		duplicate_list = data[data.duplicated('username', keep='first')]
-		duplicate_list['description']='This username is duplicated'
-		data.drop_duplicates(subset ="username", keep = 'first', inplace = True) 
 
-		dummy_df = data[(data["wfh_numeric"] != '')]
-		duplicate_list = dummy_df[dummy_df.duplicated('wfh_numeric', keep='first')]
-		data = data.drop(duplicate_list.index.tolist())
-		duplicate_list['description']='This wfh_numeric is duplicated'
-		dummy_df= data[(data["employee_id"]!='')]
-		dup_email_list = dummy_df[dummy_df.duplicated(["employee_id"], keep='first')]
-		dup_email_list['description']='This employee_id is duplicated'
-
-		frame = [duplicate_list]
-		duplicate_list = pd.concat(frame)
 		# index_list = dup_email_list.index.tolist()
 		# data = data.drop(index_list)
 
@@ -559,8 +594,21 @@ def validate_uploaded_users_file(data):
 		data = data.replace(np.nan, '', regex=True)
 		incorrect_count =len(duplicate_list)
 
+		wfh_numeric_duplicate_df=data[data.duplicated('wfh_numeric')]
+		wfh_numerics_duplicates=set(wfh_numeric_duplicate_df['wfh_numeric'].tolist())
+
+		if "" in wfh_numerics_duplicates:
+			wfh_numerics_duplicates.remove("")
+
+		wfh_numerics_db=list(UserVariable.objects.exclude(wfh_numeric=None).values_list('wfh_numeric',flat=True))
+
+		username_duplicate_df=data[data.duplicated('username')]
+		username_duplicates=set(username_duplicate_df['username'].tolist())
+
+
+
 		for index, row in data.iterrows():
-			username = row.get("username", "")
+			username = str(row.get("username", ""))
 			email = row.get("email", "")
 			
 
@@ -568,23 +616,61 @@ def validate_uploaded_users_file(data):
 			# data = {}
 			user_role = row.get("role", "")
 			group = row.get("group", "")
-			password = row.get("password", "")
+			password = str(row.get("password", ""))
+			password=password.strip()
 			wfh_numeric = row.get("wfh_numeric","")
 			employee_id = row.get("employee_id","")
 			if not username or not password:
 				data = {"Msg": "Missing value in row"}
 			
-			data = validate_data(str(username), str(email), wfh_numeric, str(employee_id))
-			if user_role:
-				check_role = UserRole.objects.filter(
-					name__iexact=user_role.strip()).exists()
-				if not check_role:
-					data["role"] = "This is not a valid role"
-			if group:
-				check_dept = Group.objects.filter(
-					name__iexact=group.strip()).exists()
-				if not check_dept:
-					data["group"] = "This is not a valid group"
+			reporting_to=row.get("reporting_to","")
+			domain=row.get("domain","")
+			call_protocol=row.get("call_protocol","")
+
+			data = validate_data(str(username), str(email), wfh_numeric, str(employee_id),str(reporting_to),str(domain),str(call_protocol),str(user_role))
+			check_role = UserRole.objects.filter(
+				name__iexact=user_role.strip()).exists()
+			if not check_role:
+				data["role"] = "This is not a valid role"
+
+			group=group.strip()
+			if group:	
+				group_lst=list(group.split(","))
+				for x in group_lst:
+					exist=Group.objects.filter(name=x,status="Active").exists()
+					if not exist:
+						data['group']="this "+x+" is not valid group"
+
+			if str(len(username.strip()))==0:
+				data['username']="Username must not be empty"
+			if username in username_duplicates:
+				data['username']="given username already in the file multiple times"
+			if wfh_numeric in wfh_numerics_duplicates:
+				data['wfh_numeric']="given wfh_numeric contains duplicates in file"
+
+			if wfh_numeric:
+				s=User.objects.filter(username=username)
+				if s:
+					if wfh_numeric==s[0].properties.wfh_numeric:
+						pass
+					else:
+						if wfh_numeric in wfh_numerics_db:
+							data['wfh_numeric']='given wfh numeric present in db'
+				else:
+					if wfh_numeric in wfh_numerics_db:
+						data['wfh_numeric']='given wfh numeric present in db'
+
+			user_obj=User.objects.filter(username=username)
+			if (not user_obj.exists()) and (not password):
+					data['password']="password should be not null for new users"	
+
+			if password:
+				reg = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!#%*?&]{6,20}$"
+				pat=re.compile(reg)
+				mat=re.search(pat,password)
+				if not mat:
+					data['password']="password should be strong"
+
 			if data:
 				incorrect_count = incorrect_count + 1
 				row["description"] = json.dumps(data)
@@ -608,7 +694,7 @@ def validate_uploaded_users_file(data):
 				for incorrect_row in incorrect_list:
 					incorrect_row.to_csv(
 						improper_file, index=False, header=improper_file.tell() == 0)
-				if not duplicate_list.empty:
+				if len(duplicate_list)!=0:
 					duplicate_list.to_csv(improper_file, index=False, header=improper_file.tell()==0)
 			incorrect_file_path = "/static/csv_files/improper_data.csv"
 			data["incorrect_file"] = incorrect_file_path
@@ -625,6 +711,8 @@ def upload_users(data, logged_in_user):
 	domain_obj=Switch.objects.filter().first()	
 	for index, row in data.iterrows():
 		username = row.get("username", "")
+		username=username.strip()
+		username=re.sub("\s", "_", username)
 		email = row.get("email", "")
 		email_password = str(row.get("email_password", ""))
 		password = row.get("password", "").strip()
@@ -634,14 +722,28 @@ def upload_users(data, logged_in_user):
 		last_name = row.get("last_name","")
 		wfh_numeric = row.get("wfh_numeric","")
 		employee_id = row.get("employee_id","")
+
+		user_obj_exists=User.objects.filter(username=username).exists()
+		
+
 		user, created = User.objects.get_or_create(username=username)
 		if user_role:
 			role = UserRole.objects.get(name__iexact=user_role.strip())
 			user.user_role = role
 		if group:
-			group = Group.objects.get(name__iexact=group.strip())
-			user.group.add(group)
-		user.set_password(password)
+			group_lst=list(group.split(","))
+			group_objs=Group.objects.filter(name__in=group_lst)
+			user.group.add(*group_objs)
+		else:
+			user.group.clear() 
+
+		if user_obj_exists:
+			if password:
+				user.set_password(password)
+			else:
+				pass
+		else:
+			user.set_password(password)
 		user.email = email.strip()
 		user.first_name = first_name
 		user.last_name = last_name
@@ -649,6 +751,12 @@ def upload_users(data, logged_in_user):
 		user.email_password = email_password.strip()
 		if employee_id:
 			user.employee_id = employee_id
+		Reporting_User = row.get('reporting_to')
+		if Reporting_User:
+			reporting_user_obj = User.objects.get(username=Reporting_User)
+			user.reporting_to = reporting_user_obj
+		call_protocol=row.get("call_protocol")
+		user.call_type=call_protocol
 		user.save()
 		if created:
 			user_variable = UserVariable()
@@ -659,7 +767,14 @@ def upload_users(data, logged_in_user):
 		extension_exist = UserVariable.objects.all().values_list('extension',flat=True)
 		extension = sorted(list(set(four_digit_number) - set(extension_exist)))[0]
 		user_variable.extension = extension
-		UserVariable.domain=domain_obj
+
+		domain=row.get('domain')
+		if not domain:
+			UserVariable.domain=domain_obj
+		else:
+			domain_obj=Switch.objects.get(name=domain) 
+			UserVariable.domain=domain_obj
+		
 		if wfh_numeric == '':
 			user_variable.wfh_numeric = None
 		else:
