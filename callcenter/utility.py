@@ -1721,17 +1721,17 @@ def download_call_detail_report(filters, user, col_list, serializer_class, downl
 			file_nfs_path = download_sw_file+str(user.id)+'_'+str('call_details')+'_'+str(datetime.now().strftime("%m.%d.%Y.%H.%M.%S"))+".csv"
 			df = pd.read_sql(sub_dispo,db_connection)
 			df.to_csv(file_path, index = False)
-		# f = open(file_path, 'rb')
+		f = open(file_path, 'rb')
 		if download_report_id:
 			download_report = DownloadReports.objects.get(id=download_report_id)
-			download_report.downloaded_file = file_nfs_path
+			download_report.downloaded_file.save(os.path.basename(f.name), File(f), save=True)
 			download_report.is_start = False
 			download_report.save()
-		# f.close()
+		f.close()
 		subprocess.call(['chmod', '777', file_path])
 		if download_report_id !=None:
 			set_download_progress_redis(download_report_id, 100.0, is_refresh=True)
-			# os.remove(file_path)
+			os.remove(file_path)
 		else:
 			sending_reports_through_mail(user,'call_details')
 		print("download report completed")

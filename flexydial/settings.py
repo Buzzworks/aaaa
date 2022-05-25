@@ -185,8 +185,9 @@ NODEJS_SOCKET_PORT = 3232
 WEB_LIVE_STATUS_CHANNEL = 'flexydial-dashboard'
 
 AUTH_USER_MODEL         = 'callcenter.User'
-MEDIA_ROOT              = os.path.join('/var/lib/flexydial/', 'media')
-MEDIA_URL               = '/media/'
+# MEDIA_ROOT              = os.path.join('/var/lib/flexydial/', 'media')
+MEDIA_ROOT              = 'media'
+# MEDIA_URL               = '/media/'
 RECORDING_ROOT          = '/var/spool/freeswitch/default'
 RECORDING_URL           = '/recordings/'
 RPC_HOST                = 'localhost'
