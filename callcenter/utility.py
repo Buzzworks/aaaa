@@ -733,6 +733,7 @@ def upload_users(data, logged_in_user):
 		if group:
 			group_lst=list(group.split(","))
 			group_objs=Group.objects.filter(name__in=group_lst)
+			user.group.clear()
 			user.group.add(*group_objs)
 		else:
 			user.group.clear() 
