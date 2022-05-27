@@ -1510,7 +1510,7 @@ class DownloadReportApiView(APIView):
 		if file_name.downloaded_file.name.endswith('.csv'):
 			data = pd.read_csv(file_name.downloaded_file, na_filter=False, encoding = "unicode_escape", escapechar='\\')
 			response = HttpResponse(content_type='text/csv')
-			response['Content-Disposition'] = 'attachment; filename=filename.csv'
+			response['Content-Disposition'] = 'attachment; filename='+downloaded_file_name
 			data.to_csv(path_or_buf=response,sep=',',float_format='%.2f',index=False,decimal=".")	
 		else:
 			with BytesIO() as b:
