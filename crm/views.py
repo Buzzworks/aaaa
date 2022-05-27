@@ -21,7 +21,7 @@ from rest_framework.response import Response
 from rest_framework import generics
 from scripts.pagination import DatatablesPageNumberPagination
 from scripts.renderers import DatatablesRenderer
-
+from io import BytesIO
 import pandas as pd
 import numpy as np
 import json
@@ -1503,3 +1503,21 @@ class ContactUploadDataApiView(APIView):
 				return JsonResponse({"msg":"Campaign is not Present",'status':'error'},status=500)		
 		else:
 			return JsonResponse({"msg":"Missing Mandatory Field Campaign and Numeric","status":"failed","a":request.data})
+			
+class DownloadReportApiView(APIView):
+	def get(self,request,pk,downloaded_file_name):
+		file_name = DownloadReports.objects.filter(id=pk).order_by('-id').first()
+		if file_name.downloaded_file.name.endswith('.csv'):
+			data = pd.read_csv(file_name.downloaded_file, na_filter=False, encoding = "unicode_escape", escapechar='\\')
+			response = HttpResponse(content_type='text/csv')
+			response['Content-Disposition'] = 'attachment; filename=filename.csv'
+			data.to_csv(path_or_buf=response,sep=',',float_format='%.2f',index=False,decimal=".")	
+		else:
+			with BytesIO() as b:
+				data = pd.read_excel(file_name.downloaded_file, encoding = "unicode_escape",
+								converters={'numeric': str,'customer_info:loan_account_number':str})
+				with pd.ExcelWriter(b) as writer:
+					data.to_excel(writer, sheet_name="Data", index=False)
+				response = HttpResponse(b.getvalue(),content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+				response['Content-Disposition'] = 'attachment; filename='+downloaded_file_name
+		return response

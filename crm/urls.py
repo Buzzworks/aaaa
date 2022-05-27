@@ -30,6 +30,7 @@ urlpatterns = [
         path('CRM/Download/<int:pk>/',views.DownloadCrmFields, name='download-crm-fields'),
         path('CRM/phonebook/status/',views.CrmPhonebookStatusApiView.as_view(), name="status-phonebook" ),
         path('download/',views.DownloadAPIView.as_view(),name="download"),
+        path('api/download/<int:pk>/<str:downloaded_file_name>/',views.DownloadReportApiView.as_view()),
         path('api/perform-action-on-entry/', views.PerformActionOnSelectedEntry.as_view(), name="perform-action-on-entry"),
         path('api/get-edit-contact/<int:pk>/', views.GetEditContactInfoApiView.as_view(), name="get-edit-contact"),
         path('api/download-phonebook/',views.DownloadPhonebook.as_view(),name="download_phoenbook"),
