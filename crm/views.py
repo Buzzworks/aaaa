@@ -1503,7 +1503,7 @@ class ContactUploadDataApiView(APIView):
 				return JsonResponse({"msg":"Campaign is not Present",'status':'error'},status=500)		
 		else:
 			return JsonResponse({"msg":"Missing Mandatory Field Campaign and Numeric","status":"failed","a":request.data})
-			
+
 class DownloadReportApiView(APIView):
 	def get(self,request,pk,downloaded_file_name):
 		file_name = DownloadReports.objects.filter(id=pk).order_by('-id').first()
@@ -1514,8 +1514,7 @@ class DownloadReportApiView(APIView):
 			data.to_csv(path_or_buf=response,sep=',',float_format='%.2f',index=False,decimal=".")	
 		else:
 			with BytesIO() as b:
-				data = pd.read_excel(file_name.downloaded_file, encoding = "unicode_escape",
-								converters={'numeric': str,'customer_info:loan_account_number':str})
+				data = pd.read_excel(file_name.downloaded_file)
 				with pd.ExcelWriter(b) as writer:
 					data.to_excel(writer, sheet_name="Data", index=False)
 				response = HttpResponse(b.getvalue(),content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')

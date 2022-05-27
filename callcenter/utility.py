@@ -1551,29 +1551,26 @@ def save_file(csv_file, download_report_id, report_name, user, file_type='csv'):
 		from django.conf import settings
 
 		download_folder = settings.MEDIA_ROOT+"/download/"+datetime.now().strftime("%m.%d.%Y")+"/"+str(user.id)+"/"
-		download_sw_file = "/download/"+datetime.now().strftime("%m.%d.%Y")+"/"+str(user.id)+"/"
 		if not os.path.exists(download_folder):
 			os.makedirs(download_folder)
 		if file_type == 'csv':
 			file_path = download_folder+str(user.id)+'_'+str(report_name)+'_'+str(datetime.now().strftime("%m.%d.%Y.%H.%M.%S"))+".csv"
-			download_sw_file = download_sw_file+str(user.id)+'_'+str(report_name)+'_'+str(datetime.now().strftime("%m.%d.%Y.%H.%M.%S"))+".csv"
 			with open(file_path, 'w', newline='') as file:
 				writer = csv.writer(file, delimiter=',')
 				writer.writerows(csv_file)
 				file.close()
 		else:
 			file_path = download_folder+str(user.id)+'_'+str(report_name)+'_'+str(datetime.now().strftime("%m.%d.%Y.%H.%M.%S"))+".xlsx"
-			download_sw_file = download_sw_file+str(user.id)+'_'+str(report_name)+'_'+str(datetime.now().strftime("%m.%d.%Y.%H.%M.%S"))+".xlsx"
 			with pd.ExcelWriter(file_path, engine="xlsxwriter",options={'remove_timezone': True, 'strings_to_formulas': False}) as writer:
 				df = pd.DataFrame(csv_file[1:], columns=csv_file[0])
 				df.to_excel(writer, sheet_name = "Sheet1", header = True, index = False)
-		# f = open(file_path, 'rb')
+		f = open(file_path, 'rb')
 		if download_report_id !=None:
 			download_report = DownloadReports.objects.get(id=download_report_id)
-			download_report.downloaded_file = download_sw_file
+			download_report.downloaded_file.save(os.path.basename(f.name), File(f), save=True)
 			download_report.is_start = False
 			download_report.save()
-		# f.close()
+		f.close()
 		if not download_report_id:
 			sending_reports_through_mail(user,report_name)
 		if download_report_id !=None:
