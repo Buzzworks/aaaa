@@ -55,7 +55,7 @@ urlpatterns = [
     path("password-reset/", views.PasswordResetView.as_view(), name="password_reset"),
     path("password-reset-confirm/<uidb64>/<token>", views.CustomPasswordResetConfirmView.as_view( template_name="registration/password_reset_confirm.html",form_class=views.CustomPasswordResetForm), name="password_reset_confirm"),
     path("password-reset-complete/", auth_views.PasswordResetCompleteView.as_view(), name="password_reset_complete"),
-    path("/api/generate-token/", authviews.obtain_auth_token),
+    path("api/generate-token/", authviews.obtain_auth_token),
 
 
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
