@@ -1,3 +1,4 @@
+from enum import unique
 import os,sys
 import ntpath
 from django.shortcuts import render
@@ -16,6 +17,7 @@ from django.db.models import Q, F, Sum, TimeField, Value, Count, Prefetch, CharF
 from django.db.models.functions import Cast, Coalesce, Concat
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
+from rest_framework.permissions import IsAuthenticated
 import csv
 import itertools
 from django.contrib.sessions.models import Session
@@ -4564,13 +4566,13 @@ class DNCCreateModifyApiView(APIView):
 				return Response({"success":"Dnc updated successfully"})
 
 class DNCUpdateApiView(APIView):
-	# permission_classes = [AllowAny]
+	permission_classes = (IsAuthenticated,)
 
 	def post(self,request):
 		uniqueid = request.data.get("uniqueid","")
 		disposition = request.data.get('disposition',"")
 		expiry_date = request.data.get("expiry_date","")
-		if uniqueid and disposition == "DNC" and datetime.strptime(expiry_date, "%Y-%m-%d").date()>= datetime.now().date():
+		if uniqueid and disposition == "DNC":
 			contact = Contact.objects.filter(uniqueid=uniqueid).first()
 			if contact:
 				DNC.objects.update_or_create(numeric=contact.numeric,global_dnc=True,uniqueid=uniqueid,defaults={"numeric":contact.numeric,"global_dnc":True,"uniqueid":uniqueid,"status":'Active','dnc_end_date':expiry_date})
@@ -4606,14 +4608,15 @@ class DNCUploadApiView(APIView):
 		return Response({"msg": "file removed successfully"})
 
 class ThirdPartyApiDispositionUpdateView(APIView):
+	permission_classes = [AllowAny]
 	def post(self,request):
 		serializer = ThirdPartyApiDispositionSerializer(data=request.data)	
 		if serializer.is_valid():
 			try:
 				serializer.save()
-				uniqueid_filter = Contact.objects.filter(uniqueid=serializer.data['uniqueid'])
+				uniqueid_filter = Contact.objects.filter(uniqueid=serializer.data['unique_id'])
 				if not uniqueid_filter:
-					return JsonResponse({"error": f"uniqueid {serializer.data['uniqueid']} is not found contact."}, status=400)
+					return JsonResponse({"error": f"unique_id {serializer.data['unique_id']} is not found contact."}, status=400)
 				mobile_number = uniqueid_filter[0].numeric
 				extension= None
 				agent_status = pickle.loads(settings.R_SERVER.get("agent_status"))

@@ -1020,10 +1020,12 @@ class PasswordManagementSerialzer(serializers.ModelSerializer):
 
 
 class ThirdPartyApiDispositionSerializer(serializers.ModelSerializer):	
-	uniqueid= serializers.CharField(required=True)
+	unique_id= serializers.CharField(required=True)
 	disposition	= serializers.CharField(required=True)
-	subdisposition	= serializers.CharField(required=False)
-	callback = serializers.DateTimeField(required=False)
+	disposition_desc = serializers.CharField(required=False)
+	callBabkDate = serializers.CharField(required=False)
+	callBabkTime = serializers.CharField(required=False)
+	flexiAgentId = serializers.CharField(required=False)
 	
 	class Meta:
 		model = ThirdPartyApiDisposition
