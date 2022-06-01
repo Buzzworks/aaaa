@@ -940,7 +940,7 @@ class ValidateUserUploadApiView(APIView):
 			if user_file.name.endswith('.csv'):
 				data = pd.read_csv(user_file, na_filter=False, dtype={"extension" : "str"})
 			else:
-				data = pd.read_excel(user_file, dtype={"extension" : "str"})
+				data = pd.read_excel(user_file,na_filter=False, dtype={"extension" : "str"})
 			user_columns = ['username', 'password','group', 'role']
 			column_names = data.columns.tolist()
 			valid = all(elem in column_names for elem in user_columns)

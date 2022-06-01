@@ -385,8 +385,8 @@ class DeleteEntryApiView(APIView):
 				'action_name':"5",'event_type':'INACTIVE'})
 		return Response({"msg": "Selected entries deleted"})
 
-
-def csvDownload(fields, model, file_type, exclude=[],
+from callcenter.models import UserVariable
+def csvDownload(fields, model, file_type, user="", exclude=[],
 				description="Export filtered data as CSV file"):
 
 	"""
@@ -399,6 +399,19 @@ def csvDownload(fields, model, file_type, exclude=[],
 	if file_type=="csv":
 		writer = csv.writer(response)
 		writer.writerow(list(fields))
+		if model=='User':
+			# users = UserVariable.objects.filter(user__created_by=user)
+			users=UserVariable.objects.filter(Q(user__created_by=user)|Q(user__reporting_to=user)).filter(user__is_active=True)
+			user_feilds = users.values_list('user__username','user__email','user__password','user__user_role__name', 'user__first_name', 'user__last_name', 'wfh_numeric', 'user__employee_id','user__reporting_to__username','domain__name','user__call_type')
+			for user in user_feilds:
+				li_user=list(user)
+				user_group=list(User.objects.filter(username=li_user[0]).values_list('group__name',flat=True))
+				if None in user_group: user_group.remove(None)
+				str_sep=','
+				user_group=str_sep.join(user_group)
+				li_user.insert(3,user_group)
+				li_user[2]=''
+				writer.writerow(li_user)
 	else:
 		wb = xlwt.Workbook(encoding='utf-8')
 		ws = wb.add_sheet(model)
@@ -406,6 +419,21 @@ def csvDownload(fields, model, file_type, exclude=[],
 		columns = list(fields)
 		for col_num in range(len(columns)):
 			ws.write(row_num,col_num, columns[col_num])
+		if model=='User':
+			# users = UserVariable.objects.filter(user__created_by=user)
+			users=UserVariable.objects.filter(Q(user__created_by=user)|Q(user__reporting_to=user))
+			user_feilds = users.values_list('user__username','user__email','user__password','user__user_role__name', 'user__first_name', 'user__last_name', 'wfh_numeric', 'user__employee_id','user__reporting_to__username','domain__name','user__call_type')
+			for row in user_feilds:
+				li_user=list(row)
+				user_group=list(User.objects.filter(username=li_user[0]).values_list('group__name',flat=True))
+				if None in user_group: user_group.remove(None)
+				str_sep=','
+				user_group=str_sep.join(user_group)
+				li_user.insert(3,user_group)
+				li_user[2]=''
+				row_num += 1
+				for col_num in range(len(li_user)):
+					ws.write(row_num, col_num, li_user[col_num])
 		wb.save(response)
 	return response
 
@@ -490,7 +518,7 @@ class DownloadSampleApiView(APIView):
 			cols = HOLIDAYS_FIELDS
 			model =  "Holidays"
 		if cols:
-			return csvDownload(cols, model,file_type)
+			return csvDownload(cols, model,file_type,request.user)
 
 class DownloadSampleContactApiView(APIView):
 	'''
