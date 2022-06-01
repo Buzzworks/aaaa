@@ -600,6 +600,7 @@ class DiallerEventLogSerializer(serializers.ModelSerializer):
 	connect_time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
 	hangup_time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
 	is_feedback = serializers.SerializerMethodField()
+	ip_address = serializers.SerializerMethodField()
 	class Meta:
 		model = DiallerEventLog
 		fields= '__all__'   
@@ -616,7 +617,11 @@ class DiallerEventLogSerializer(serializers.ModelSerializer):
 		if call_recording_feedback.exists():
 			feedback = "true"
 		return feedback
-
+	def get_ip_address(self,obj):
+		ip_address = ''
+		if obj.campaign_name:
+			ip_address = list(Campaign.objects.filter(name=obj.campaign_name).values_list('switch__ip_address', flat=True))[0]
+		return ip_address
 
 class DiallerEventLogTimeSerializer(serializers.ModelSerializer):
 	""" sericlizzer for diallerevent log time format data serilizer"""

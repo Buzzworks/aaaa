@@ -1508,7 +1508,8 @@ class DownloadReportApiView(APIView):
 	def get(self,request,pk,downloaded_file_name):
 		file_name = DownloadReports.objects.filter(id=pk).order_by('-id').first()
 		if file_name.downloaded_file.name.endswith('.csv'):
-			data = pd.read_csv(file_name.downloaded_file, na_filter=False, encoding = "unicode_escape", escapechar='\\')
+			reader = pd.read_csv(file_name.downloaded_file, low_memory=False, chunksize=10000, index_col=[0], encoding = "unicode_escape", escapechar='\\', na_filter=False)
+			data = pd.concat(reader)
 			response = HttpResponse(content_type='text/csv')
 			response['Content-Disposition'] = 'attachment; filename='+downloaded_file_name
 			data.to_csv(path_or_buf=response,sep=',',float_format='%.2f',index=False,decimal=".")	
