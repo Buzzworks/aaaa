@@ -704,9 +704,9 @@ function setAudioTag(url, row_data){
 $(document).on('click', '.play-recording', function(){
 	$(this).parent('tr').addClass('highlighted_row')
 	var url = ''
+	var row_data = custom_pagination_table.row(row).data()
 	var parent_path = `${location.protocol}//${row_data['ip_address']}/recordings`
 	var row = $(this).parents('tr')
-	var row_data = custom_pagination_table.row(row).data()
 	var date = new Date(row_data['ring_time']);
 	var file_date = `${("0" + date.getDate()).slice(-2)}-${("0" + (date.getMonth() + 1)).slice(-2)}-${date.getFullYear()}`
 	var file_time = `${("0" + date.getHours()).slice(-2)}-${("0" + date.getMinutes()).slice(-2)}`
