@@ -21,6 +21,7 @@ from rest_framework.response import Response
 from rest_framework import generics
 from scripts.pagination import DatatablesPageNumberPagination
 from scripts.renderers import DatatablesRenderer
+from crm.s3_fileoperations import *
 
 import pandas as pd
 import numpy as np
@@ -1501,3 +1502,20 @@ class ContactUploadDataApiView(APIView):
 				return JsonResponse({"msg":"Campaign is not Present",'status':'error'},status=500)		
 		else:
 			return JsonResponse({"msg":"Missing Mandatory Field Campaign and Numeric","status":"failed","a":request.data})
+
+class RecordingPlayAPIView(APIView):
+	def get(self,request,file_name):
+		s3fileDownloadToServer(file_name,"recordings/"+file_name,"/tmp/")
+		with open("/tmp/"+file_name, 'rb') as fh:
+			response = HttpResponse(fh.read(), content_type='audio/mpeg')
+			response['Content-Disposition'] = 'attachment; filename=/tmp/%s' % file_name
+			response['Accept-Ranges'] = 'bytes'
+			response['X-Sendfile'] = file_name
+			response['Content-Length'] = os.path.getsize("/tmp/"+file_name)
+		return response
+	def post(self,request,file_name):
+		if settings.S3_PHONEBOOK_BUCKET_NAME:
+			url = s3singedUrl(file_name)
+			return JsonResponse({"msg":url},status=200)
+		else:
+			return JsonResponse({"msg",""},status=500)

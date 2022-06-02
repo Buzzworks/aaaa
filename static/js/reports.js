@@ -700,43 +700,59 @@ function setAudioTag(url, row_data){
 	$('#recordingPlay_modal').modal('show')
 }
 
+
 // play the audio file
 $(document).on('click', '.play-recording', function(){
 	$(this).parent('tr').addClass('highlighted_row')
 	var url = ''
-	var parent_path = `${location.protocol}//${location.hostname}/recordings`
 	var row = $(this).parents('tr')
 	var row_data = custom_pagination_table.row(row).data()
+	var parent_path = `${location.protocol}//${location.hostname}/recordings`
 	var date = new Date(row_data['ring_time']);
 	var file_date = `${("0" + date.getDate()).slice(-2)}-${("0" + (date.getMonth() + 1)).slice(-2)}-${date.getFullYear()}`
 	var file_time = `${("0" + date.getHours()).slice(-2)}-${("0" + date.getMinutes()).slice(-2)}`
 	if (date.setHours(0,0,0,0) != new Date().setHours(0,0,0,0)){
 		parent_path = `${parent_path}/${file_date}`
 	}
+	setAudioTag(`/recordings-play/${file_date}-${file_time}_${row_data['customer_cid']}_${row_data['session_uuid']}.mp3/`,row_data)
+	return 
 	$.ajax({
-		url:`${parent_path}/${file_date}-${file_time}_${row_data['customer_cid']}_${row_data['session_uuid']}.mp3`,
-		type:'HEAD',
-		error: function()
-		{
-			date = new Date(row_data['connect_time']);
-			file_time = `${("0" + date.getHours()).slice(-2)}-${("0" + date.getMinutes()).slice(-2)}`
+        type: 'post',
+        headers: {
+            "X-CSRFToken": csrf_token
+        },
+        url: `/recordings-play/${file_date}-${file_time}_${row_data['customer_cid']}_${row_data['session_uuid']}.mp3/`,
+        success: function(data) {
+			console.log(data)
+			setAudioTag(data['msg'],row_data)
+		},
+		error: function(){
 			$.ajax({
 				url:`${parent_path}/${file_date}-${file_time}_${row_data['customer_cid']}_${row_data['session_uuid']}.mp3`,
 				type:'HEAD',
 				error: function()
 				{
-					filenotfoundAlert()
+					date = new Date(row_data['connect_time']);
+					file_time = `${("0" + date.getHours()).slice(-2)}-${("0" + date.getMinutes()).slice(-2)}`
+					$.ajax({
+						url:`${parent_path}/${file_date}-${file_time}_${row_data['customer_cid']}_${row_data['session_uuid']}.mp3`,
+						type:'HEAD',
+						error: function()
+						{
+							filenotfoundAlert()
+						},
+						success: function(){
+							setAudioTag(`${parent_path}/${file_date}-${file_time}_${row_data['customer_cid']}_${row_data['session_uuid']}.mp3`,row_data)
+						}
+					})
 				},
-				success: function(){
+				success: function()
+				{
 					setAudioTag(`${parent_path}/${file_date}-${file_time}_${row_data['customer_cid']}_${row_data['session_uuid']}.mp3`,row_data)
 				}
-			})
-		},
-		success: function()
-		{
-			setAudioTag(`${parent_path}/${file_date}-${file_time}_${row_data['customer_cid']}_${row_data['session_uuid']}.mp3`,row_data)
+			});
 		}
-	});
+	});	
 });
 // hide record play modal
 $('#recordingPlay_modal').on('hide.bs.modal', function(){

@@ -22,3 +22,15 @@ def s3fileDownloadToServer(self,file_name,s3_location_file_name,dest_path=settin
         return True
     except Exception as e:
         print("Error :: File Download from S3 to Server", e)
+
+def s3singedUrl(S3_location):
+    try:
+        s3_resource_bucket = boto3.client('s3',aws_access_key_id=settings.S3_ACCESS_KEY,
+							aws_secret_access_key= settings.S3_SECRET_KEY) if settings.S3_ACCESS_KEY and settings.S3_SECRET_KEY else boto3.client('s3')
+        url = s3_resource_bucket.generate_presigned_url(
+        ClientMethod='get_object', 
+        Params={'Bucket': settings.S3_PHONEBOOK_BUCKET_NAME, 'Key': S3_location},
+        ExpiresIn=300)
+        return url
+    except Exception as e:
+        print('s3 signed Url ',e)

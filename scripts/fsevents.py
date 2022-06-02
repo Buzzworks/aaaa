@@ -14,6 +14,9 @@ import os,sys
 AGENTS={}
 urllib3.disable_warnings()
 pool = ThreadPoolExecutor(max_workers=20)
+from datetime import datetime
+from crm.s3_fileoperations import *
+
 
 def capture_events(signal, sender, **kwargs):
 	""" 
@@ -68,6 +71,12 @@ def capture_events(signal, sender, **kwargs):
 				'unique_id':kwargs.get('variable_uniqueid',None),
 				'wfh_call' :kwargs.get('variable_wfh_call',None),
 			})
+			
+			if settings.S3_PHONEBOOK_BUCKET_NAME:
+				file_date = datetime.strptime(kwargs.get('variable_profile_start_stamp', None),"%Y-%m-%d %H:%M:%S").strftime("%d-%m-%Y-%H-%M")
+				file_name = file_date+"_"+customer_cid+"_"+kwargs.get('Unique-ID', '')+".mp3"
+				s3_location_file_name = file_name
+				fileTransferToS3(settings.RECORDING_ROOT+"/"+file_name,"recordings/"+s3_location_file_name,settings.RECORDING_ROOT,False)
 			if kwargs.get('variable_usertype') != "client_ipphone":
 				trunk_id = str(kwargs.get('variable_trunk_id', ''))
 				if kwargs.get('Call-Direction') == 'inbound':
