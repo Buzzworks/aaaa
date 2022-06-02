@@ -4569,7 +4569,7 @@ class DNCUpdateApiView(APIView):
 	permission_classes = (IsAuthenticated,)
 
 	def post(self,request):
-		uniqueid = request.data.get("uniqueid","")
+		uniqueid = request.data.get("unique_id","")
 		disposition = request.data.get('disposition',"")
 		expiry_date = request.data.get("expiry_date","")
 		if uniqueid and disposition == "DNC":
