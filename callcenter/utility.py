@@ -545,6 +545,7 @@ def validate_data(username, email,wfh_numeric, employee_id='',reporting_to='',do
 		try:
 			reporting_to=reporting_to.strip()
 			reporting_user_obj = User.objects.filter(username=reporting_to)
+			user_role=UserRole.objects.get(name=user_role).access_level.lower()
 			if user_role=='admin' and reporting_to:
 				data['reporting_to']='admin cannot report to any'
 			elif user_role=='agent' and reporting_to:
@@ -648,6 +649,13 @@ def validate_uploaded_users_file(data):
 			if wfh_numeric in wfh_numerics_duplicates:
 				data['wfh_numeric']="given wfh_numeric contains duplicates in file"
 
+			status=str(row.get('status')).strip()
+			str_bools=['True','False']
+			if len(status) ==0:
+				data['status']="status must be not empty"
+			elif status not in str_bools:
+				data['status']="status must be boolean only"
+
 			if wfh_numeric:
 				s=User.objects.filter(username=username)
 				if s:
@@ -711,7 +719,7 @@ def upload_users(data, logged_in_user):
 	domain_obj=Switch.objects.filter().first()	
 	for index, row in data.iterrows():
 		username = row.get("username", "")
-		username=username.strip()
+		username=str(username).strip()
 		username=re.sub("\s", "_", username)
 		email = row.get("email", "")
 		email_password = str(row.get("email_password", ""))
@@ -722,7 +730,7 @@ def upload_users(data, logged_in_user):
 		last_name = row.get("last_name","")
 		wfh_numeric = row.get("wfh_numeric","")
 		employee_id = row.get("employee_id","")
-
+		user_is_active=row.get("status")
 		user_obj_exists=User.objects.filter(username=username).exists()
 		
 
@@ -750,6 +758,7 @@ def upload_users(data, logged_in_user):
 		user.last_name = last_name
 		user.created_by = logged_in_user
 		user.email_password = email_password.strip()
+		user.is_active=user_is_active
 		if employee_id:
 			user.employee_id = employee_id
 		Reporting_User = row.get('reporting_to')
