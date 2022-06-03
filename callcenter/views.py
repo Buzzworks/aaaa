@@ -12,7 +12,7 @@ from django.views.decorators.cache import never_cache, cache_page
 from django.conf import settings
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
 from django.core.cache import cache
-from django.db.models import Q, F, Sum, TimeField, Value, Count, Prefetch, CharField,TextField
+from django.db.models import Q, F, Sum, TimeField, Value, Count,Max, Prefetch, CharField,TextField
 from django.db.models.functions import Cast, Coalesce, Concat
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
@@ -58,7 +58,7 @@ from flexydial.constants import (Status, REPORTS_LIST, TRUNK_TYPE, UserStatus, D
 
 from crm.models import (CrmField, TempContactInfo, Phonebook,
 						Contact,CrmField,ContactInfo, DownloadReports, LeadBucket, AlternateContact)
-from crm.serializers import (SetContactSerializer,AgentCrmFieldSerializer,TempContactInfoSerializer, ContactSerializer,CssContactSerializer, AssignedContactInfoSerializer, ContactListSerializer, LeadBucketSerializer, AlternateContactSerializer)
+from crm.serializers import (SetContactSerializer,UniqueSerializer,AgentCrmFieldSerializer,TempContactInfoSerializer, ContactSerializer,CssContactSerializer, AssignedContactInfoSerializer, ContactListSerializer, LeadBucketSerializer, AlternateContactSerializer)
 from crm.utility import crm_field_value_schema,get_user_crm_data, get_customizable_crm_fields,get_customizable_crm_fields_for_template
 from flexydial.views import (check_permission, get_paginated_object, data_for_pagination, get_active_campaign,
 		data_for_vue_pagination, sendSMS, csvDownloadTemplate, create_admin_log_entry, sendsmsparam)
@@ -5979,6 +5979,28 @@ class GetTotalCallsPerMonth(LoginRequiredMixin,APIView):
 				'page': paginate_obj.number,'has_next': paginate_obj.has_next(),'has_prev': paginate_obj.has_previous(),
 				'start_index':paginate_obj.start_index(), 'end_index':paginate_obj.end_index(),
 				'total_data':agent_callpermonth[::-1]})
+
+class UniqueCallsPerMonth(LoginRequiredMixin, APIView):
+	login_url= '/'
+	def post(self,request):
+		agent_uniquecallpermonth=[]
+		user= request.user
+		page = int(request.POST.get('page' ,1))
+		paginate_by = int(request.POST.get('paginate_by', 10))
+		disposition = request.POST.get('disposition','')
+		column_name = request.POST.get('column_name',None)
+		search_by = request.POST.get('search_by',None)
+		filter_dict={}
+		if column_name and search_by:
+			filter_dict[column_name] = search_by
+		queryset=CallDetail.objects.filter(**filter_dict).filter(created__month__gte=datetime.now().month).values('campaign_name','contact_id','customer_cid').annotate(Count('customer_cid'),Max('id')).order_by()
+
+		paginate_obj = get_paginated_object(queryset, page, paginate_by)
+		agent_uniquecallpermonth = UniqueSerializer(paginate_obj,many=True).data
+		return Response({'total_records': paginate_obj.paginator.count,'total_pages': paginate_obj.paginator.num_pages,
+			'page': paginate_obj.number,'has_next': paginate_obj.has_next(),'has_prev': paginate_obj.has_previous(),
+			'start_index':paginate_obj.start_index(), 'end_index':paginate_obj.end_index(),
+			'total_data':agent_uniquecallpermonth[::-1]})
 
 class GetAgentDispoCount(LoginRequiredMixin, APIView):
 	"""

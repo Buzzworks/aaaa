@@ -386,6 +386,9 @@
 										<div class="col-6" id="mb-show-agent-totalcall-month">
 											<canvas id="monthly_data" width="600" height="600"></canvas>
 										</div>
+										<div class="col-6" id="mb-show-agent-totaluniquecall-month">
+											<canvas id="monthly_uniquedata" width="600" height="600"></canvas>
+										</div>
 									</div>
 								</div>
 								<div class="col-sm-6 pt-3">
@@ -778,9 +781,11 @@
             });
 			sessionStorage.setItem("todays_call",`{{total_agentcalls_today|safe}}`)
 			sessionStorage.setItem("monthly_call", `{{ total_agentcalls_month|safe }}`)
+			sessionStorage.setItem("unique_monthly_call", `{{ unique_monthly_call|safe }}`)
 			sessionStorage.setItem("assigned_calls",`{{ total_agent_assigned_calls|safe}}`)
 			$('#show-agent-totalcall-today small span').text(sessionStorage.getItem("todays_call",""))
 			$('#show-agent-totalcall-month small span').text(sessionStorage.getItem("monthly_call",""))
+			$('#show-agent-totaluniquecall-month small span').text(sessionStorage.getItem("unique_monthly_call",""))
 			if(sessionStorage.getItem("assigned_calls",0) > 0){
 				$('#show-agent-assigned-calls small span').text(sessionStorage.getItem("assigned_calls",""))
 				$('#show-agent-assigned-calls').removeClass('d-none')

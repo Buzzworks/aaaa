@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import (Phonebook, CrmField, TempContactInfo, Contact, LeadListPriority, DownloadReports, LeadBucket, AlternateContact)
-from callcenter.models import CSS, User
+from callcenter.models import CSS, User,CallDetail
 
 class PhoneBookSerializer(serializers.ModelSerializer):
 	""" This serializer is used for phonebook display """
@@ -256,3 +256,79 @@ class AlternateContactSerializer(serializers.ModelSerializer):
 		fields = '__all__'
 	def get_alt_numeric(self, obj):
 		return ','.join(obj.alt_numeric.values())
+
+class UniqueSerializer(serializers.ModelSerializer):
+	primary_dispo = serializers.SerializerMethodField()
+	c_name=serializers.SerializerMethodField()
+	pl=serializers.SerializerMethodField()
+	customer_cid_count = serializers.SerializerMethodField()
+	
+	class Meta:
+		model = CallDetail
+		fields = ('primary_dispo','c_name','pl','customer_cid','contact_id','id','campaign_name','customer_cid_count')
+
+	def get_customer_cid_count(self,obj):
+		count=CallDetail.objects.filter(created__month__gte=datetime.now().month,campaign_name=obj['campaign_name'],customer_cid=obj['customer_cid']).count()
+		return count
+
+	def get_c_name(self,obj):
+		full_name = ''
+		contact_id = obj['contact_id']
+		contact=''
+		if contact_id:
+			contact = Contact.objects.filter(id=obj['contact_id']).first()
+		if contact and contact.customer_raw_data and 'customer_details' in contact.customer_raw_data:
+			if "first_name" in contact.customer_raw_data['customer_details'] and contact.customer_raw_data['customer_details']['first_name'] != None:
+				full_name += contact.customer_raw_data['customer_details']['first_name'] + ' '
+			if "middle_name" in contact.customer_raw_data['customer_details'] and contact.customer_raw_data['customer_details']['middle_name'] != None:
+				full_name += contact.customer_raw_data['customer_details']['middle_name'] + ' '
+			if "last_name" in contact.customer_raw_data['customer_details'] and contact.customer_raw_data['customer_details']['last_name'] != None:
+				full_name += contact.customer_raw_data['customer_details']['last_name']
+		return full_name.strip()
+
+
+	def get_primary_dispo(self,obj):
+		max_id=obj['id__max']
+		if max_id:
+			cdr_obj=CdrFeedbck.objects.filter(calldetail_id=max_id).first()
+			if cdr_obj:
+				primary_dispo=cdr_obj.primary_dispo
+				if primary_dispo:
+					return primary_dispo
+				else:
+					return ''
+			else:
+				return ''
+
+	def get_pl(self,obj):
+		contact=Contact.objects.filter(id=obj['contact_id']).first()
+		pl = {'phonenumber':"",'actionid':"",'name':"",'source':"",'flag':"",'last_comp_stage':"",'application_number':"",'reg_date_time':"",'campaign1':"",'filler1':"",'filler2':""}
+		if contact and contact.customer_raw_data:
+			if 'pl' in contact.customer_raw_data and 'phonenumber' in contact.customer_raw_data['pl']:
+				pl['phonenumber']=contact.customer_raw_data['pl']['phonenumber']
+			if 'pl' in contact.customer_raw_data and 'actionid' in contact.customer_raw_data['pl']:
+				pl['actionid']=contact.customer_raw_data['pl']['actionid']
+			if 'pl' in contact.customer_raw_data and 'name' in contact.customer_raw_data['pl']:
+				pl['name']=contact.customer_raw_data['pl']['name']
+			if 'pl' in contact.customer_raw_data and 'source' in contact.customer_raw_data['pl']:
+				pl['source']=contact.customer_raw_data['pl']['source']
+			if 'pl' in contact.customer_raw_data and 'source' in contact.customer_raw_data['pl']:
+				pl['source']=contact.customer_raw_data['pl']['source']
+			if 'pl' in contact.customer_raw_data and 'flag' in contact.customer_raw_data['pl']:
+				pl['flag']=contact.customer_raw_data['pl']['flag']
+			if 'pl' in contact.customer_raw_data and 'last_comp_stage' in contact.customer_raw_data['pl']:
+				pl['last_comp_stage']=contact.customer_raw_data['pl']['last_comp_stage']
+			if 'pl' in contact.customer_raw_data and 'application_number' in contact.customer_raw_data['pl']:
+				pl['application_number']=contact.customer_raw_data['pl']['application_number']
+			if 'pl' in contact.customer_raw_data and 'reg_date_time' in contact.customer_raw_data['pl']:
+				pl['reg_date_time']=contact.customer_raw_data['pl']['reg_date_time']
+			if 'pl' in contact.customer_raw_data and 'campaign1' in contact.customer_raw_data['pl']:
+				pl['campaign1']=contact.customer_raw_data['pl']['campaign1']
+			if 'pl' in contact.customer_raw_data and 'filler1' in contact.customer_raw_data['pl']:
+				pl['filler1']=contact.customer_raw_data['pl']['filler1']
+			if 'pl' in contact.customer_raw_data and 'filler2' in contact.customer_raw_data['pl']:
+				pl['filler2']=contact.customer_raw_data['pl']['filler2']
+		return pl
+		
+
+
