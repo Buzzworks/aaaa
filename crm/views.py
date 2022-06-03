@@ -21,7 +21,7 @@ from rest_framework.response import Response
 from rest_framework import generics
 from scripts.pagination import DatatablesPageNumberPagination
 from scripts.renderers import DatatablesRenderer
-
+from io import BytesIO
 import pandas as pd
 import numpy as np
 import json
@@ -1388,7 +1388,7 @@ class ContactUploadDataApiView(APIView):
 			data = data.get(settings.XML_UPDATE_KEY,data)
 
 		if settings.REPLACE_API_KEY and settings.REPLACE_API_VALUE:
-			data =  {k.replace(settings.REPLACE_API_KEY,settings.REPLACE_API_VALUE).lower(): v for k, v in data.items()}
+			data =  {k.replace(settings.REPLACE_API_KEY,settings.REPLACE_API_VALUE,1).lower(): v for k, v in data.items()}
 		campaign = settings.API_DEST_CAMP if settings.API_DEST_CAMP != "" else data.get(settings.API_CAMPAIGN_FIELD)
 		numeric = data.get(settings.API_NUMERIC_FIELD)
 		if campaign and numeric:
@@ -1503,3 +1503,21 @@ class ContactUploadDataApiView(APIView):
 				return JsonResponse({"msg":"Campaign is not Present",'status':'error'},status=500)		
 		else:
 			return JsonResponse({"msg":"Missing Mandatory Field Campaign and Numeric","status":"failed","a":request.data})
+
+class DownloadReportApiView(APIView):
+	def get(self,request,pk,downloaded_file_name):
+		file_name = DownloadReports.objects.filter(id=pk).order_by('-id').first()
+		if file_name.downloaded_file.name.endswith('.csv'):
+			reader = pd.read_csv(file_name.downloaded_file, low_memory=False, chunksize=10000, index_col=[0], encoding = "unicode_escape", escapechar='\\', na_filter=False)
+			data = pd.concat(reader)
+			response = HttpResponse(content_type='text/csv')
+			response['Content-Disposition'] = 'attachment; filename='+downloaded_file_name
+			data.to_csv(path_or_buf=response,sep=',',float_format='%.2f',index=False,decimal=".")	
+		else:
+			with BytesIO() as b:
+				data = pd.read_excel(file_name.downloaded_file)
+				with pd.ExcelWriter(b) as writer:
+					data.to_excel(writer, sheet_name="Data", index=False)
+				response = HttpResponse(b.getvalue(),content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+				response['Content-Disposition'] = 'attachment; filename='+downloaded_file_name
+		return response

@@ -16,6 +16,9 @@ var socket_server = https.createServer(options);
 var io = require('socket.io')(socket_server);
 socket_server.listen(3233,'0.0.0.0')
 
+const redis_adapter = require("socket.io-redis")
+io.adapter(redis_adapter({host : process.env.REDIS_URL, port : process.env.REDIS_PORT}))
+
 var redis = require('redis');
 leadlist_details_data = redis.createClient({host: process.env.REDIS_URL,port: process.env.REDIS_PORT});
 leadlist_details_data.subscribe('lead-details');
@@ -247,7 +250,7 @@ inbound_server = esl.createCallServer();
 inbound_server.on('CONNECT', function (req) {
 		var channel_data = req.body;
 		destination_number = req.body['Caller-Caller-ID-Number'].slice(-10)
-		caller_id = req.body['Caller-Destination-Number']
+		caller_id = req.body['variable_caller_id']
 		dialed_uuid = req.body['Unique-ID']
 		server = req.body['FreeSWITCH-IPv4']
 		date_time = '${strftime(%d-%m-%Y-%H-%M)}'

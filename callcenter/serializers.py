@@ -3,6 +3,7 @@ from callcenter.models import *
 from flexydial.views import get_login_campaign, get_login_agent
 from crm.models import Contact, ContactInfo
 from datetime import timedelta
+from .constants import four_digit_number, three_digits_list
 
 class LoginSerializer(serializers.Serializer):
 	""" login serializer for user """
@@ -45,6 +46,14 @@ class UserVariableCreateSerializer(serializers.ModelSerializer):
 		fields = ('device_pass', 'level', 'position', 'domain',
 			'type', 'contact', 'max_no_answer', 'wrap_up_time',
 			'reject_delay_time','busy_delay_time','extension', 'dial_status')
+	def validate(self,data):
+		try:
+			extension_exist = UserVariable.objects.all().values_list('extension', flat=True)
+			latest_extension = sorted(list(set(four_digit_number) - set(extension_exist)))[0]
+			data['extension']= latest_extension if data['extension']=='NEW'  else ""
+			return data
+		except Exception as e:
+			print('exception at UserVariableCreateSerializer',e)
 		
 
 class UpdateUserSerializer(serializers.ModelSerializer):
@@ -591,6 +600,7 @@ class DiallerEventLogSerializer(serializers.ModelSerializer):
 	connect_time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
 	hangup_time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
 	is_feedback = serializers.SerializerMethodField()
+	ip_address = serializers.SerializerMethodField()
 	class Meta:
 		model = DiallerEventLog
 		fields= '__all__'   
@@ -607,7 +617,11 @@ class DiallerEventLogSerializer(serializers.ModelSerializer):
 		if call_recording_feedback.exists():
 			feedback = "true"
 		return feedback
-
+	def get_ip_address(self,obj):
+		ip_address = ''
+		if obj.campaign_name:
+			ip_address = list(Campaign.objects.filter(name=obj.campaign_name).values_list('switch__ip_address', flat=True))[0]
+		return ip_address
 
 class DiallerEventLogTimeSerializer(serializers.ModelSerializer):
 	""" sericlizzer for diallerevent log time format data serilizer"""

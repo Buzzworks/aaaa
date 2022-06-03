@@ -57,3 +57,7 @@ xlutils==2.0.0
 xlwt==1.3.0
 uWSGI==2.0.20
 djangorestframework-xml
+google-cloud-storage==2.3.0
+django-storages==1.12.3
+openpyxl==3.0.10
+et-xmlfile==1.1.0

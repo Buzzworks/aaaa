@@ -813,8 +813,7 @@ class UsersCreateApiView(LoginRequiredMixin, APIView):
 		if check_non_admin_user(request.user):
 			group_obj = group_obj.filter(Q(user_group=request.user)|Q(created_by=request.user)).distinct()
 		groups = group_obj.values("id", "name", 'color_code')
-		extension_exist = UserVariable.objects.all().values_list('extension',flat=True)
-		latest_extension = sorted(list(set(four_digit_number) - set(extension_exist)))[0]
+		latest_extension="NEW"
 		user_timezone = USER_TIMEZONE
 		enable_wfh = pickle.loads(settings.R_SERVER.get('enable_wfh') or pickle.dumps(False))
 		switch_list = Switch.objects.filter().values("id","name")
@@ -941,7 +940,7 @@ class ValidateUserUploadApiView(APIView):
 			if user_file.name.endswith('.csv'):
 				data = pd.read_csv(user_file, na_filter=False, dtype={"extension" : "str"})
 			else:
-				data = pd.read_excel(user_file, dtype={"extension" : "str"})
+				data = pd.read_excel(user_file,na_filter=False, dtype={"extension" : "str"})
 			user_columns = ['username', 'password','group', 'role']
 			column_names = data.columns.tolist()
 			valid = all(elem in column_names for elem in user_columns)
@@ -1737,9 +1736,7 @@ class CampaignCreateApiView(LoginRequiredMixin, generics.CreateAPIView):
 		data["all_campaign"] = Campaign.objects.values("id", "name")
 		data['api_modes'] = API_MODE
 		data['enable_wfh'] = pickle.loads(settings.R_SERVER.get('enable_wfh') or pickle.dumps(False))
-		extension_exist = CampaignVariable.objects.all().values_list('extension',flat=True)
-		latest_extension = sorted(list(set(three_digits_list) - set(extension_exist)))[0]
-		data['extension'] = latest_extension
+		data['extension'] = 'NEW'
 		data['trunk_group'] = list(DiaTrunkGroup.objects.all().values("id","name"))
 		data = {**data, **kwargs['permissions']}
 		return Response(data)
@@ -1758,7 +1755,9 @@ class CampaignCreateApiView(LoginRequiredMixin, generics.CreateAPIView):
 				camp = CampaignVariable.objects.get(campaign__id=existing_campaign)
 				camp.pk = None
 			camp.campaign = campaign
-			camp.extension = request.POST["extension"]
+			extension_exist = CampaignVariable.objects.all().values_list('extension', flat=True)
+			latest_extension = sorted(list(set(three_digits_list) - set(extension_exist)))[0]
+			camp.extension=latest_extension
 			# camp.caller_id = request.POST["caller_id"]
 			camp.dial_ratio = request.POST["dial_ratio"]
 			camp.wfh_caller_id = request.POST["wfh_caller_id"]
@@ -4961,75 +4960,114 @@ def rec_check_agent_availabilty(request):
 	c_max_wait_time = 25
 	no_agent_audio = False
 	try:
+		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
 		caller_data=json.loads(request.body.decode('utf-8'))
-		ingroup_campaign = InGroupCampaign.objects.filter(caller_id__did__contains=caller_data["caller_id"], status='Active',
-				ingroup_campaign__campaign__status='Active')
-		campaign_id = None
-		if ingroup_campaign.exists():
-			ingroup_campaign = ingroup_campaign.first()
-			campaign_id = get_ingroup_campaign(ingroup_campaign)
-			if campaign_id == None:
-				campaign_id = ingroup_campaign.ingroup_campaign.first().campaign_id
-		campaign_obj = Campaign.objects.filter(id=campaign_id).prefetch_related()
-		# campaign_obj = Campaign.objects.filter(all_caller_id__contains=[str(caller_data["caller_id"])],
-		#   dial_method__contains={"inbound":True}).order_by('?')
-		if campaign_obj:
-			dial_method =campaign_obj.first().dial_method
-			campaign = campaign_obj.first().slug
-			r_campaigns = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps(CAMPAIGNS))
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-			if dial_method['inbound']:
-				queue_call=True
-				callback = campaign_obj[0].queued_busy_callback
-				ibc_popup = dial_method['ibc_popup']
-				stk_obj = StickyAgent.objects.none()
-				if dial_method['sticky_agent_map']:
-					stk_obj = StickyAgent.objects.filter(campaign_name=campaign_obj[0].name,numeric=caller_data['destination_number'])
-				if stk_obj.exists():
-					stk_obj = stk_obj.latest('id')
-				if dial_method['ibc_popup']:
-					queue_call=False
-					if stk_obj and stk_obj.agent.extension in AGENTS:
-						extension = stk_obj.agent.extension
-						if AGENTS[extension]['status'] == 'Ready' and AGENTS[extension]['state'] not in ['InCall','Predictive Wait','Blended Wait']:
-							extensions.append(extension)
-					else:
-						camp_users=list(campaign_obj.values_list("users", flat=True).exclude(users__isnull=True))
-						camp_grp_users = list(campaign_obj.values_list("group__user_group", flat=True).exclude(group__isnull=True))
-						user_ids = list(set(camp_grp_users+camp_users))
-						users = list(UserVariable.objects.filter(user__id__in = user_ids,
-								user__is_active=True).values_list('extension',flat=True))
-						if users:
-							extensions = []
-							if campaign_obj[0].slug in r_campaigns:
-								unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))
-								for active_user in users:
-									if active_user in unique_extensions:
-										if AGENTS[active_user]['status'] == 'Ready' and AGENTS[active_user]['state'] not in ['InCall','Predictive Wait','Blended Wait'] and AGENTS[active_user]['campaign']==campaign:
-											extensions.append(active_user)
-				else:
-					camp_users=list(campaign_obj.values_list("users", flat=True).exclude(users__isnull=True))
-					camp_grp_users = list(campaign_obj.values_list("group__user_group", flat=True).exclude(group__isnull=True))
-					user_ids = list(set(camp_grp_users+camp_users))
-					users = list(UserVariable.objects.filter(user__id__in = user_ids,
-							user__is_active=True).values_list('extension',flat=True))
-					if users:
-						extensions = []
-						if campaign_obj[0].slug in r_campaigns:
-							unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))
-							for active_user in users:
-								if active_user in unique_extensions:
-									if AGENTS[active_user]['status'] == 'Ready' and AGENTS[active_user]['state'] not in ['InCall','Predictive Wait','Blended Wait']:
-										extensions.append(active_user)
+		skill_obj = SkilledRouting.objects.filter(skill_id__did__contains = caller_data["caller_id"],status='Active')
+		if skill_obj:
+			campaign_obj = skill_obj
+			ibc_popup = False
+			queue_call = True
+			skill_routed_status = True
+			skill = skill_obj[0].skills
+			skill_popup = skill_obj[0].skill_popup
+		else:
+			user_obj = User.objects.filter(caller_id = caller_data["caller_id"])
+			user_extension = None
+			if user_obj.exists():
+				user_extension = user_obj.first().extension
+			if user_extension and user_extension in AGENTS.keys():
+				campaign = AGENTS[user_extension]['campaign']
+				queue_call=False
+				if campaign:
+					campaign_obj = Campaign.objects.filter(name=campaign)
+					dial_method = campaign_obj.first().dial_method
+					if dial_method['inbound']:
+						trunk = None
+						if campaign_obj.first().is_trunk_group and campaign_obj.first().trunk_group:
+							trunks = campaign_obj.first().trunk_group.trunks.filter(trunk_id=user_obj.first().trunk_id)
+							if trunks.exists():
+								trunk = trunks.first().trunk
+						else:
+							if campaign_obj.first().trunk and campaign_obj.first().trunk_id == user_obj.first().trunk_id:
+								trunk = campaign_obj.first().trunk
+						if trunk and trunk.status == 'Active':
+							ibc_popup = dial_method['ibc_popup']
+							user = user_extension
+							if ibc_popup:
+								if AGENTS[user_extension]['status'] == 'Ready' and AGENTS[user_extension]['state'] not in ['InCall','Predictive Wait','Blended Wait','Inbound Wait']:
+									extensions.append(user_extension)
+							else:
+								if AGENTS[user_extension]['status'] == 'Ready' and AGENTS[user_extension]['state'] not in ['InCall','Predictive Wait']:
+									extensions.append(user_extension)
 			else:
-				if stk_obj:
-					if campaign_obj[0].slug in r_campaigns:
-						unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))
-						if stk_obj.agent.extension in unique_extensions:
-							user=stk_obj.agent.extension
-							if AGENTS[user]['status'] == 'Ready' and AGENTS[user]['state'] in ['Inbound Wait','Blended Wait']:
-								extensions.append(user)
-								stickyagent = True
+				ingroup_campaign = InGroupCampaign.objects.filter(caller_id__did__contains=caller_data["caller_id"], status='Active',
+					ingroup_campaign__campaign__status='Active')
+				campaign_id = None
+				if ingroup_campaign.exists():
+					ingroup_campaign = ingroup_campaign.first()
+					campaign_id = get_ingroup_campaign(ingroup_campaign)
+					if campaign_id == None:
+						campaign_id = ingroup_campaign.ingroup_campaign.first().campaign_id
+				campaign_obj = Campaign.objects.filter(id=campaign_id).prefetch_related()
+				# campaign_obj = Campaign.objects.filter(all_caller_id__contains=[str(caller_data["caller_id"])],
+				#   dial_method__contains={"inbound":True}).order_by('?')
+				if campaign_obj:
+					dial_method =campaign_obj.first().dial_method
+					campaign = campaign_obj.first().slug
+					r_campaigns = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps(CAMPAIGNS))
+					AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))                        
+					if dial_method['inbound']:
+						queue_call=True
+						callback = campaign_obj[0].queued_busy_callback
+						ibc_popup = dial_method['ibc_popup']
+						stk_obj = StickyAgent.objects.none()
+						if dial_method['sticky_agent_map']:
+							stk_obj = StickyAgent.objects.filter(campaign_name=campaign_obj[0].name,numeric=caller_data['destination_number'])
+						if stk_obj.exists():
+							stk_obj = stk_obj.latest('id')
+						if dial_method['ibc_popup']:
+							queue_call=False
+							if stk_obj and stk_obj.agent.extension in AGENTS:
+								extension = stk_obj.agent.extension 
+								if AGENTS[extension]['status'] == 'Ready' and AGENTS[extension]['state'] not in ['InCall','Predictive Wait','Blended Wait']:
+									extensions.append(extension)
+							else:
+								camp_users=list(campaign_obj.values_list("users", flat=True).exclude(users__isnull=True))
+								camp_grp_users = list(campaign_obj.values_list("group__user_group", flat=True).exclude(group__isnull=True))
+								user_ids = list(set(camp_grp_users+camp_users))
+								users = list(UserVariable.objects.filter(user__id__in = user_ids,
+									user__is_active=True).values_list('extension',flat=True))
+								if users:
+									extensions = []
+									if campaign_obj[0].slug in r_campaigns:
+										unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))
+										for active_user in users:
+											if active_user in unique_extensions:
+												if AGENTS[active_user]['status'] == 'Ready' and AGENTS[active_user]['state'] not in ['InCall','Predictive Wait','Blended Wait'] and AGENTS[active_user]['campaign']==campaign:
+													extensions.append(active_user)
+						else:
+							camp_users=list(campaign_obj.values_list("users", flat=True).exclude(users__isnull=True))
+							camp_grp_users = list(campaign_obj.values_list("group__user_group", flat=True).exclude(group__isnull=True))
+							user_ids = list(set(camp_grp_users+camp_users))
+							users = list(UserVariable.objects.filter(user__id__in = user_ids,
+								user__is_active=True).values_list('extension',flat=True))
+							if users:
+								extensions = []
+								if campaign_obj[0].slug in r_campaigns:
+									unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))
+									for active_user in users:
+										if active_user in unique_extensions:
+											if AGENTS[active_user]['status'] == 'Ready' and AGENTS[active_user]['state'] not in ['InCall','Predictive Wait','Blended Wait']:
+												extensions.append(active_user)
+					else:
+						if stk_obj:
+							if campaign_obj[0].slug in r_campaigns:
+								unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))                                    
+								if stk_obj.agent.extension in unique_extensions:
+									user=stk_obj.agent.extension
+									if AGENTS[user]['status'] == 'Ready' and AGENTS[user]['state'] in ['Inbound Wait','Blended Wait']:
+										extensions.append(user)
+										stickyagent = True
 		status = check_ibc_cust_status(caller_data['server'],dialed_uuid=caller_data['dialed_uuid'],campaign_obj=campaign_obj)
 		timestamp = int(caller_data['intiate_time'])/1000000
 		diff_in_seconds = diff_time_in_seconds(timestamp)
@@ -5046,10 +5084,10 @@ def rec_check_agent_availabilty(request):
 				status['cust_status']='uuid_not_exist'
 		else:
 			status['cust_status']='timeout'
-			extensions=[]
+			extensions=[]           
 		return JsonResponse({'extension':extensions,'cust_status':status.get('cust_status',False),
-						'no_agent_audio':status.get('no_agent_audio',False),'c_max_wait_time':status.get('c_max_wait_time',25),
-						'audio_moh_sound':status.get('audio_moh_sound',None)})
+				'no_agent_audio':status.get('no_agent_audio',False),'c_max_wait_time':status.get('c_max_wait_time',25),
+				'audio_moh_sound':status.get('audio_moh_sound',None)})
 	except Exception as e:
 		print("check_agent_availabilty",e)
 		return JsonResponse({'extension':extensions,'cust_status':status['cust_status'],'no_agent_audio':no_agent_audio,'c_max_wait_time':c_max_wait_time,'audio_moh_sound':audio_moh_sound})

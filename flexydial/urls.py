@@ -54,7 +54,7 @@ urlpatterns = [
     path("password-reset-confirm/<uidb64>/<token>", views.CustomPasswordResetConfirmView.as_view( template_name="registration/password_reset_confirm.html",form_class=views.CustomPasswordResetForm), name="password_reset_confirm"),
     path("password-reset-complete/", auth_views.PasswordResetCompleteView.as_view(), name="password_reset_complete")
 
-]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+] #+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 #if settings.DEBUG:
 #    urlpatterns.append(path('__debug__/', include(debug_toolbar.urls)))

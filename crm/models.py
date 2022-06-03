@@ -9,7 +9,7 @@ import json
 import uuid
 from callcenter.models import (Campaign,DataUploadLog, CALLBACK_MODE)
 from flexydial.constants import (Status, CONTACT_STATUS, ORDER_BY)
-from crm.s3_fileoperations import fileTransferToS3, s3fileDownloadToServer
+from crm.s3_fileoperations import fileTransferToCloudStorage, cloudStoragefileDownloadToServer
 
 # Create your models here.
 short_uuid = str(uuid.uuid4())[:8]
@@ -337,19 +337,19 @@ class FIleModelField(models.FileField):
 			# Commit the file to storage prior to saving the model
 			file.save(file.name, file.file, save=False)
 		try:
-			if settings.S3_PHONEBOOK_BUCKET_NAME:
+			if settings.S3_PHONEBOOK_BUCKET_NAME or settings.S3_GCLOUD_BUCKET_NAME:
 				if add:
-					fileTransferToS3(self,file.name,file.name)
+					fileTransferToCloudStorage(self,file.name,file.name)
 				else:
-					s3fileDownloadToServer(self,file.name,file.name)
+					cloudStoragefileDownloadToServer(self,file.name,file.name)
 		except Exception as e:
-			print("Error :: File Upload/Download in S3",e)
+			print("Error :: File Upload/Download in Cloud Server",e)
 		return file
 class PhoneBookUpload(models.Model):
 	""" This model is used to the phonebook upload status"""
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
 			on_delete=models.SET_NULL,null=True)	
-	phonebook_file = FIleModelField(upload_to='upload', blank=True)
+	phonebook_file = models.FileField(upload_to='upload', blank=True)
 	phone_inst = models.ForeignKey(Phonebook, related_name="phonebook_upload", null=True,
 		on_delete=models.CASCADE, blank=True)
 	duplicate_check = models.CharField(max_length=100,null=True,blank=True)
