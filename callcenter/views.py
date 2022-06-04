@@ -6029,6 +6029,7 @@ class UniqueCallsPerMonth(LoginRequiredMixin, APIView):
 		column_name = request.POST.get('column_name',None)
 		search_by = request.POST.get('search_by',None)
 		filter_dict={}
+		filter_dict = {'user':user}
 		if column_name and search_by:
 			filter_dict[column_name] = search_by
 		queryset=CallDetail.objects.filter(**filter_dict).filter(created__month__gte=datetime.now().month).values('campaign_name','contact_id','customer_cid').annotate(Count('customer_cid'),Max('id')).order_by()
