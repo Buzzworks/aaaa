@@ -1,6 +1,7 @@
+from datetime import datetime
 from rest_framework import serializers
 from .models import (Phonebook, CrmField, TempContactInfo, Contact, LeadListPriority, DownloadReports, LeadBucket, AlternateContact)
-from callcenter.models import CSS, User,CallDetail
+from callcenter.models import CSS, CdrFeedbck, User,CallDetail
 
 class PhoneBookSerializer(serializers.ModelSerializer):
 	""" This serializer is used for phonebook display """
@@ -258,14 +259,14 @@ class AlternateContactSerializer(serializers.ModelSerializer):
 		return ','.join(obj.alt_numeric.values())
 
 class UniqueSerializer(serializers.ModelSerializer):
-	primary_dispo = serializers.SerializerMethodField()
+	cdr_feedback = serializers.SerializerMethodField()
 	c_name=serializers.SerializerMethodField()
 	pl=serializers.SerializerMethodField()
 	customer_cid_count = serializers.SerializerMethodField()
 	
 	class Meta:
 		model = CallDetail
-		fields = ('primary_dispo','c_name','pl','customer_cid','contact_id','id','campaign_name','customer_cid_count')
+		fields = ('cdr_feedback','c_name','pl','customer_cid','contact_id','id','campaign_name','customer_cid_count')
 
 	def get_customer_cid_count(self,obj):
 		count=CallDetail.objects.filter(created__month__gte=datetime.now().month,campaign_name=obj['campaign_name'],customer_cid=obj['customer_cid']).count()
@@ -286,19 +287,21 @@ class UniqueSerializer(serializers.ModelSerializer):
 				full_name += contact.customer_raw_data['customer_details']['last_name']
 		return full_name.strip()
 
-
-	def get_primary_dispo(self,obj):
+	def get_cdr_feedback(self,obj):
 		max_id=obj['id__max']
+		cdr_feedback = {"primary_dispo":"","secondary_dispo":""}
 		if max_id:
 			cdr_obj=CdrFeedbck.objects.filter(calldetail_id=max_id).first()
 			if cdr_obj:
 				primary_dispo=cdr_obj.primary_dispo
+				cdr_fb = cdr_obj.feedback
 				if primary_dispo:
-					return primary_dispo
-				else:
-					return ''
-			else:
-				return ''
+					cdr_feedback["primary_dispo"] = primary_dispo
+				if cdr_fb and 'sub_dispo' in cdr_fb:
+					sub_dispo=cdr_fb['sub_dispo']
+					if sub_dispo:
+						cdr_feedback["secondary_dispo"] = sub_dispo
+		return cdr_feedback
 
 	def get_pl(self,obj):
 		contact=Contact.objects.filter(id=obj['contact_id']).first()
