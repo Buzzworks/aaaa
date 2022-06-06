@@ -21,7 +21,7 @@ from rest_framework.response import Response
 from rest_framework import generics
 from scripts.pagination import DatatablesPageNumberPagination
 from scripts.renderers import DatatablesRenderer
-# from crm.s3_fileoperations import *
+from crm.s3_fileoperations import *
 
 import pandas as pd
 import numpy as np
@@ -30,13 +30,13 @@ import louie
 import copy
 
 from .models import (Status, Contact, Phonebook, CrmField,
-	Contact, ContactInfo, CampaignInfo, TempContactInfo, LeadListPriority, DownloadReports, TrashContact, PhoneBookUpload, AlternateContact)
+	Contact, ContactInfo, CampaignInfo, TempContactInfo, LeadListPriority, DownloadReports, TrashContact, PhoneBookUpload, AlternateContact,ScheduleMasterContact)
 from callcenter.models import (Campaign,User, CallDetail, CSS,Disposition, DataUploadLog,PhonebookBucketCampaign, StickyAgent, UserVariable)
 from flexydial.constants import (Status, CONTACT_STATUS, FIELD_CHOICES, ORDER_BY, SEARCH_TYPE)
 
 from .serializers import (PhoneBookSerializer, CrmFieldSerializer, SetContactSerializer,
 		AgentCrmFieldSerializer,ContactListSerializer, PhonebookRefreshSerializer,CrmFieldCustomSerializer,
-		CrmFieldPaginationSerializer, LeadListPrioritySerializer, DownloadReportsSerializer,ContactSerializer, EditContactListSerializer)
+		CrmFieldPaginationSerializer, LeadListPrioritySerializer, DownloadReportsSerializer,ContactSerializer, EditContactListSerializer,ScheduleMasterContactSerializer)
 from callcenter.serializers import DispositionSerializer
 # from flexydial.views import check_permission
 
@@ -1520,7 +1520,6 @@ class RecordingPlayAPIView(APIView):
 		else:
 			return JsonResponse({"msg",""},status=500)
 
-from .serializers import *
 class ApiBulkUpload(APIView):
 	permission_classes = (IsAuthenticated, )
 	def post(self,request):
@@ -1528,9 +1527,9 @@ class ApiBulkUpload(APIView):
 			ser=ScheduleMasterContactSerializer(data=request.data,context={"request":request})
 			if ser.is_valid():
 				ser.save()
-				return Response({"msg":"saved","status is":ser.data['status'],'ref_id':ser.data['ref_id']})
+				return Response({"msg":"Successfully Scheduled",'ref_id':ser.data['ref_id']})
 			else:
-				return Response({"msg":"not saved","error":str(ser.errors)})
+				return Response({"msg":"Failed to Schedule","error":str(ser.errors)})
 		except Exception as e:
 			return Response({"msg":"internal errors","error":str(e)})
 
