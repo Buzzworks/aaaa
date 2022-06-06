@@ -9,7 +9,7 @@ import json
 import uuid
 from callcenter.models import (Campaign,DataUploadLog, CALLBACK_MODE)
 from flexydial.constants import (Status, CONTACT_STATUS, ORDER_BY)
-from crm.s3_fileoperations import fileTransferToS3, s3fileDownloadToServer
+# from crm.s3_fileoperations import fileTransferToS3, s3fileDownloadToServer
 
 # Create your models here.
 short_uuid = str(uuid.uuid4())[:8]
@@ -374,3 +374,27 @@ class AlternateContact(models.Model):
 
 	class Meta:
 		ordering = ['id']
+
+class MasterContact(models.Model):
+	numeric=models.CharField(max_length=20)
+	unique_id=models.CharField(max_length=50,unique=True)
+	customer_raw_data=JSONField(default=dict)
+
+	class Meta:
+		ordering=['id']
+
+Status1 = (
+	('scheduled', 'scheduled'),
+	('started','started'),
+	('dbsaving','dbsaving'),
+	('finished','finished')
+)
+class ScheduleMasterContact(models.Model):
+	status=models.CharField(max_length=40,choices=Status1,default='scheduled',null=True,blank=True)
+	ref_id=models.CharField(max_length=30,unique=True,db_index=True,null=True,blank=True)#this ref id for status check afterwards
+	mcdata=models.FileField(upload_to='upload', blank=True)#orginal customer data which uploaded
+	proper_mcdata=models.FileField(upload_to='upload',blank=True)#this proper mc data will upload in master contact
+	improper_mcdata=models.FileField(upload_to='upload',blank=True)
+
+	class Meta:
+		ordering=['id']

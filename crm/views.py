@@ -21,7 +21,7 @@ from rest_framework.response import Response
 from rest_framework import generics
 from scripts.pagination import DatatablesPageNumberPagination
 from scripts.renderers import DatatablesRenderer
-from crm.s3_fileoperations import *
+# from crm.s3_fileoperations import *
 
 import pandas as pd
 import numpy as np
@@ -1519,3 +1519,48 @@ class RecordingPlayAPIView(APIView):
 			return JsonResponse({"msg":url},status=200)
 		else:
 			return JsonResponse({"msg",""},status=500)
+
+from .serializers import *
+class ApiBulkUpload(APIView):
+	permission_classes = (IsAuthenticated, )
+	def post(self,request):
+		try:
+			ser=ScheduleMasterContactSerializer(data=request.data,context={"request":request})
+			if ser.is_valid():
+				ser.save()
+				return Response({"msg":"saved","status is":ser.data['status'],'ref_id':ser.data['ref_id']})
+			else:
+				return Response({"msg":"not saved","error":str(ser.errors)})
+		except Exception as e:
+			return Response({"msg":"internal errors","error":str(e)})
+
+class ApiBulkUploadStatus(APIView):
+	permission_classes = (IsAuthenticated, )
+	def get(self,request):
+		try:
+			status=ScheduleMasterContact.objects.get(ref_id=request.data['ref_id'])
+			orginal_path='media/'+str(status.mcdata)
+			orginal_count=pd.read_csv('/var/lib/flexydial/'+orginal_path)
+			orginal_count=len(orginal_count.index)## orginal_count=orginal_count['unique_id'].tolist().count()
+
+			if status.proper_mcdata:
+				proper_path='media/'+str(status.proper_mcdata)
+				proper_count=pd.read_csv('/var/lib/flexydial/'+proper_path)
+				proper_count=len(proper_count.index)
+			else:
+				proper_path=''
+				proper_count=''
+
+			if status.improper_mcdata:
+				improper_path='media/'+str(status.improper_mcdata)
+				improper_count=pd.read_csv('/var/lib/flexydial/'+improper_path)
+				improper_count=len(improper_count.index)
+			else:
+				improper_path=''
+				improper_count=''
+
+			return Response({"status is":status.status,'orginal path':str(orginal_path),"orginal_count":orginal_count,"proper path":str(proper_path),"proper count":proper_count,"improper path":str(improper_path),"improper count":improper_count})
+			# return Response({"status is":status.status,'orginal path':str(orginal_path),"orginal_count":orginal_count})
+
+		except Exception as e:
+			return Response({"msg":"internal errors","error":str(e)})
