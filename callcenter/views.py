@@ -4571,20 +4571,23 @@ class DNCUpdateApiView(APIView):
 	def post(self,request):
 		uniqueid = request.data.get("unique_id","")
 		disposition = request.data.get('disposition',"")
-		expiry_date = request.data.get("expiry_date","")
-		if uniqueid and disposition == "DNC":
-			contact = Contact.objects.filter(uniqueid=uniqueid).first()
-			if contact:
-				DNC.objects.update_or_create(numeric=contact.numeric,global_dnc=True,uniqueid=uniqueid,defaults={"numeric":contact.numeric,"global_dnc":True,"uniqueid":uniqueid,"status":'Active','dnc_end_date':expiry_date})
-				temp_contact_data = TempContactInfo.objects.filter(numeric=contact.numeric)
-				temp_contact_id = temp_contact_data.values_list("id",flat=True)
-				Contact.objects.filter(Q(id__in=temp_contact_id)|Q(numeric=contact.numeric)).update(status="Dnc")
-				temp_contact_data.delete()
-				return JsonResponse({"message":"DNC Updated Sucessfully."},status=200)
+		expiry_date = request.data.get("expiry_date")
+		try:
+			if uniqueid and disposition == "DNC":
+				contact = Contact.objects.filter(uniqueid=uniqueid).first()
+				if contact:
+					DNC.objects.update_or_create(numeric=contact.numeric,global_dnc=True,uniqueid=uniqueid,defaults={"numeric":contact.numeric,"global_dnc":True,"uniqueid":uniqueid,"status":'Active','dnc_end_date':expiry_date})
+					temp_contact_data = TempContactInfo.objects.filter(numeric=contact.numeric)
+					temp_contact_id = temp_contact_data.values_list("id",flat=True)
+					Contact.objects.filter(Q(id__in=temp_contact_id)|Q(numeric=contact.numeric)).update(status="Dnc")
+					temp_contact_data.delete()
+					return JsonResponse({"message":"DNC Updated Sucessfully."},status=200)
+				else:
+					return JsonResponse({"message":"Contact does not exists, Kindly check the Unique_id"},status=500)
 			else:
-				return JsonResponse({"message":"Contact does not exists, Kindly check the Uniqueid"},status=500)
-		else:
-			return JsonResponse({"message":"Invalid data."}, status=500)
+				return JsonResponse({"message":"Invalid data."}, status=500)
+		except Exception as e:
+			return JsonResponse({"message":"Contact Administrator. "+e}, status=500)
 
 class DNCUploadApiView(APIView):
 	"""
@@ -4633,7 +4636,7 @@ class ThirdPartyApiDispositionUpdateView(APIView):
 					redis_data = {
 						"extension": extension,
 						"disposition": request.data['disposition'],
-						"subdisposition": request.data['subdisposition']
+						"disposition_desc": request.data['disposition_desc']
 					}
 					settings.R_SERVER.publish('api_disp_extension',message=json.dumps(redis_data))	
 					return JsonResponse({"message": "Successfully Registered Dispositions."}, status=200)

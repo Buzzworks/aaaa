@@ -189,7 +189,7 @@ function socketevents (){
 				}
 				setTimeout(()=>{
 					third_party_api_disp = data['disposition']
-					third_party_api_sub_dispo = data['subdisposition']
+					third_party_api_sub_dispo = data['disposition_desc']
 					if (third_party_api_disp){
 						$("#submit_customer_info").trigger("click")
 					}
