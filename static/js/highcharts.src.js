@@ -1,10 +1,4 @@
-/**
- * @license Highcharts JS v10.1.0 (2022-04-29)
- *
- * (c) 2009-2021 Torstein Honsi
- *
- * License: www.highcharts.com/license
- */
+
  (function (root, factory) {
     if (typeof module === 'object' && module.exports) {
         factory['default'] = factory;

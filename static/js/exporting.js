@@ -1,12 +1,3 @@
-/*
- Highcharts JS v10.1.0 (2022-04-29)
-
- Exporting module
-
- (c) 2010-2021 Torstein Honsi
-
- License: www.highcharts.com/license
-*/
 (function(a){"object"===typeof module&&module.exports?(a["default"]=a,module.exports=a):"function"===typeof define&&define.amd?define("highcharts/modules/exporting",["highcharts"],function(h){a(h);a.Highcharts=h;return a}):a("undefined"!==typeof Highcharts?Highcharts:void 0)})(function(a){function h(a,b,t,n){a.hasOwnProperty(b)||(a[b]=n.apply(null,t),"function"===typeof CustomEvent&&window.dispatchEvent(new CustomEvent("HighchartsModuleLoaded",{detail:{path:b,module:a[b]}})))}a=a?a._modules:{};h(a,
     "Extensions/FullScreen.js",[a["Core/Chart/Chart.js"],a["Core/Globals.js"],a["Core/Renderer/HTML/AST.js"],a["Core/Utilities.js"]],function(a,b,t,n){var l=n.addEvent,g=n.fireEvent;n=function(){function a(c){this.chart=c;this.isOpen=!1;c=c.renderTo;this.browserProps||("function"===typeof c.requestFullscreen?this.browserProps={fullscreenChange:"fullscreenchange",requestFullscreen:"requestFullscreen",exitFullscreen:"exitFullscreen"}:c.mozRequestFullScreen?this.browserProps={fullscreenChange:"mozfullscreenchange",
     requestFullscreen:"mozRequestFullScreen",exitFullscreen:"mozCancelFullScreen"}:c.webkitRequestFullScreen?this.browserProps={fullscreenChange:"webkitfullscreenchange",requestFullscreen:"webkitRequestFullScreen",exitFullscreen:"webkitExitFullscreen"}:c.msRequestFullscreen&&(this.browserProps={fullscreenChange:"MSFullscreenChange",requestFullscreen:"msRequestFullscreen",exitFullscreen:"msExitFullscreen"}))}a.prototype.close=function(){var c=this,e=c.chart,a=e.options.chart;g(e,"fullscreenClose",null,
