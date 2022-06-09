@@ -4483,10 +4483,10 @@ function set_agentstate(state){
         $('#dialer-pad-ast,#dialer-pad-hash').addClass('d-none')
     }
 }
-
+$(".form-control").attr('autocomplete', 'off');
 $('.form-control').bind('input', function() {
     var c = this.selectionStart,
-          r = /[^a-z./@#_%$*'+-0123456789 ]/gi,
+       r = /[^a-z./@#_%$*:;()+-0123456789 ]/gi,
        v = $(this).val();
     if(r.test(v)) {
       $(this).val(v.replace(r, ''));
