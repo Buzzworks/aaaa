@@ -385,7 +385,33 @@ class DeleteEntryApiView(APIView):
 				'action_name':"5",'event_type':'INACTIVE'})
 		return Response({"msg": "Selected entries deleted"})
 
+def user_hierarchy_func(username):
+	"""this function takes the username and returns usernames based on reporting_to hierarchy"""
+	username=str(username).strip()
+	lst_1=lst_2=lst_3=[]
+	users_1=User.objects.filter(reporting_to__username=username)
+	if users_1:
+		lst_1=list(users_1.values_list('username',flat=True))
+	if lst_1:
+		users_2=User.objects.filter(reporting_to__username__in=lst_1)
+		if users_2:
+			lst_2=list(users_2.values_list('username',flat=True))
+	if lst_2:
+		users_3=User.objects.filter(reporting_to__username__in=lst_2)
+		if users_3:
+			lst_3=list(users_3.values_list('username',flat=True))
+
+	if username=='admin':#ad admin username is python superuser need to download all
+		username=User.objects.exclude(username='admin').values_list("username",flat=True)
+
+	initial_request_user=[username]
+	users_list=lst_1+lst_2+lst_3+initial_request_user
+	return users_list
+
+
 from callcenter.models import UserVariable
+from flexydial.constants import CALL_TYPE
+
 def csvDownload(fields, model, file_type, user="", exclude=[],
 				description="Export filtered data as CSV file"):
 
@@ -396,13 +422,19 @@ def csvDownload(fields, model, file_type, user="", exclude=[],
 	response['Content-Disposition'] = 'attachment; filename=%s.%s' % \
 			(model, file_type)
 
+	calltype_dict=dict(CALL_TYPE)
 	if file_type=="csv":
 		writer = csv.writer(response)
 		writer.writerow(list(fields))
 		if model=='User':
 			# users = UserVariable.objects.filter(user__created_by=user)
-			users=UserVariable.objects.filter(Q(user__created_by=user)|Q(user__reporting_to=user))
-			user_feilds = users.values_list('user__username','user__email','user__password','user__user_role__name', 'user__first_name', 'user__last_name', 'wfh_numeric', 'user__employee_id','user__reporting_to__username','domain__name','user__call_type','user__is_active')
+
+			ref_users=user_hierarchy_func(user)
+
+			users=UserVariable.objects.filter(user__username__in=ref_users)
+			user_feilds = users.values_list('user__username','user__email','user__password','user__user_role__name', 'user__first_name', 'user__last_name', 'wfh_numeric', 'user__employee_id','user__reporting_to__username','domain__name','user__call_type','user__is_active','user__trunk__name','user__caller_id')
+
+
 			for user in user_feilds:
 				li_user=list(user)
 				user_group=list(User.objects.filter(username=li_user[0]).values_list('group__name',flat=True))
@@ -411,6 +443,7 @@ def csvDownload(fields, model, file_type, user="", exclude=[],
 				user_group=str_sep.join(user_group)
 				li_user.insert(3,user_group)
 				li_user[2]=''
+				li_user[11]=calltype_dict.get(li_user[11]) #changing call type at 11th index
 				writer.writerow(li_user)
 	else:
 		wb = xlwt.Workbook(encoding='utf-8')
@@ -421,20 +454,24 @@ def csvDownload(fields, model, file_type, user="", exclude=[],
 			ws.write(row_num,col_num, columns[col_num])
 		if model=='User':
 			# users = UserVariable.objects.filter(user__created_by=user)
-			users=UserVariable.objects.filter(Q(user__created_by=user)|Q(user__reporting_to=user))
-			user_feilds = users.values_list('user__username','user__email','user__password','user__user_role__name', 'user__first_name', 'user__last_name', 'wfh_numeric', 'user__employee_id','user__reporting_to__username','domain__name','user__call_type','user__is_active')
+			ref_users=user_hierarchy_func(user)
+			users=UserVariable.objects.filter(user__username__in=ref_users)
+
+			user_feilds = users.values_list('user__username','user__email','user__password','user__user_role__name', 'user__first_name', 'user__last_name', 'wfh_numeric', 'user__employee_id','user__reporting_to__username','domain__name','user__call_type','user__is_active','user__trunk__name','user__caller_id')
 			for row in user_feilds:
 				li_user=list(row)
-				li_user[-1]=str(li_user[-1])
+				li_user[-3]=str(li_user[-3])
 				user_group=list(User.objects.filter(username=li_user[0]).values_list('group__name',flat=True))
 				if None in user_group: user_group.remove(None)
 				str_sep=','
 				user_group=str_sep.join(user_group)
 				li_user.insert(3,user_group)
 				li_user[2]=''
+				li_user[11]=calltype_dict.get(li_user[11]) #changing call type at 11th index
 				row_num += 1
 				for col_num in range(len(li_user)):
 					ws.write(row_num, col_num, li_user[col_num])
+
 		wb.save(response)
 	return response
 
