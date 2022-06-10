@@ -387,9 +387,9 @@ class DeleteEntryApiView(APIView):
 
 def user_hierarchy_func(username):
 	"""this function takes the username and returns usernames based on reporting_to hierarchy"""
-	username=str(username).strip()
+	username=[str(username).strip()]
 	lst_1=lst_2=lst_3=[]
-	users_1=User.objects.filter(reporting_to__username=username)
+	users_1=User.objects.filter(reporting_to__username__in=username)
 	if users_1:
 		lst_1=list(users_1.values_list('username',flat=True))
 	if lst_1:
@@ -401,11 +401,10 @@ def user_hierarchy_func(username):
 		if users_3:
 			lst_3=list(users_3.values_list('username',flat=True))
 
-	if username=='admin':#ad admin username is python superuser need to download all
+	if username[0]=='admin':#ad admin username is python superuser need to download all
 		username=list(User.objects.exclude(username='admin').values_list("username",flat=True))
 
-	initial_request_user=[username]
-	users_list=lst_1+lst_2+lst_3+initial_request_user
+	users_list=lst_1+lst_2+lst_3+username
 	return users_list
 
 

@@ -804,10 +804,10 @@ def upload_users(data, logged_in_user):
 			reporting_user_obj = User.objects.get(username=Reporting_User)
 			user.reporting_to = reporting_user_obj
 		call_protocol=row.get("call_protocol")
-		call_type_dict=dict(CALL_TYPE)
-		call_protocol_key = [k for k, v in call_type_dict.items() if v == call_protocol]#we need to store the call type key as we get value from dict we are getting key from calltype
-		user.call_type=call_protocol_key[0]
-
+		if call_protocol:
+			call_type_dict=dict(CALL_TYPE)
+			call_protocol_key = [k for k, v in call_type_dict.items() if v == call_protocol]#we need to store the call type key as we get value from dict we are getting key from calltype
+			user.call_type=call_protocol_key[0]
 		user_trunk=row.get('dial_trunk')
 		if user_trunk:
 			trunk_obj=DialTrunk.objects.get(name=user_trunk)
