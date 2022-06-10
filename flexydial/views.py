@@ -403,8 +403,8 @@ def user_hierarchy_func(username):
 
 	if username[0]=='admin':#ad admin username is python superuser need to download all
 		username=list(User.objects.exclude(username='admin').values_list("username",flat=True))
-
 	users_list=lst_1+lst_2+lst_3+username
+	users_list=list(set(users_list))#using set because reporting_to given of python superuser admin, it's not possible but given intentionally(shell, users bulk, db).
 	return users_list
 
 
