@@ -402,7 +402,7 @@ def user_hierarchy_func(username):
 			lst_3=list(users_3.values_list('username',flat=True))
 
 	if username=='admin':#ad admin username is python superuser need to download all
-		username=User.objects.exclude(username='admin').values_list("username",flat=True)
+		username=list(User.objects.exclude(username='admin').values_list("username",flat=True))
 
 	initial_request_user=[username]
 	users_list=lst_1+lst_2+lst_3+initial_request_user
