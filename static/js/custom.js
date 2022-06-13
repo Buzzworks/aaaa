@@ -581,6 +581,9 @@ function set_agent_dashboard_count(){
     if(sessionStorage.getItem("monthly_call","") > 0){
         $('#show-agent-totalcall-month small span').text(sessionStorage.getItem("monthly_call",""))
     }
+    if(sessionStorage.getItem("unique_monthly_call","") > 0){
+        $('#show-agent-totaluniquecall-month small span').text(sessionStorage.getItem("unique_monthly_call",""))
+    }
 }
 
 var socket_id = ""
@@ -2964,6 +2967,61 @@ function CallPerMonth(filter_dict={}){
         }
     })
 }
+
+callpermonthunique_vue = new Vue({
+    el: '#callpermonthunique_vue',
+    delimiters: ['${', '}'],
+    data: {
+        total_records:0,
+        total_pages:0,
+        page:1,
+        has_next:false,
+        has_prev:false,
+        start_index:0,
+        end_index:0,
+    },
+    methods:{
+        changePage(value){
+            var filter_dict = {}
+            $('#nextPage_number').val(value)
+            dispo_name = $('#fetch_dispo_count_monthly_unique').find('.dispo_count_btn span').text()
+            if(dispo_name == 'All Dispositions'){
+                dispo_name = ''
+            }
+            if ($('#cpmu_search_by').val().trim()){
+                filter_dict['column_name'] = $('input[name="cpmu_column_name"]:checked').val()
+                filter_dict['search_by'] = $('#cpmu_search_by').val()
+            }
+            UniqueCallPerMonth(filter_dict)
+        }
+    }
+})
+
+function UniqueCallPerMonth(filter_dict={}){
+    filter_dict['page'] = $('#nextPage_number').val()
+    filter_dict['paginate_by'] = $('#page_length').val()
+    filter_dict['column_name'] = $('input[name="cpmu_column_name"]:checked').val()
+    filter_dict['search_by'] = $('#cpmu_search_by').val().trim()
+    $.ajax({
+        type:'post',
+        headers:{ 'X-CSRFToken':csrf_token },
+        url:'/api/get-totaluniquecallsper-month/',
+        data: filter_dict,
+        success:function(data){
+            uniquecallpermonth_table.clear().draw();
+            uniquecallpermonth_table.rows.add(data['total_data']); // Add new data
+            uniquecallpermonth_table.columns.adjust().draw(); // Redraw the DataTable
+            callpermonthunique_vue.total_records = data['total_records']
+            callpermonthunique_vue.total_pages = data['total_pages']
+            callpermonthunique_vue.page = data['page']
+            callpermonthunique_vue.has_next = data['has_next']
+            callpermonthunique_vue.has_prev = data['has_prev']
+            callpermonthunique_vue.start_index = data['start_index']
+            callpermonthunique_vue.end_index = data['end_index']
+            $('#processingIndicator').css( 'display', false ? 'block' : 'none' );
+        }
+    })    
+}
 function callsmonthly_table(table){
 callpermonth_table = $(table).DataTable({
         "destroy": true,
@@ -2989,6 +3047,31 @@ callpermonth_table = $(table).DataTable({
     })
 }
 
+function uniquecallsmonthly_table(table){  
+    uniquecallpermonth_table = $(table).DataTable({
+            "destroy": true,
+            "bPaginate": false,
+            "searching": false,
+            "processing": true,
+            "info": false,
+            columnDefs:[{
+                "targets":'phone_number_field',
+                render:function(data,type,row){
+                    return "<a class='td-call-number'>"+data+"</a>"
+                }
+            },
+                {
+                "targets":'time_field_format',
+                render:function(data){
+                    return format_time(data)
+                },
+            }],
+            createdRow: function(row, data){
+                $(row).attr('data-tableName','totaluniqueCallsPerMonth_table')
+            },
+        })
+    }
+
 $('#show-agent-totalcall-month, #mb-show-agent-totalcall-month').click(function(){
     hideHomeDiv()
     $('#fetch_dispo_count_monthly').find('.dispo_count_btn span').text('All Dispositions');
@@ -3004,6 +3087,36 @@ $('#show-agent-totalcall-month, #mb-show-agent-totalcall-month').click(function(
     callsmonthly_table(callsmonthly)
     CallPerMonth()
 })
+
+$('#show-agent-totaluniquecall-month, #mb-show-agent-totaluniquecall-month').click(function(){
+    hideHomeDiv()
+    $('#fetch_dispo_count_monthly_unique').find('.dispo_count_btn span').text('Source');
+    $('#fetch_dispo_count_monthly_unique').find('.dropdown-content').html('');
+    $('#page_length').val('10');
+    $('#paginate_by_per_month_unique').val('10')
+    $('#nextPage_number').val(1)
+    $('#contents-agent-totaluniquecallsper-month').removeClass('d-none')
+    $('.breadcrumb').append('<li class="breadcrumb-item" aria-current="page"><a href="#" id="crm-home">'+
+        '<i class="fas fa-home"></i></a></li>')
+    // CallPerMonth(calls_url)
+    var callsmonthlyunique = $('#agent-monthly-uniquecalls')
+    // uniquecallsmonthly_table
+    uniquecallsmonthly_table(callsmonthlyunique)
+    UniqueCallPerMonth()
+})
+$('#paginate_by_per_month_unique').change(function () {
+    var filter_dict = {}
+    $('#page_length').val($(this).val());
+    dispo_name = $('#fetch_source_count_monthly_unique').find('.dispo_count_btn span').text()
+    if(dispo_name == 'All Sources'){
+        dispo_name = ''
+    }
+    if ($('#cpmu_search_by').val().trim()){
+        filter_dict['column_name'] = $('input[name="cpmu_column_name"]:checked').val()
+        filter_dict['search_by'] = $('#cpmu_search_by').val()
+    }
+    UniqueCallPerMonth(filter_dict)
+});
 $('#paginate_by_per_month').change(function () {
     var filter_dict = {}
     $('#page_length').val($(this).val());
@@ -3138,6 +3251,16 @@ $(document).on('click', '.filter_contact', function(){
         filter_dict['cpm_filter_date'] = $('#date_filter_monthly input').val()
         filter_dict['disposition'] = dispo_name
         CallPerMonth(filter_dict)
+    }else if ($(this).attr('id') == 'cpmu_filter_contact_unique') {
+        dispo_name = $('#fetch_dispo_count_monthly_unique').find('.dispo_count_btn span').text()
+        if(dispo_name == 'All Dispositions'){
+            dispo_name = ''
+        }
+        if ($('#cpmu_search_by').val().trim()){
+            filter_dict['column_name'] = $('input[name="cpmu_column_name"]:checked').val()
+            filter_dict['search_by'] = $('#cpmu_search_by').val()
+        }
+        UniqueCallPerMonth(filter_dict)
     }
     if(agent_info_vue.isMobile()){
         $('.mb-filter-modal').modal('hide');
@@ -3148,8 +3271,10 @@ $(document).on('shown.bs.dropdown', '.fetch_dispo_count', function () {
         $(this).find('.dropdown-menu .dropdown-loading').fadeIn('fast')
         if($(this).attr('id') == 'fetch_dispo_count_monthly'){
             fetch_type = 'CallsPerMonth'
-        } else{
+        } else if($(this).attr('id') == 'fetch_dispo_count_daily'){
             fetch_type = 'CallsPerDay'
+        }else{
+            fetch_type = 'CallsPerMonthUnique'
         }
         $.ajax({
             type:'get',
@@ -4358,3 +4483,14 @@ function set_agentstate(state){
         $('#dialer-pad-ast,#dialer-pad-hash').addClass('d-none')
     }
 }
+$(".form-control").attr('autocomplete', 'off');
+$('.form-control').bind('input', function() {
+    var c = this.selectionStart,
+       r = /[^a-z./@#_%$*:;()+-0123456789 ]/gi,
+       v = $(this).val();
+    if(r.test(v)) {
+      $(this).val(v.replace(r, ''));
+      c--;
+    }
+    this.setSelectionRange(c, c);
+});

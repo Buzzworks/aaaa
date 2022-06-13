@@ -10,7 +10,17 @@ var dateNow = new Date("October 13, 2014 02:00:00");
 is_refresh_lead_list = false
 var current_selectd={trc:false,tap:false,tapd:false,period:''};
 
-
+$(".form-control").attr('autocomplete', 'off');
+$('.form-control').bind('input', function() {
+    var c = this.selectionStart,
+       r = /[^a-z./@#_%$*:;()+-0123456789 ]/gi,
+       v = $(this).val();
+    if(r.test(v)) {
+      $(this).val(v.replace(r, ''));
+      c--;
+    }
+    this.setSelectionRange(c, c);
+});
 function format_datetime_forlistingpages(datetime) {
     if (datetime) {
         return moment(datetime).format("YYYY-MM-DD");
@@ -18,6 +28,7 @@ function format_datetime_forlistingpages(datetime) {
         return ''
     }
 }
+
 
 function selective_datatable(table) {
     var id = '#' + table.attr('id');

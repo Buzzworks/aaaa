@@ -3,7 +3,17 @@
 jQuery.validator.addMethod("notEqual", function(value, element, param) {
     return this.optional(element) || value != $(param).val();
 }, "Please specify a different (non-default) value");
-
+$(".form-control").attr('autocomplete', 'off');
+$('.form-control').bind('input', function() {
+    var c = this.selectionStart,
+          r = /[^a-z./@#_%$*:;()+-0123456789 ]/gi,
+       v = $(this).val();
+    if(r.test(v)) {
+      $(this).val(v.replace(r, ''));
+      c--;
+    }
+    this.setSelectionRange(c, c);
+});
 $('#changePassword_link').click(function(e) {
     e.preventDefault()
     $('#loginForm_div').hide('slow');

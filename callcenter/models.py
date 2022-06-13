@@ -1439,3 +1439,6 @@ class PasswordChangeLogs(models.Model):
 
 	def __str__(self):
 		return self.username
+
+class SourceList(models.Model):
+	sourcename = models.CharField(max_length=150,blank=True,null=True)

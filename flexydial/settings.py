@@ -62,6 +62,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'flexydial.session_middleware.SessionIdleMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # 'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
