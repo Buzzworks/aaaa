@@ -99,7 +99,7 @@ import base64
 import subprocess
 from gtts import gTTS
 import csv
-
+from flexydial.forms import CaptchaForm
 def save_csv(file_name, list):
 	"""
 	Saving the list values into the csv file
@@ -231,10 +231,16 @@ class LoginAPIView(APIView):
 		ps_obj = PasswordManagement.objects.filter().first()
 		if ps_obj:
 			forgot_password =ps_obj.forgot_password
-		return Response({"forgot_password":forgot_password})
+		cap_form=CaptchaForm()
+		return Response({"forgot_password":forgot_password,"cap_form":cap_form})
 
 	def post(self, request):
 		## Data for login validation
+		cap_form=CaptchaForm(request.POST)
+		if not cap_form.is_valid():
+			cap_form=CaptchaForm()
+			error_dict = {"error": "captcha is imporoper",'forgot_password':'',"cap_form":cap_form}
+			return Response(error_dict)
 		serializer = LoginSerializer(data=request.data)
 		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps({}))
 		PASSWORD_ATTEMPTS = pickle.loads(settings.R_SERVER.get("password_attempt_status") or pickle.dumps({}))
@@ -251,7 +257,7 @@ class LoginAPIView(APIView):
 					session_extension = [agent.extension for agent in get_current_users()
 									if agent.extension == user.extension]
 					if session_extension:
-						return Response({"error": "You are already LogIn"})
+						return Response({"error": "You are already LogIn","cap_form":cap_form})
 					elif user.user_role == None and not user.is_superuser:
 						return Response({"error": "User Role is not defined to this user.Please Contact To your admin",'forgot_password':forgot_password})
 					else:
@@ -331,7 +337,7 @@ class LoginAPIView(APIView):
 						else:
 							PASSWORD_ATTEMPTS[username] = 1
 						settings.R_SERVER.set('password_attempt_status',pickle.dumps(PASSWORD_ATTEMPTS))
-		error_dict = {"error": "Username or Password is incorrect",'forgot_password':forgot_password}
+		error_dict = {"error": "Username or Password is incorrect",'forgot_password':forgot_password,'cap_form':cap_form}
 		return Response(error_dict)
 class LogoutAPIView(LoginRequiredMixin, APIView):
 	"""
