@@ -1277,7 +1277,7 @@ def convert_into_timedelta(given_time):
 		return timedelta(hours=given_time.hour, minutes=given_time.minute, seconds=given_time.second)
 	elif type(given_time) == str:
 		given_time_list = given_time.split(':')
-		return timedelta(hours=int(given_time_list[0]),minutes=int(given_time_list[1]), seconds=int(given_time_list[2]))
+		return timedelta(hours=int(given_time_list[0]),minutes=int(given_time_list[1]), seconds=int(float(given_time_list[2])))
 	else:
 		return timedelta(seconds=0)
 
