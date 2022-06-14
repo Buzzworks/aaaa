@@ -502,7 +502,7 @@ def get_pre_campaign_edit_info(pk, request):
 	return data
 
 from flexydial.constants import CALL_TYPE
-def validate_data(username, email,wfh_numeric, employee_id='',reporting_to='',domain='',call_protocol='',user_role=''):
+def validate_data(username, email,wfh_numeric, employee_id='',reporting_to='',domain='',call_protocol='',user_role='',dial_trunk='',caller_id=''):
 	"""
 	this is the function defined for validating the user information
 	"""	
@@ -523,11 +523,9 @@ def validate_data(username, email,wfh_numeric, employee_id='',reporting_to='',do
 				data['domain']="the domain does not exists"
 
 	if call_protocol:
-		PROTOCOL_CHOICES_list=[]
-		for protocol in CALL_TYPE:
-			PROTOCOL_CHOICES_list.append(protocol[0])
-		if call_protocol not in PROTOCOL_CHOICES_list:
-			data['call_protocol']="the call protocal must be of "+str(PROTOCOL_CHOICES_list)
+		list_call_type=list(dict(CALL_TYPE).values())
+		if call_protocol not in list_call_type:
+			data['call_protocol']='the call protocol must be of'+str(list_call_type)
 
 
 	if wfh_numeric:
@@ -545,6 +543,7 @@ def validate_data(username, email,wfh_numeric, employee_id='',reporting_to='',do
 		try:
 			reporting_to=reporting_to.strip()
 			reporting_user_obj = User.objects.filter(username=reporting_to)
+			user_role=UserRole.objects.get(name=user_role).access_level.lower()
 			if user_role=='admin' and reporting_to:
 				data['reporting_to']='admin cannot report to any'
 			elif user_role=='agent' and reporting_to:
@@ -573,6 +572,38 @@ def validate_data(username, email,wfh_numeric, employee_id='',reporting_to='',do
 			#this exception will printed only if given reported_to is for admin user
 			#as admin user is superuser and not having any userrole 
 
+	if dial_trunk:
+		if User.objects.filter(username=username).exists():
+			# user_exists=User.objects.prefetch_related(campaign_users)#use this prefetch related
+			camp_user_exists=set(Campaign.objects.filter(users__username=username).values_list('trunk__name',flat=True))
+			if not dial_trunk in camp_user_exists:
+				data['dial_trunk']='the trunks must be of '+str(camp_user_exists)
+		else:
+			data['dial_trunk']="the user must be not new for dial trunk"
+
+	if caller_id:
+		if caller_id.isdigit():
+			if User.objects.filter(username=username).exists():
+				camp_user_exists=set(Campaign.objects.filter(users__username=username).values_list('trunk__name',flat=True))
+				if not dial_trunk in camp_user_exists:
+					data['dial_trunk__caller_id']='caller id the trunks must be of '+str(camp_user_exists)
+
+				trunk_obj=DialTrunk.objects.filter(name=dial_trunk).first()
+				if trunk_obj:
+					trunk_obj_range=trunk_obj.did_range
+					trunk_obj_range=trunk_obj_range.split(",")
+					trunk_obj_range=range(int(trunk_obj_range[0]),int(trunk_obj_range[1]))
+					if not int(caller_id) in trunk_obj_range:
+						data['caller id']='the caller id must be in the range of'+str(trunk_obj_range)
+
+					if User.objects.exclude(username=username).filter(trunk=trunk_obj.id,caller_id=caller_id).exists():
+						data['caller id']="this number is already taken"
+				else:
+					data['caller id']="the dial trunk must be in db to check caller id"
+			else:
+				data['caller id']="the user must be not new for caller id"
+		else:
+			data['caller id']="caller id must be integer"
 	return data
 
 
@@ -605,7 +636,11 @@ def validate_uploaded_users_file(data):
 		username_duplicate_df=data[data.duplicated('username')]
 		username_duplicates=set(username_duplicate_df['username'].tolist())
 
-
+		duplicate = data[data.duplicated(['dial_trunk', 'caller_id'])]
+		duplicate_col=duplicate[['username','dial_trunk','caller_id']]
+		null_filter = duplicate_col["dial_trunk"] != ""
+		dfNew = duplicate_col[null_filter]
+		user_trunk_list=dfNew['username'].tolist()#this list contains which has duplicate caller id's
 
 		for index, row in data.iterrows():
 			username = str(row.get("username", ""))
@@ -627,7 +662,9 @@ def validate_uploaded_users_file(data):
 			domain=row.get("domain","")
 			call_protocol=row.get("call_protocol","")
 
-			data = validate_data(str(username), str(email), wfh_numeric, str(employee_id),str(reporting_to),str(domain),str(call_protocol),str(user_role))
+			dial_trunk=str(row.get("dial_trunk")).strip()
+			caller_id=str(row.get("caller_id")).strip()
+			data = validate_data(str(username), str(email), wfh_numeric, str(employee_id),str(reporting_to),str(domain),str(call_protocol),str(user_role),dial_trunk,caller_id)
 			check_role = UserRole.objects.filter(
 				name__iexact=user_role.strip()).exists()
 			if not check_role:
@@ -645,8 +682,17 @@ def validate_uploaded_users_file(data):
 				data['username']="Username must not be empty"
 			if username in username_duplicates:
 				data['username']="given username already in the file multiple times"
+			if username in user_trunk_list:#we are returning error in same caller id present in file by taking username as key
+				data['caller_id']='this domain with same caller_id exists in the file'
 			if wfh_numeric in wfh_numerics_duplicates:
 				data['wfh_numeric']="given wfh_numeric contains duplicates in file"
+
+			status=str(row.get('status')).strip()
+			str_bools=['True','False']
+			if len(status) ==0:
+				data['status']="status must be not empty"
+			elif status not in str_bools:
+				data['status']="status must be boolean only"
 
 			if wfh_numeric:
 				s=User.objects.filter(username=username)
@@ -711,7 +757,7 @@ def upload_users(data, logged_in_user):
 	domain_obj=Switch.objects.filter().first()	
 	for index, row in data.iterrows():
 		username = row.get("username", "")
-		username=username.strip()
+		username=str(username).strip()
 		username=re.sub("\s", "_", username)
 		email = row.get("email", "")
 		email_password = str(row.get("email_password", ""))
@@ -722,7 +768,7 @@ def upload_users(data, logged_in_user):
 		last_name = row.get("last_name","")
 		wfh_numeric = row.get("wfh_numeric","")
 		employee_id = row.get("employee_id","")
-
+		user_is_active=row.get("status")
 		user_obj_exists=User.objects.filter(username=username).exists()
 		
 
@@ -750,6 +796,7 @@ def upload_users(data, logged_in_user):
 		user.last_name = last_name
 		user.created_by = logged_in_user
 		user.email_password = email_password.strip()
+		user.is_active=user_is_active
 		if employee_id:
 			user.employee_id = employee_id
 		Reporting_User = row.get('reporting_to')
@@ -757,7 +804,19 @@ def upload_users(data, logged_in_user):
 			reporting_user_obj = User.objects.get(username=Reporting_User)
 			user.reporting_to = reporting_user_obj
 		call_protocol=row.get("call_protocol")
-		user.call_type=call_protocol
+		if call_protocol:
+			call_type_dict=dict(CALL_TYPE)
+			call_protocol_key = [k for k, v in call_type_dict.items() if v == call_protocol]#we need to store the call type key as we get value from dict we are getting key from calltype
+			user.call_type=call_protocol_key[0]
+		user_trunk=row.get('dial_trunk')
+		if user_trunk:
+			trunk_obj=DialTrunk.objects.get(name=user_trunk)
+			print("trunk obj is",trunk_obj)
+			user.trunk=trunk_obj
+		caller_id=row.get('caller_id')
+
+		user.caller_id=caller_id
+
 		user.save()
 		if created:
 			user_variable = UserVariable()
@@ -1218,7 +1277,7 @@ def convert_into_timedelta(given_time):
 		return timedelta(hours=given_time.hour, minutes=given_time.minute, seconds=given_time.second)
 	elif type(given_time) == str:
 		given_time_list = given_time.split(':')
-		return timedelta(hours=int(given_time_list[0]),minutes=int(given_time_list[1]), seconds=int(given_time_list[2]))
+		return timedelta(hours=int(given_time_list[0]),minutes=int(given_time_list[1]), seconds=int(float(given_time_list[2])))
 	else:
 		return timedelta(seconds=0)
 
