@@ -8796,6 +8796,27 @@ contTemplate:'<tbody><tr><td colspan="7"></td></tr></tbody>',footTemplate:'<tfoo
         }
       })
     }
+    uploadFailAlert = function(redirect_url=""){
+        swal({
+            title:  'Upload Failed!',
+            text: 'Check downloaded file for more details.',
+            icon: 'error',
+            closeOnClickOutside:false,
+             button: {
+              text: "OK",
+              value: true,
+              visible: true,
+              className: "btn btn-primary"
+            },
+          }).then(
+            function() {
+              if (redirect_url) {
+                $(".swal-button-container button").removeClass("reload")
+                window.location.href = redirect_url
+              }
+            },
+            )
+    }
   confirmLogout = function(){
     swal({
         title: 'Are you sure?',

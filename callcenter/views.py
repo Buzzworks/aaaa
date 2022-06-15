@@ -947,8 +947,9 @@ class ValidateUserUploadApiView(APIView):
 			if valid:
 				data_dict = validate_uploaded_users_file(data)
 				cwd = settings.BASE_DIR
-				data_proper = pd.DataFrame()
 				data_improper = pd.DataFrame()
+				improper_file = ""
+				proper_file = ""
 				if 'correct_file' in data_dict:
 					proper_file = data_dict["correct_file"]
 					if proper_file.endswith('.csv'):
@@ -963,21 +964,15 @@ class ValidateUserUploadApiView(APIView):
 						data_improper = pd.read_csv(cwd+improper_file, na_filter=False)
 					else:
 						data_improper = pd.read_excel(cwd+improper_file)
-				if 	'correct_file' in data_dict or 'incorrect_file' in data_dict:
-					if not data_proper.empty and not data_improper.empty:
-						concat_file = pd.concat([data_proper,data_improper],sort=False)
-					elif not data_proper.empty:
-						concat_file = data_proper
-					elif not data_improper.empty:
-						concat_file = data_improper
+				if 	'incorrect_file' in data_dict:
 					response = HttpResponse(content_type='text/csv')
 					response['Content-Disposition'] = 'attachment; filename=summary_user.csv'
-					concat_file.to_csv(path_or_buf=response,sep=',',float_format='%.2f',index=False,decimal=".")
-					if proper_file:
-						os.remove(cwd+proper_file)
-					if improper_file:
-						os.remove(cwd+improper_file)
+					data_improper.to_csv(path_or_buf=response,sep=',',float_format='%.2f',index=False,decimal=".")
 					return response
+				if proper_file:
+					os.remove(cwd+proper_file)
+				if improper_file:
+					os.remove(cwd+improper_file)
 			else:
 				data = {}
 				data["column_err_msg"] = 'File must contains these ' + \

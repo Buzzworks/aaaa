@@ -1826,7 +1826,7 @@ uploadOptions = {
             link.href=window.URL.createObjectURL(blob);
             link.download="user_upload_stats.csv";
             link.click();
-            showSwal('success-message', 'User Uploaded Successfully')
+            uploadFailAlert()
         }else if ("column_err_msg" in data) {
             $(data["column_id"]).text(data["column_err_msg"]).removeClass("d-none")
             if ($("#uploadedad-file-error").length == 0) {
@@ -1843,20 +1843,21 @@ uploadOptions = {
                 $("#empty-data").addClass("d-none")
             }, 3000);
         } else {
-            $(".cancel-uploaded-file").removeClass("d-none")
-            $(".validate-uploaded-file").addClass("d-none")
-            if ("correct_file" in data) {
-                $("#proper-data").attr("href", data["correct_file"]).removeClass("d-none")
-                $(".confirm-user-upload").removeClass("d-none")
-                $("#proper-data span.msg").text("Proper Data: " + data["correct_count"])
-                $(".proper_data_div").removeClass("d-none")
-            }
-            if ("incorrect_file" in data) {
-                $(".improper_data_div").removeClass("d-none")
-                $("#improper-data").attr("href", data["incorrect_file"]).removeClass("d-none")
-                $("#improper-data span.msg").text("Improper Data: " + data["incorrect_count"])
-                $('#empty-data').addClass('d-none')
-            }
+            showSwal('success-message', 'User Bulk Uploaded Sucessfully')
+            // $(".cancel-uploaded-file").removeClass("d-none")
+            // $(".validate-uploaded-file").addClass("d-none")
+            // if ("correct_file" in data) {
+            //     $("#proper-data").attr("href", data["correct_file"]).removeClass("d-none")
+            //     $(".confirm-user-upload").removeClass("d-none")
+            //     $("#proper-data span.msg").text("Proper Data: " + data["correct_count"])
+            //     $(".proper_data_div").removeClass("d-none")
+            // }
+            // if ("incorrect_file" in data) {
+            //     $(".improper_data_div").removeClass("d-none")
+            //     $("#improper-data").attr("href", data["incorrect_file"]).removeClass("d-none")
+            //     $("#improper-data span.msg").text("Improper Data: " + data["incorrect_count"])
+            //     $('#empty-data').addClass('d-none')
+            // }
         }
     },
     error: function(data) {
