@@ -1820,7 +1820,14 @@ uploadOptions = {
     success: function(data) {
         $('.preloader').fadeOut('fast');
         $('.phonebook-valid-loader,.user-valid-loader').fadeOut('fast');
-        if ("column_err_msg" in data) {
+        if (typeof data == "string"){
+            var blob=new Blob([data]);
+            var link=document.createElement('a');
+            link.href=window.URL.createObjectURL(blob);
+            link.download="user_upload_stats.csv";
+            link.click();
+            showSwal('success-message', 'User Uploaded Successfully')
+        }else if ("column_err_msg" in data) {
             $(data["column_id"]).text(data["column_err_msg"]).removeClass("d-none")
             if ($("#uploadedad-file-error").length == 0) {
                 error_id = "#phonebook-err-msg"
