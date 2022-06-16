@@ -47,6 +47,16 @@
      font-size:15px;
  }
 
+ .js-captcha-refresh{
+	border:none;
+	/* border: 2px solid #CDCDCD; */
+	/* background-repeat: repeat;
+	background-size: 1%; */
+	/* background-color: #fff; */
+	opacity:100;
+	/* background-color: #0860ad; */
+}
+
 </style>
 <link rel="stylesheet" href="{% static '/css/password-strength.css' %}">
 </head>
@@ -108,6 +118,7 @@
 								<div id="login-error" class="alert alert-danger d-none"></div>
 								<!-- <h4>Welcome back!</h4> -->
 								<!-- <h6 class="font-weight-light">Happy to see you again!</h6> -->
+
 								<form class="cmxform pt-3" id="loginForm" method="post">
 									<div class="form-group">
 									   <label for="username">Username {{ request.session.is_download }}<span class="star"> *</span></label>
@@ -131,6 +142,12 @@
 											<input type="password" class="form-control form-control-lg border-left-0" id="password" placeholder="Password" name="password" required autocomplete="off">
 										</div>
 									</div>
+
+									<div class="container">
+										<p2>{{cap_form.captcha}}</p2>
+								<button class='js-captcha-refresh'><img src="{% static 'images/refresh.png' %}" style="width:50px;height:50px;" alt="Snow"></button>
+									</div>
+
 									<div id="group_login_options">
 										<div class="my-2 d-flex justify-content-between align-items-center">
 											<a id="forgotPassword_link" href="#" class="auth-link text-black forgotPassword_link d-none">Forgot password?</a>
@@ -141,7 +158,9 @@
 									<div class="my-2 d-flex justify-content-between align-items-center">
 										<a id="sign_in_redirect" href="#" class="auth-link text-black d-none">Back to Sign in?</a>
 									</div>
-									<div class="my-3">
+
+
+							<div class="my-3">
 										<input class="btn btn-block btn-dark btn-lg font-weight-medium auth-form-btn mb-btn-primary" type="button" value="LOGIN" id="login_btn">
 									</div>
 									<input type="hidden" name="internet_failure_data" id="internet_failure_data">
@@ -292,6 +311,14 @@
 <script src="{% static 'js/moment.js' %}"></script>
 <script src="{% static 'js/bootstrap.min.js' %}"></script>
 <script type="text/javascript">
+
+$('.js-captcha-refresh').click(function () {
+    $.getJSON("/captcha/refresh/", function (result) {
+        $('.captcha').attr('src', result['image_url']);
+        $('#id_captcha_0').val(result['key'])
+    });
+});
+
 	{% if forgot_password %}
 		$('.forgotPassword_link').removeClass('d-none')
 	{% endif %}
