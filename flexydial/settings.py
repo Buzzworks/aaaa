@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'django.contrib.postgres',
     'storages',
+    'captcha'
     # 'debug_toolbar',
 ]
 SITE_ID = 1
