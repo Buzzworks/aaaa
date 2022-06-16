@@ -29,7 +29,7 @@ from .models import (CampaignSchedule, Switch, DialTrunk, User, Group,
 	UserRole, Script, User, AgentActivity, Campaign, DiallerEventLog, CallDetail,DNC,CSS, CdrFeedbck,
 	CallBackContact, CurrentCallBack, SnoozedCallback, Abandonedcall, ThirdPartyApiUserToken, SMSTemplate, SMSGateway,
 	DiaTrunkGroup,EmailScheduler,AdminLogEntry, ReportColumnVisibility, CallRecordingFeedback, InGroupCampaign, SkilledRouting,
-	EmailGateway,CampaignVariable, SkilledRoutingCallerid,Daemons,Holidays,PasswordManagement,PasswordChangeLogs,WebSocket)
+	EmailGateway,CampaignVariable, SkilledRoutingCallerid,Daemons,Holidays,PasswordManagement,PasswordChangeLogs)
 from flexydial.constants import (Status,CALL_MODE, CAMPAIGN_STRATEGY_CHOICES, DIAL_RATIO_CHOICES, CDR_DOWNLOAD_COl,QC_FEEDBACK_COL,PasswordChangeType)
 from .serializers import (GroupSerializer,CallDetailSerializer, CallBackContactSerializer,
 	SetCallBackContactSerializer, DncSerializer, CallDetailReportSerializer, AgentActivityReportSerializer, CurrentCallBackSerializer, AbandonedcallSerializer, CallRecordingFeedbackSerializer)
@@ -3734,12 +3734,3 @@ def PasswordChangeAndLockedReminder():
 					break
 	except Exception as e:
 		print("Error in sending password change reminder and locked mails",e)
-def getWebSocketHost():
-	try:
-		web_sock = WebSocket.objects.first()
-		if web_sock:
-			settings.WEB_SOCKET_HOST = web_sock.ip_address+':'+str(web_sock.port)
-			settings.R_SERVER.set("WEB_SOCKET_HOST", pickle.dumps(settings.WEB_SOCKET_HOST))
-		return settings.WEB_SOCKET_HOST
-	except Exception as e:
-		print('Error in getting WebSocket Host')

@@ -276,7 +276,6 @@ urlpatterns = [
 	path('Administration/Holidays/edit/<int:pk>/',views.CreateEditHolidaysApiView.as_view(),name='edit-holidays'),
 	path('Administration/upload-holiday-list/',views.UploadHolidaysApiView.as_view(), name="upload-holiday-list"),
 	path('api/send_dtmf/', views.SendDTMFAPIView.as_view(),name='send_dtmf'),
-	path('api/create_websocket',views.createWebSocketHostApiView.as_view(),name='create-websocket'),
 	path('CallReports/pending-contacts/',views.PendingContactAPIView.as_view(),name='pending_contacts'),
 	path('CallReports/pending-contacts/<int:pk>/',views.PendingContactEditAPIView.as_view(),name='edit-pending_contacts'),
 ] + static(settings.RECORDING_URL, document_root=settings.RECORDING_ROOT)
