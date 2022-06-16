@@ -6045,6 +6045,7 @@ class GetTotalCallsPerMonth(LoginRequiredMixin,APIView):
 				'start_index':paginate_obj.start_index(), 'end_index':paginate_obj.end_index(),
 				'total_data':agent_callpermonth[::-1]})
 
+import datetime as dt
 class UniqueCallsPerMonth(LoginRequiredMixin, APIView):
 	login_url= '/'
 	def post(self,request):
@@ -6052,15 +6053,16 @@ class UniqueCallsPerMonth(LoginRequiredMixin, APIView):
 		user= request.user
 		page = int(request.POST.get('page' ,1))
 		paginate_by = int(request.POST.get('paginate_by', 10))
-		disposition = request.POST.get('disposition','')
+		source = request.POST.get('disposition','')
 		column_name = request.POST.get('column_name',None)
 		search_by = request.POST.get('search_by',None)
 		filter_dict={}
 		filter_dict = {'user':user}
 		if column_name and search_by:
 			filter_dict[column_name] = search_by
-		queryset=CallDetail.objects.filter(**filter_dict).filter(created__month__gte=datetime.now().month).values('campaign_name','contact_id','customer_cid').annotate(Count('customer_cid'),Max('id')).order_by()
-
+		if source:
+			filter_dict['customer_raw_data__pl__source'] = source
+		queryset=Contact.objects.values("numeric","campaign","customer_raw_data","id").filter(last_dialed_date__lte=dt.datetime.today(), last_dialed_date__gt=dt.datetime.today()-dt.timedelta(days=30)).filter(**filter_dict,last_connected_user=user).distinct("numeric","campaign")
 		paginate_obj = get_paginated_object(queryset, page, paginate_by)
 		agent_uniquecallpermonth = UniqueSerializer(paginate_obj,many=True).data
 		return Response({'total_records': paginate_obj.paginator.count,'total_pages': paginate_obj.paginator.num_pages,
@@ -6075,11 +6077,15 @@ class GetAgentDispoCount(LoginRequiredMixin, APIView):
 	login_url= '/'
 	def get(self,request):
 		fetch_type = request.GET.get('fetch_type','')
+		dispo_data=''
+		source_data=''
 		if fetch_type == 'CallsPerMonth':
 			dispo_data = CdrFeedbck.objects.filter(calldetail__user=request.user, calldetail__created__month=datetime.now().month).values('primary_dispo').order_by('primary_dispo').annotate(count = Count('primary_dispo'))
-		else:
+		elif fetch_type == 'CallsPerDay':
 			dispo_data = CdrFeedbck.objects.filter(calldetail__user=request.user, calldetail__created__date=date.today()).values('primary_dispo').order_by('primary_dispo').annotate(count = Count('primary_dispo'))
-		return Response({'dispo_data':dispo_data})
+		else:
+			source_data= SourceList.objects.values("sourcename")
+		return Response({'dispo_data':dispo_data,'source_data':source_data})
 
 class GetAgentAssignedCall(LoginRequiredMixin, APIView):
 	"""

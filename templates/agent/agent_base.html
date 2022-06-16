@@ -761,6 +761,7 @@
 			$('#show-agent-totalcall-today small span').text(sessionStorage.getItem("todays_call",""))
 			$('#show-agent-totalcall-month small span').text(sessionStorage.getItem("monthly_call",""))
 			$('#show-agent-assigned-calls small span').text(sessionStorage.getItem("assigned_calls",""))
+			$('#show-agent-totaluniquecall-month small span').text(sessionStorage.getItem("unique_monthly_call",""))
 		});
 		$.validate({
 			form:'#change_password_form',
@@ -781,7 +782,7 @@
             });
 			sessionStorage.setItem("todays_call",`{{total_agentcalls_today|safe}}`)
 			sessionStorage.setItem("monthly_call", `{{ total_agentcalls_month|safe }}`)
-			sessionStorage.setItem("unique_monthly_call", `{{ unique_monthly_call|safe }}`)
+			sessionStorage.setItem("unique_monthly_call", `{{ total_agentcalls_monthly_unique|safe }}`)
 			sessionStorage.setItem("assigned_calls",`{{ total_agent_assigned_calls|safe}}`)
 			$('#show-agent-totalcall-today small span').text(sessionStorage.getItem("todays_call",""))
 			$('#show-agent-totalcall-month small span').text(sessionStorage.getItem("monthly_call",""))

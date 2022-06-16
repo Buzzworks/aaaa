@@ -265,11 +265,11 @@ class UniqueSerializer(serializers.ModelSerializer):
 	customer_cid_count = serializers.SerializerMethodField()
 	
 	class Meta:
-		model = CallDetail
-		fields = ('cdr_feedback','c_name','pl','customer_cid','contact_id','id','campaign_name','customer_cid_count')
+		model = Contact
+		fields = ('c_name','pl','numeric','campaign','cdr_feedback','customer_cid_count')
 
 	def get_customer_cid_count(self,obj):
-		count=CallDetail.objects.filter(created__month__gte=datetime.now().month,campaign_name=obj['campaign_name'],customer_cid=obj['customer_cid']).count()
+		count=CallDetail.objects.filter(created__lte=datetime.datetime.today(), created__gt=datetime.datetime.today()-datetime.timedelta(days=30),campaign_name=obj['campaign'],customer_cid=obj['numeric']).count()
 		return count
 
 	def get_c_name(self,obj):
@@ -288,7 +288,7 @@ class UniqueSerializer(serializers.ModelSerializer):
 		return full_name.strip()
 
 	def get_cdr_feedback(self,obj):
-		max_id=obj['id__max']
+		max_id=CallDetail.objects.filter(customer_cid=obj['numeric'],campaign_name=obj['campaign']).order_by("-id").first().id
 		cdr_feedback = {"primary_dispo":"","secondary_dispo":""}
 		if max_id:
 			cdr_obj=CdrFeedbck.objects.filter(calldetail_id=max_id).first()
@@ -298,40 +298,37 @@ class UniqueSerializer(serializers.ModelSerializer):
 				if primary_dispo:
 					cdr_feedback["primary_dispo"] = primary_dispo
 				if cdr_fb and 'sub_dispo' in cdr_fb:
-					sub_dispo=cdr_fb['sub_dispo']
-					if sub_dispo:
-						cdr_feedback["secondary_dispo"] = sub_dispo
+					sub=cdr_fb['sub_dispo']
+					if sub:
+						cdr_feedback["secondary_dispo"]=cdr_fb[sub]
 		return cdr_feedback
 
 	def get_pl(self,obj):
-		contact=Contact.objects.filter(id=obj['contact_id']).first()
 		pl = {'phonenumber':"",'actionid':"",'name':"",'source':"",'flag':"",'last_comp_stage':"",'application_number':"",'reg_date_time':"",'campaign1':"",'filler1':"",'filler2':""}
-		if contact and contact.customer_raw_data:
-			if 'pl' in contact.customer_raw_data and 'phonenumber' in contact.customer_raw_data['pl']:
-				pl['phonenumber']=contact.customer_raw_data['pl']['phonenumber']
-			if 'pl' in contact.customer_raw_data and 'actionid' in contact.customer_raw_data['pl']:
-				pl['actionid']=contact.customer_raw_data['pl']['actionid']
-			if 'pl' in contact.customer_raw_data and 'name' in contact.customer_raw_data['pl']:
-				pl['name']=contact.customer_raw_data['pl']['name']
-			if 'pl' in contact.customer_raw_data and 'source' in contact.customer_raw_data['pl']:
-				pl['source']=contact.customer_raw_data['pl']['source']
-			if 'pl' in contact.customer_raw_data and 'source' in contact.customer_raw_data['pl']:
-				pl['source']=contact.customer_raw_data['pl']['source']
-			if 'pl' in contact.customer_raw_data and 'flag' in contact.customer_raw_data['pl']:
-				pl['flag']=contact.customer_raw_data['pl']['flag']
-			if 'pl' in contact.customer_raw_data and 'last_comp_stage' in contact.customer_raw_data['pl']:
-				pl['last_comp_stage']=contact.customer_raw_data['pl']['last_comp_stage']
-			if 'pl' in contact.customer_raw_data and 'application_number' in contact.customer_raw_data['pl']:
-				pl['application_number']=contact.customer_raw_data['pl']['application_number']
-			if 'pl' in contact.customer_raw_data and 'reg_date_time' in contact.customer_raw_data['pl']:
-				pl['reg_date_time']=contact.customer_raw_data['pl']['reg_date_time']
-			if 'pl' in contact.customer_raw_data and 'campaign1' in contact.customer_raw_data['pl']:
-				pl['campaign1']=contact.customer_raw_data['pl']['campaign1']
-			if 'pl' in contact.customer_raw_data and 'filler1' in contact.customer_raw_data['pl']:
-				pl['filler1']=contact.customer_raw_data['pl']['filler1']
-			if 'pl' in contact.customer_raw_data and 'filler2' in contact.customer_raw_data['pl']:
-				pl['filler2']=contact.customer_raw_data['pl']['filler2']
+		if obj and obj['customer_raw_data']:
+			if 'pl' in obj['customer_raw_data'] and 'phonenumber' in obj['customer_raw_data']['pl']:
+				pl['phonenumber']=obj['customer_raw_data']['pl']['phonenumber']
+			if 'pl' in obj['customer_raw_data'] and 'actionid' in obj['customer_raw_data']['pl']:
+				pl['actionid']=obj['customer_raw_data']['pl']['actionid']
+			if 'pl' in obj['customer_raw_data'] and 'name' in obj['customer_raw_data']['pl']:
+				pl['name']=obj['customer_raw_data']['pl']['name']
+			if 'pl' in obj['customer_raw_data'] and 'source' in obj['customer_raw_data']['pl']:
+				pl['source']=obj['customer_raw_data']['pl']['source']
+			if 'pl' in obj['customer_raw_data'] and 'source' in obj['customer_raw_data']['pl']:
+				pl['source']=obj['customer_raw_data']['pl']['source']
+			if 'pl' in obj['customer_raw_data'] and 'flag' in obj['customer_raw_data']['pl']:
+				pl['flag']=obj['customer_raw_data']['pl']['flag']
+			if 'pl' in obj['customer_raw_data'] and 'last_comp_stage' in obj['customer_raw_data']['pl']:
+				pl['last_comp_stage']=obj['customer_raw_data']['pl']['last_comp_stage']
+			if 'pl' in obj['customer_raw_data'] and 'application_number' in obj['customer_raw_data']['pl']:
+				pl['application_number']=obj['customer_raw_data']['pl']['application_number']
+			if 'pl' in obj['customer_raw_data'] and 'reg_date_time' in obj['customer_raw_data']['pl']:
+				pl['reg_date_time']=obj['customer_raw_data']['pl']['reg_date_time']
+			if 'pl' in obj['customer_raw_data'] and 'campaign1' in obj['customer_raw_data']['pl']:
+				pl['campaign1']=obj['customer_raw_data']['pl']['campaign1']
+			if 'pl' in obj['customer_raw_data'] and 'filler1' in obj['customer_raw_data']['pl']:
+				pl['filler1']=obj['customer_raw_data']['pl']['filler1']
+			if 'pl' in obj['customer_raw_data'] and 'filler2' in obj['customer_raw_data']['pl']:
+				pl['filler2']=obj['customer_raw_data']['pl']['filler2']
 		return pl
 		
-
-

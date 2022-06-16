@@ -485,8 +485,8 @@ $(document).on('click','.td-call-number',function(){
 	var mont_uniquecall_data;
 	if($(this).parents('tr').attr('data-tableName') == 'totaluniqueCallsPerMonth_table'){
 		mont_uniquecall_data = $('#agent-monthly-uniquecalls').DataTable().row($(this).parents('tr')).data();
-		if(mont_uniquecall_data['campaign_name'] === agent_info_vue.camp_name) {
-			if(mont_uniquecall_data['customer_cid'] != ''){
+		if(mont_uniquecall_data['campaign'] === agent_info_vue.camp_name) {
+			if(mont_uniquecall_data['numeric'] != ''){
 				if (extension in session_details && Object.keys(session_details[extension]).length > 0) {
 					 swal({
 						text: 'Preparing to make call',
@@ -497,7 +497,7 @@ $(document).on('click','.td-call-number',function(){
 					setTimeout(
 					function(){
 						callmode = 'manual'
-						do_manual_call(mont_uniquecall_data.customer_cid,mont_uniquecall_data.cdrfeedback.contact_id)
+						do_manual_call(mont_uniquecall_data.numeric,mont_uniquecall_data.cdrfeedback.contact_id)
 						swal.close();
 						$('#crm-home').click()
 					},3000)
@@ -507,7 +507,7 @@ $(document).on('click','.td-call-number',function(){
 				}
 			}
 		} else {
-			showWarningToast(`Login to <b>${mont_uniquecall_data['campaign_name']}</b> campaign to make call`, 'top-right')
+			showWarningToast(`Login to <b>${mont_uniquecall_data['campaign']}</b> campaign to make call`, 'top-right')
 		}
 	}
 })

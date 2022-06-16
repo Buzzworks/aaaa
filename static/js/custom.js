@@ -2476,6 +2476,7 @@ $("#submit_customer_info").click(function() {
                     hangup_cause_code_er = hangup_cause_er = dialed_status_er = ''
                     sessionStorage.setItem("todays_call", data['total_agentcalls_today'])
                     sessionStorage.setItem("monthly_call", data['total_agentcalls_month'])
+                    sessionStorage.setItem("unique_monthly_call", data['total_agentcalls_monthly_unique'])
                     set_agent_dashboard_count()
                     $('#feedback-tab').removeClass('active show')
                     $('#feedback-tab').addClass('hide')
@@ -2985,7 +2986,7 @@ callpermonthunique_vue = new Vue({
             var filter_dict = {}
             $('#nextPage_number').val(value)
             dispo_name = $('#fetch_dispo_count_monthly_unique').find('.dispo_count_btn span').text()
-            if(dispo_name == 'All Dispositions'){
+            if(dispo_name == 'All Sources'){
                 dispo_name = ''
             }
             if ($('#cpmu_search_by').val().trim()){
@@ -3090,7 +3091,7 @@ $('#show-agent-totalcall-month, #mb-show-agent-totalcall-month').click(function(
 
 $('#show-agent-totaluniquecall-month, #mb-show-agent-totaluniquecall-month').click(function(){
     hideHomeDiv()
-    $('#fetch_dispo_count_monthly_unique').find('.dispo_count_btn span').text('Source');
+    $('#fetch_dispo_count_monthly_unique').find('.dispo_count_btn span').text('All Sources');
     $('#fetch_dispo_count_monthly_unique').find('.dropdown-content').html('');
     $('#page_length').val('10');
     $('#paginate_by_per_month_unique').val('10')
@@ -3260,6 +3261,7 @@ $(document).on('click', '.filter_contact', function(){
             filter_dict['column_name'] = $('input[name="cpmu_column_name"]:checked').val()
             filter_dict['search_by'] = $('#cpmu_search_by').val()
         }
+        filter_dict['disposition'] = dispo_name
         UniqueCallPerMonth(filter_dict)
     }
     if(agent_info_vue.isMobile()){
@@ -3282,11 +3284,18 @@ $(document).on('shown.bs.dropdown', '.fetch_dispo_count', function () {
             url:'/api/get-agent-dispo-count/',
             data:{'fetch_type':fetch_type},
             success:function(data){
+                if(data['dispo_data'] != ''){
                 $('.fetch_dispo_count').find('.dropdown-menu .dropdown-content').html('')
                 $('.fetch_dispo_count').find('.dropdown-menu .dropdown-content').append(`<a class='dropdown-item px-3' data-name="All Dispositions">All Dispositions</a>`)
                 $.each(data['dispo_data'],function(k,v){
                    $('.fetch_dispo_count').find('.dropdown-menu .dropdown-content').append(`<a class='dropdown-item px-3' data-name="${v['primary_dispo']}"><span class='badge badge-pill badge-info float-right ml-2 py-1'>${v['count']}</span>${v['primary_dispo']}</a>`)
-                })
+                })}
+                if(data['source_data'] != ''){
+                    $('.fetch_dispo_count').find('.dropdown-menu .dropdown-content').html('')
+                $('.fetch_dispo_count').find('.dropdown-menu .dropdown-content').append(`<a class='dropdown-item px-3' data-name="All Sources">All Sources</a>`)
+                $.each(data['source_data'],function(k,v){
+                   $('.fetch_dispo_count').find('.dropdown-menu .dropdown-content').append(`<a class='dropdown-item px-3' data-name="${v['sourcename']}"><span class='badge badge-pill badge-info float-right ml-2 py-1'></span>${v['sourcename']}</a>`)
+                })}
                 $('.fetch_dispo_count').find('.dropdown-menu .dropdown-loading').fadeOut('fast')
             },
         })
@@ -3296,9 +3305,13 @@ $(document).on('shown.bs.dropdown', '.fetch_dispo_count', function () {
 $(document).on('click','.fetch_dispo_count .dropdown-menu .dropdown-content a',function(){
     var filter_dict = {}
     var selText = $(this).data('name');
+    var selText1 = $(this).data('name');
     $(this).parents('.fetch_dispo_count').find('.dispo_count_btn span').html(selText);
     if(selText == 'All Dispositions'){
         selText = ''
+    }
+    if(selText1 == 'All Sources'){
+        selText1 = ''
     }
     if($(this).parents('.fetch_dispo_count').attr('id') == 'fetch_dispo_count_monthly'){
         if ($('#cpm_search_by').val().trim()){
@@ -3308,7 +3321,14 @@ $(document).on('click','.fetch_dispo_count .dropdown-menu .dropdown-content a',f
         filter_dict['cpm_filter_date'] = $('#date_filter_monthly input').val()
         filter_dict['disposition'] = selText
         CallPerMonth(filter_dict)
-    } else{
+    } else if($(this).parents('.fetch_dispo_count').attr('id') == 'fetch_dispo_count_monthly_unique'){
+        if ($('#cpmu_search_by').val().trim()){
+            filter_dict['column_name'] = $('input[name="cpmu_column_name"]:checked').val()
+            filter_dict['search_by'] = $('#cpmu_search_by').val()
+        }
+        filter_dict['disposition'] = selText1
+        UniqueCallPerMonth(filter_dict) 
+    }else{
         if ($('#cpd_search_by').val().trim()){
             filter_dict['column_name'] = $('input[name="cpd_column_name"]:checked').val()
             filter_dict['search_by'] = $('#cpd_search_by').val()
