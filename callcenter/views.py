@@ -313,7 +313,7 @@ class LoginAPIView(APIView):
 						action_name='4',event_type='LOGIN')
 					return redirect_user(request,user)
 				else:
-					if username in PASSWORD_ATTEMPTS:
+					if username in PASSWORD_ATTEMPTS and password_obj:
 						if PASSWORD_ATTEMPTS[username] >= password_obj.max_password_attempt:
 							error_dict = {"error": "This account is Locked Please Try to User Forgot Password or Contact Administrator",'forgot_password':forgot_password}
 						else:
@@ -323,8 +323,7 @@ class LoginAPIView(APIView):
 					return Response(error_dict)
 			else:
 				user_obj = User.objects.filter(username=username)
-				if user_obj.exists():
-					if password_obj:
+				if user_obj.exists() and password_obj:
 						if username in PASSWORD_ATTEMPTS:
 							if PASSWORD_ATTEMPTS[username] >= password_obj.max_password_attempt:
 								error_dict = {"error": "This account is Locked Please Try to User Forgot Password or Contact Administrator",'forgot_password':forgot_password}
