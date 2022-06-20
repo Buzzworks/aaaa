@@ -178,7 +178,7 @@ outbound_server.on('CONNECT', function (req) {
 	var cc_agent = req.body['variable_cc_agent']
 	var dialed_uuid = req.body['Unique-ID']
 	setTimeout(()=>{
-			if (!('wfh_call' in req.body)){
+		if (!('wfh_call' in req.body)){
 			req.execute("conference",req.body['variable_agent-Unique-ID']+"@sla")
 		}
 		req.execute('set', `cc_customer=${destination_number}`)
@@ -196,8 +196,9 @@ outbound_server.on('CONNECT', function (req) {
 		console.log(req.body['Event-Date-Timestamp'])
 		// req.execute("bridge","user/"+cc_agent)
 		if('variable_fake_ring' in req.body && req.body['variable_fake_ring'] == 'true'){
+			util.log(req.body)
 			var date_time = '${strftime(%d-%m-%Y-%H-%M)}'
-			var destination_number = req.body['variable_cc_customer'].slice(-10)
+			var destination_number = (typeof req.body['variable_cc_customer'] != 'undefined')?req.body['variable_cc_customer'].slice(-10):req.body['variable_dialed_number'].slice(-10)
 			var dialed_uuid = req.body['Unique-ID']
 			req.execute("conference",req.body['variable_agent-Unique-ID']+"@sla")
 			req.execute('set', 'RECORD_TITLE=Recording ${dialed_number} ${caller_id_number} ${strftime(%Y-%m-%d %H:%M)');

@@ -96,7 +96,8 @@ function selective_datatable(table) {
                         return data
                     } else {
                         if (row["improper_file_name"] != '') {
-                            return '<a href="/media/upload/' + row["improper_file_name"] + '" download id="file-' + row['id'] + '">' + row['improper_file_name'] + '</a>'
+                            // return '<a href="/media/upload/' + row["improper_file_name"] + '" download id="file-' + row['id'] + '">' + row['improper_file_name'] + '</a>'
+                            return '<a href="' + row["improper_file_name"] + '" download id="file-' + row['id'] + '">' + row['improper_file_name'] + '</a>'
                         }
                     }
                     return ''
