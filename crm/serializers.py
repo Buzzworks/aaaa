@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 from rest_framework import serializers
 from .models import (Phonebook, CrmField, TempContactInfo, Contact, LeadListPriority, DownloadReports, LeadBucket, AlternateContact)
 from callcenter.models import CSS, CdrFeedbck, User,CallDetail
@@ -274,17 +274,15 @@ class UniqueSerializer(serializers.ModelSerializer):
 
 	def get_c_name(self,obj):
 		full_name = ''
-		contact_id = obj['contact_id']
-		contact=''
-		if contact_id:
-			contact = Contact.objects.filter(id=obj['contact_id']).first()
-		if contact and contact.customer_raw_data and 'customer_details' in contact.customer_raw_data:
-			if "first_name" in contact.customer_raw_data['customer_details'] and contact.customer_raw_data['customer_details']['first_name'] != None:
-				full_name += contact.customer_raw_data['customer_details']['first_name'] + ' '
-			if "middle_name" in contact.customer_raw_data['customer_details'] and contact.customer_raw_data['customer_details']['middle_name'] != None:
-				full_name += contact.customer_raw_data['customer_details']['middle_name'] + ' '
-			if "last_name" in contact.customer_raw_data['customer_details'] and contact.customer_raw_data['customer_details']['last_name'] != None:
-				full_name += contact.customer_raw_data['customer_details']['last_name']
+		
+		# contact=''
+		# if obj and obj.customer_raw_data and 'customer_details' in contact.customer_raw_data:
+		# 	if "first_name" in contact.customer_raw_data['customer_details'] and contact.customer_raw_data['customer_details']['first_name'] != None:
+		# 		full_name += contact.customer_raw_data['customer_details']['first_name'] + ' '
+		# 	if "middle_name" in contact.customer_raw_data['customer_details'] and contact.customer_raw_data['customer_details']['middle_name'] != None:
+		# 		full_name += contact.customer_raw_data['customer_details']['middle_name'] + ' '
+		# 	if "last_name" in contact.customer_raw_data['customer_details'] and contact.customer_raw_data['customer_details']['last_name'] != None:
+		# 		full_name += contact.customer_raw_data['customer_details']['last_name']
 		return full_name.strip()
 
 	def get_cdr_feedback(self,obj):
