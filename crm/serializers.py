@@ -286,10 +286,10 @@ class UniqueSerializer(serializers.ModelSerializer):
 		return full_name.strip()
 
 	def get_cdr_feedback(self,obj):
-		max_id=CallDetail.objects.filter(customer_cid=obj['numeric'],campaign_name=obj['campaign']).order_by("-id").first().id
+		max_id=CallDetail.objects.filter(customer_cid=obj['numeric'],campaign_name=obj['campaign']).order_by("-id").first()
 		cdr_feedback = {"primary_dispo":"","secondary_dispo":""}
 		if max_id:
-			cdr_obj=CdrFeedbck.objects.filter(calldetail_id=max_id).first()
+			cdr_obj=CdrFeedbck.objects.filter(calldetail_id=max_id.id).first()
 			if cdr_obj:
 				primary_dispo=cdr_obj.primary_dispo
 				cdr_fb = cdr_obj.feedback
