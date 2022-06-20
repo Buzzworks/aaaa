@@ -52,7 +52,7 @@ class Phonebook(models.Model):
 	@property
 	def contact_file_name(self):
 		if self.contact_file:
-			return os.path.basename(self.contact_file.name)
+			return self.contact_file.name
 
 	@property
 	def campaign_name(self):
@@ -78,7 +78,7 @@ class Phonebook(models.Model):
 		improper_file = ""
 		if data_upload_inst.exists() and data_upload_inst.first().improper_file:
 			improper_file = data_upload_inst.first().improper_file.name
-			improper_file = os.path.basename(improper_file)
+			improper_file = improper_file
 		return improper_file
 
 	@property
@@ -93,12 +93,12 @@ class Phonebook(models.Model):
 	@property
 	def deleted_contact_file_name(self):
 		if self.deleted_contact_file:
-			return os.path.basename(self.deleted_contact_file.name)
+			return self.deleted_contact_file.name
 
 	@property
 	def transfer_contact_file_name(self):
 		if self.transfer_contact_file:
-			return os.path.basename(self.transfer_contact_file.name)
+			return self.transfer_contact_file.name
 		  
 class Contact(models.Model):
 	"""
@@ -285,7 +285,7 @@ class DownloadReports(models.Model):
 	def downloaded_file_name(self):
 		improper_file = ''
 		if self.downloaded_file:
-			improper_file = os.path.basename(self.downloaded_file.name)
+			improper_file = self.downloaded_file.name
 		return improper_file
 	@property
 	def downloaded_file_path(self):
