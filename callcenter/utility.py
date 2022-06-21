@@ -573,33 +573,42 @@ def validate_data(username, email,wfh_numeric, employee_id='',reporting_to='',do
 			#as admin user is superuser and not having any userrole 
 
 	if dial_trunk:
-		if User.objects.filter(username=username).exists():
-			# user_exists=User.objects.prefetch_related(campaign_users)#use this prefetch related
-			camp_user_exists=set(Campaign.objects.filter(users__username=username).values_list('trunk__name',flat=True))
-			if not dial_trunk in camp_user_exists:
-				data['dial_trunk']='the trunks must be of '+str(camp_user_exists)
+		userobj=User.objects.filter(username=username)
+		if userobj.exists():
+			username=userobj.first()
+			campaign = Campaign.objects.filter(Q(users=username)|Q(group__in=username.group.all())).filter(status='Active').distinct()
+			trunk_group = campaign.filter(is_trunk_group=True).values_list('trunk_group__trunks__trunk',flat=True)
+			camp_trunk = campaign.filter(is_trunk_group=False).values_list('trunk',flat=True)
+			trunk_list = list(DialTrunk.objects.filter(Q(id__in=camp_trunk)|Q(id__in=trunk_group)).values_list('name',flat=True))
+			if dial_trunk not in trunk_list:
+				data['dial_trunk']='the trunks must be of '+str(trunk_list)
 		else:
 			data['dial_trunk']="the user must be not new for dial trunk"
 
 	if caller_id:
 		if caller_id.isdigit():
-			if User.objects.filter(username=username).exists():
-				camp_user_exists=set(Campaign.objects.filter(users__username=username).values_list('trunk__name',flat=True))
-				if not dial_trunk in camp_user_exists:
-					data['dial_trunk__caller_id']='caller id the trunks must be of '+str(camp_user_exists)
-
-				trunk_obj=DialTrunk.objects.filter(name=dial_trunk).first()
-				if trunk_obj:
+			userobj=User.objects.filter(username=username)
+			if userobj.exists():
+				username=userobj.first()
+				campaign = Campaign.objects.filter(Q(users=username)|Q(group__in=username.group.all())).filter(status='Active').distinct()
+				trunk_group = campaign.filter(is_trunk_group=True).values_list('trunk_group__trunks__trunk',flat=True)
+				camp_trunk = campaign.filter(is_trunk_group=False).values_list('trunk',flat=True)
+				trunk_list = list(DialTrunk.objects.filter(Q(id__in=camp_trunk)|Q(id__in=trunk_group)).values_list('name',flat=True))
+				if dial_trunk in trunk_list:
+					trunk_obj=DialTrunk.objects.filter(name=dial_trunk).first()
 					trunk_obj_range=trunk_obj.did_range
 					trunk_obj_range=trunk_obj_range.split(",")
 					trunk_obj_range=range(int(trunk_obj_range[0]),int(trunk_obj_range[1]))
 					if not int(caller_id) in trunk_obj_range:
 						data['caller id']='the caller id must be in the range of'+str(trunk_obj_range)
 
-					if User.objects.exclude(username=username).filter(trunk=trunk_obj.id,caller_id=caller_id).exists():
-						data['caller id']="this number is already taken"
+					exst_user=User.objects.exclude(username=str(username)).filter(trunk=trunk_obj.id,caller_id=caller_id)
+					if exst_user.exists():
+						data['caller id']="this number is already taken by user"+str(exst_user.first().username)
+
 				else:
-					data['caller id']="the dial trunk must be in db to check caller id"
+					data['dial_trunk__caller_id']='caller id the trunks must be of '+str(trunk_list)
+
 			else:
 				data['caller id']="the user must be not new for caller id"
 		else:
@@ -821,13 +830,11 @@ def upload_users(data, logged_in_user):
 		if created:
 			user_variable = UserVariable()
 			user_variable.user = user
+			extension_exist = UserVariable.objects.all().values_list('extension',flat=True)
+			extension = sorted(list(set(four_digit_number) - set(extension_exist)))[0]
+			user_variable.extension = extension
 		else:
 			user_variable = UserVariable.objects.get(user=user)
-
-		extension_exist = UserVariable.objects.all().values_list('extension',flat=True)
-		extension = sorted(list(set(four_digit_number) - set(extension_exist)))[0]
-		user_variable.extension = extension
-
 		domain=row.get('domain')
 		if not domain:
 			UserVariable.domain=domain_obj
