@@ -524,7 +524,7 @@ class DashBoardApiView(LoginRequiredMixin, APIView):
 		down_count = DownloadReports.objects.filter(status=False,view=False).count()
 		trunk_status = pickle.loads(settings.R_SERVER.get("trunk_status") or pickle.dumps({}))
 		trunks_data = list(DialTrunk.objects.filter(status='Active').values('id','name','channel_count',free_channels=F('channel_count')))
-		            
+					
 		for trunk in trunks_data:
 			trunk['consumed_channels'] = 0
 			if str(trunk['id']) in trunk_status:
@@ -643,6 +643,9 @@ class LoginAgentLiveDataView(LoginRequiredMixin, APIView):
 					data["login_duration"] = ':'.join(str(tdelta).split(':')[:3])
 				if 'name' not in data:
 					data['name'] = ''
+				if data['name']==' ':
+					usr_obj =	User.objects.filter(username=data['username']).first()
+					data['name'] = usr_obj.first_name + "  " + usr_obj.last_name
 				data['extension'] = agent
 				data['role_name'] = ''
 				la_data.append(data)
