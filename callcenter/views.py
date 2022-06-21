@@ -643,6 +643,8 @@ class LoginAgentLiveDataView(LoginRequiredMixin, APIView):
 					data["login_duration"] = ':'.join(str(tdelta).split(':')[:3])
 				if 'name' not in data:
 					data['name'] = ''
+				if data['name']==' ':	
+					data['name'] = User.objects.filter(username=data['username']).first().first_name + "  " + User.objects.filter(username=data['username']).first().last_name
 				data['extension'] = agent
 				data['role_name'] = ''
 				la_data.append(data)
