@@ -4130,6 +4130,8 @@ class PreviewUpdateContactStatus(APIView):
 		AGENTS = {}
 		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
 						pickle.dumps(AGENTS))
+		if request.user.extension not in AGENTS:
+			AGENTS[request.user.extension]={}
 		contact_info = {}
 		contact_dialled = {}
 		campaign = request.POST.get("campaign_name", "")
@@ -4263,6 +4265,8 @@ class DispoSubmit(LoginRequiredMixin, APIView):
 		AGENTS = {}
 		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
 						pickle.dumps(AGENTS))
+		if request.user.extension not in AGENTS:
+			AGENTS[request.user.extension]={}
 		campaign_name = request.POST.get('campaign')
 		call_type = request.POST.get('call_type', '')
 		switch_ip = request.POST.get('switch_ip', '')

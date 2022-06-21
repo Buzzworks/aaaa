@@ -1041,6 +1041,8 @@ class SaveAgentBreakApiView(LoginRequiredMixin, APIView):
 			activity_dict["event_time"] =login_time
 
 		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status"))
+		if request.user.extension not in AGENTS:
+			AGENTS[request.user.extension]={}
 		if request.POST.get("break_name", ""):
 			AGENTS[request.user.extension]['status'] = request.POST.get("break_name")
 			if request.POST["break_name"] not in ["Ready","NotReady"]:
