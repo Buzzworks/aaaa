@@ -1973,7 +1973,7 @@
 		getAgentLivedata();
 		getBroadCastMessages();
 		showbreaksonagentsdashboard()
-		var notify = setInterval(getAgentLivedata, 5000);
+		var notify = setInterval(getAgentLivedata, 10000);
 
 		$('#agent-monthly-calls').on( 'length.dt', function ( e, settings, len ) {
 			$('#page_length').val(len)

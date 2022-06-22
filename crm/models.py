@@ -109,7 +109,7 @@ class Contact(models.Model):
 	phonebook = models.ForeignKey(Phonebook, related_name="contacts", null=True,
 		on_delete=models.CASCADE, blank=True,db_index=True, verbose_name="Lead List")
 	campaign = models.CharField(max_length=100,null=True,blank=True,db_index=True)
-	user = models.CharField(max_length=100,null=True,blank=True)
+	user = models.CharField(max_length=100,null=True,blank=True,db_index=True)
 	numeric  = models.CharField(default='', max_length=50,null=True, db_index=True)
 	alt_numeric = HStoreField(default=dict)
 	first_name	= models.CharField(default='', max_length=100)

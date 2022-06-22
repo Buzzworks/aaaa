@@ -2529,7 +2529,7 @@ function getAgentLivedata() {
         url: '/api/agentlivedata/',
         data: { "campaign_name": campaign_name },
         cache: false,
-        timeout: 5000,
+        timeout: 10000,
         success: function(data,textStatus,xhr) {
             if(data['total_callbacks']){
                 $('#callbacks').removeClass('d-none')
