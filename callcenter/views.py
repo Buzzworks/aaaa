@@ -61,7 +61,7 @@ from crm.models import (CrmField, TempContactInfo, Phonebook,
 from crm.serializers import (SetContactSerializer,UniqueSerializer,AgentCrmFieldSerializer,TempContactInfoSerializer, ContactSerializer,CssContactSerializer, AssignedContactInfoSerializer, ContactListSerializer, LeadBucketSerializer, AlternateContactSerializer)
 from crm.utility import crm_field_value_schema,get_user_crm_data, get_customizable_crm_fields,get_customizable_crm_fields_for_template
 from flexydial.views import (check_permission, get_paginated_object, data_for_pagination, get_active_campaign,
-		data_for_vue_pagination, sendSMS, csvDownloadTemplate, create_admin_log_entry, sendsmsparam)
+		data_for_vue_pagination, sendSMS, csvDownloadTemplate, create_admin_log_entry, sendsmsparam,user_hierarchy_func,user_in_hirarchy_level)
 from callcenter.signals import (fs_pre_del_user)
 from callcenter.schedulejobs import (leadrecycle_add,leadrecycle_del,schedulereports_download,sched,remove_scheduled_job)
 from .utility import (redirect_user, get_object, get_pre_campaign_edit_info,
@@ -749,7 +749,11 @@ class UsersListApiView(LoginRequiredMixin, ListAPIView):
 		column_name = request.GET.get('column_name', '')
 		camp_name, active_camp, noti_count = get_active_campaign(request)
 		team_extensions = user_hierarchy(request,camp_name)
-		queryset = User.objects.filter(Q(properties__extension__in=team_extensions)|Q(created_by=request.user)|Q(id=request.user.id))
+		# queryset = User.objects.filter(Q(properties__extension__in=team_extensions)|Q(created_by=request.user)|Q(id=request.user.id))
+		if request.user.is_superuser:
+			queryset = User.objects.filter(Q(properties__extension__in=team_extensions)|Q(created_by=request.user)|Q(id=request.user.id))
+		else:
+			queryset = User.objects.filter(Q(id__in=user_hierarchy_func(request.user.id))|Q(created_by=request.user))
 		if search_by:
 			try:
 				if column_name=='status':
@@ -1017,7 +1021,10 @@ class GroupListApiView(LoginRequiredMixin, APIView):
 		queryset = get_paginated_object(queryset, page, paginate_by)
 		paginate_by_columns = (('name', 'Group Name'),
 				('status', 'status'))
-		user_querysets = User.objects.all().exclude(is_superuser=True).values_list("id","username")
+		if request.user.is_superuser:
+			user_querysets = User.objects.all().exclude(is_superuser=True).values_list("id","username")
+		else:
+			user_querysets = User.objects.filter(id__in=user_hierarchy_func(request.user.id)).values_list("id", "username")
 		camp_name, active_camp, noti_count = get_active_campaign(request)
 		context = {
 				'group_status':Status, 'id_list': queryset_list,'paginate_by':paginate_by,
@@ -1042,7 +1049,7 @@ class GroupListApiView(LoginRequiredMixin, APIView):
 			group_obj = group.save(created_by=request.user)
 			if request.data['add_users_save']:
 				user_save_list = request.data['add_users_save'].split(",")
-				user_save_queryset = User.objects.filter(id__in=user_save_list)
+				user_save_queryset = User.objects.filter(id__in=user_hierarchy_func(request.user.id))
 				for user in user_save_queryset:
 					user.group.add(group_obj)
 			create_admin_log_entry(request.user, "group","1",'CREATED',group_obj.name)
@@ -2400,7 +2407,7 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 		report_visible_cols = get_report_visible_column("1",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			camp = Campaign.objects.all().prefetch_related(
 					'users', 'group', 'disposition').distinct()
 			campaign_list = camp.values("id", "name")
@@ -2412,7 +2419,7 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 			dispo_keys = list(disposition.values_list('dispo_keys',flat=True))
 			dispo_keys = set([item for sublist in dispo_keys for item in sublist])
 		else:
-			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
+			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).prefetch_related(
 					'users', 'group', 'disposition').distinct()
 			campaign_list = camp.values("id", "name")
@@ -2451,7 +2458,11 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 		'session_uuid','init_time','ring_time','connect_time','hangup_time','wait_time','ring_duration','hold_time','callflow','callmode',
 		'bill_sec','ivr_duration','call_duration','feedback_time','call_length','hangup_source','internal_tc_number','external_tc_number','progressive_time','preview_time','predictive_wait_time','inbound_wait_time','blended_wait_time'],
 		'cdrfeedback':['primary_dispo','feedback','relationtag']}
-		context['users'] = list(user_list)
+		# context['users'] = list(user_list)
+		if request.user.is_superuser:
+			context['users'] = list(user_list)
+		else:
+			context['users'] = user_in_hirarchy_level(request.user.id)
 		context['disposition'] = disposition.values("id", "name")
 		context['dispo_keys'] = dispo_keys
 		context['all_fields'] = all_fields
@@ -2515,12 +2526,16 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 		else:
 			query_string = Q(user_id__in=all_users)|Q(user=None)
 		if selected_user and selected_campaign:
-			query_string = Q(campaign_name__in=list(selected_campaign), user_id__in=list(all_users))
+			# query_string = Q(campaign_name__in=list(selected_campaign), user_id__in=list(all_users))
+			user_list_in_hirarchy = user_hierarchy_func(request.user.id,list(all_users))
+			query_string = Q(campaign_name__in=list(selected_campaign), user_id__in=user_list_in_hirarchy)
 		elif selected_user:
-			query_string = Q(user_id__in=all_users)
+			# query_string = Q(user_id__in=all_users)
+			user_list_in_hirarchy = user_hierarchy_func(request.user.id,list(all_users))
+			query_string = Q(user_id__in=user_list_in_hirarchy)
 		elif selected_campaign:
 			query_string = Q(campaign_name__in=selected_campaign)
-			if not (request.user.is_superuser or admin):
+			if not (request.user.is_superuser):
 				get_camp_users = list(get_campaign_users(selected_campaign,
 				request.user).values_list("id",flat=True))
 				query_string=Q(campaign_name__in = selected_campaign,user__in=get_camp_users)|Q(campaign_name__in = selected_campaign,user=None)
@@ -2553,7 +2568,7 @@ class CallRecordingView(LoginRequiredMixin, generics.ListAPIView):
 		report_visible_cols = get_report_visible_column("2",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			can_qc_update = "true"
 			campaign_list = Campaign.objects.all().prefetch_related(
 					'users', 'group', 'disposition').distinct().values("id", "name")
@@ -2565,7 +2580,7 @@ class CallRecordingView(LoginRequiredMixin, generics.ListAPIView):
 			can_qc_update = "false"
 			if 'qc_feedback' in permissions and 'C' in permissions['qc_feedback'] :
 				can_qc_update = "true"
-			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
+			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).prefetch_related(
 					'users', 'group', 'disposition').distinct()
 			campaign_list = camp.values("id", "name")
@@ -2591,7 +2606,8 @@ class CallRecordingView(LoginRequiredMixin, generics.ListAPIView):
 		all_fields = {"diallereventlog":['campaign_name','user','full_name','phonebook','uniqueid','customer_cid',
 		'session_uuid','init_time','ring_time','connect_time','wait_time','ring_duration','hold_time',
 		'callflow','callmode','dialed_status','hangup_cause','hangup_cause_code','bill_sec','call_duration','hangup_time']}
-		context['users'] = list(user_list)
+		# context['users'] = list(user_list)
+		context['users'] = user_in_hirarchy_level(request.user.id)
 		context['can_qc_update']=can_qc_update
 		context['all_fields'] = all_fields
 		camp_name, active_camp, noti_count = get_active_campaign(request)
@@ -2619,7 +2635,8 @@ class CallRecordingView(LoginRequiredMixin, generics.ListAPIView):
 			filters['all_campaigns'] = all_campaigns
 			filters['all_users'] = all_users
 			filters['selected_campaign'] = selected_campaign
-			filters['selected_user'] = selected_user
+			# filters['selected_user'] = selected_user
+			filters['selected_user'] = user_hierarchy_func(request.user.id,selected_user)
 			filters['unique_id'] = unique_id
 			filters['selected_records'] = request.POST.get("selected_records",'').split(',')
 			DownloadReports.objects.create(report='Call Recordings',filters=filters, user=request.user.id, serializers=self.serializer_class, col_list=col_list, status=True)
@@ -2661,7 +2678,7 @@ class CallRecordingView(LoginRequiredMixin, generics.ListAPIView):
 			if customer_cid:
 				queryset = queryset.filter(customer_cid=customer_cid)
 			if selected_campaign:
-				if not (request.user.is_superuser or admin):
+				if not (request.user.is_superuser):
 					get_camp_users = list(get_campaign_users(selected_campaign,
 					request.user).values_list("id",flat=True))
 					queryset = queryset.filter(Q(campaign_name__in = selected_campaign),
@@ -2733,12 +2750,12 @@ class PendingCallbackCallView(LoginRequiredMixin, generics.ListAPIView):
 		report_visible_cols = get_report_visible_column("8",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			campaign_list = Campaign.objects.all().distinct().values("id", "name")
 			user_list = User.objects.all().exclude(
 					user_role__access_level="Admin").exclude(is_superuser=True).values("id", "username")
 		else:
-			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
+			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).distinct()
 			campaign_list = camp.values("id", "name")
 			c_user  = c_group = []
@@ -2761,7 +2778,8 @@ class PendingCallbackCallView(LoginRequiredMixin, generics.ListAPIView):
 		context["campaign_list"] =campaign_list
 		context['all_fields'] =  ('campaign', 'phonebook', 'user','full_name','numeric', 'status', 'callback_title',
 				'callback_type', 'schedule_date', 'disposition', 'comment')
-		context["user_list"] = user_list
+		# context["user_list"] = user_in_hirarchy_level(request.user.id)
+		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context['report_visible_cols'] = report_visible_cols
 		context = {**context, **kwargs['permissions']}
 		return Response(context)
@@ -2824,11 +2842,11 @@ class PendingAbandonedCallView(LoginRequiredMixin, generics.ListAPIView):
 		report_visible_cols = get_report_visible_column("9",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			campaign_list = Campaign.objects.all().distinct().values("id", "name")
 			user_list = User.objects.all().exclude(user_role__access_level="Admin").exclude(is_superuser=True).exclude(properties__extension=None).values("username",extension=F('properties__extension'))
 		else:
-			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
+			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).distinct()
 			campaign_list = camp.values("id", "name")
 			c_user  = c_group = []
@@ -2850,7 +2868,8 @@ class PendingAbandonedCallView(LoginRequiredMixin, generics.ListAPIView):
 			user_list = final_camp_users.values("username",extension=F('properties__extension'))
 		context["campaign_list"] =campaign_list
 		context['all_fields'] =  ('campaign', 'username','full_name','numeric', 'call_date', 'status',)
-		context["user_list"] = user_list
+		# context["user_list"] = user_in_hirarchy_level(request.user.id)
+		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context['report_visible_cols'] = report_visible_cols
 		context = {**context, **kwargs['permissions']}
 		return Response(context)
@@ -2914,9 +2933,10 @@ class CallRecordingFeedbackView(LoginRequiredMixin, generics.ListAPIView):
 		admin = False
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			user_list = list(User.objects.all().exclude(user_role__access_level='Agent').values("id", "username"))
-			context["user_list"] = user_list
+			# context["user_list"] = user_in_hirarchy_level(request.user.id)
+			context["user_list"] = user_in_hirarchy_level(request.user.id)
 			agent_list = User.objects.all().exclude(
 					user_role__access_level="Admin").exclude(is_superuser=True).values("id", "username")
 		else:
@@ -3031,12 +3051,12 @@ class AgentActivityReportView(LoginRequiredMixin, ListAPIView):
 		report_visible_cols = get_report_visible_column("5",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			campaign_list = Campaign.objects.all().distinct().values("id", "name")
 			user_list = User.objects.all().values("id", "username")
 			disposition = Disposition.objects.all().values("id", "name")
 		else:
-			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
+			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).distinct()
 			campaign_list = camp.values("id", "name")
 
@@ -3106,7 +3126,7 @@ class AgentActivityReportView(LoginRequiredMixin, ListAPIView):
 			paginator.is_datatable_request = False
 		if queryset:
 			if selected_campaign:
-				if not (request.user.is_superuser or admin):
+				if not (request.user.is_superuser):
 					get_camp_users = list(get_campaign_users(selected_campaign,
 							request.user).values_list("id",flat=True))
 					queryset = queryset.filter(Q(campaign_name__in = selected_campaign),
@@ -3139,12 +3159,12 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		report_visible_cols = get_report_visible_column("3",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			campaign_list = Campaign.objects.all().distinct().values("id", "name")
 			user_list = User.objects.all().exclude(
 					user_role__access_level="Admin").exclude(is_superuser=True).values("id", "username")
 		else:
-			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
+			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).distinct()
 			campaign_list = camp.values("id", "name")
 			c_user  = c_group = []
@@ -3170,7 +3190,8 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		context['all_fields'] =  ('username','full_name','supervisor_name','campaign','app_idle_time','dialer_idle_time','pause_progressive_time','progressive_time','preview_time',
 				'predictive_wait_time','inbound_wait_time','blended_wait_time','ring_duration','hold_time','media_time','bill_sec','call_duration','feedback_time','break_time','app_login_time'
 				) + pause_breaks + ('dialer_login_time','total_login_time','first_login_time','last_logout_time','total_calls','total_unique_connected_calls')
-		context["user_list"] = list(user_list)
+		# context["user_list"] = list(user_list)
+		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context = {**context, **kwargs['permissions']}
 		return Response(context)
 
@@ -3200,7 +3221,8 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		all_users = request.POST.get("all_users",[])
 		all_users = all_users.split(',')
 		if selected_user:
-			queryset = User.objects.filter(id__in=selected_user)
+			# queryset = User.objects.filter(id__in=selected_user)
+			queryset = User.objects.filter(id__in=user_hierarchy_func(request.user.id,selected_user))
 		else:
 			queryset = User.objects.filter(id__in=all_users)
 		queryset = queryset.order_by("username")
@@ -3313,12 +3335,12 @@ class ManagementPerformanceReportView(LoginRequiredMixin,APIView):
 		report_visible_cols = get_report_visible_column("15",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			campaign_list = Campaign.objects.all().distinct().values("id", "name")
 			user_list = User.objects.all().exclude(user_role__access_level='Agent').values("id", "username")
 		else:
 			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
-					Q( group__in=request.user.group.all(), group__isnull=False)).distinct()
+				Q( group__in=request.user.group.all(), group__isnull=False)).distinct()
 			campaign_list = camp.values("id", "name")
 			c_user  = c_group = []
 			for campaign in camp:
@@ -3340,7 +3362,8 @@ class ManagementPerformanceReportView(LoginRequiredMixin,APIView):
 		context["report_visible_cols"] = report_visible_cols
 		context["campaign_list"] =campaign_list
 		context['all_fields'] =  ('username','full_name','first_login_time','last_logout_time','login_duration')
-		context["user_list"] = list(user_list)
+		# context["user_list"] = list(user_list)
+		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context = {**context, **kwargs['permissions']}
 		return Response(context)
 
@@ -3426,12 +3449,12 @@ class CampainwisePerformanceReportView(LoginRequiredMixin,APIView):
 		report_visible_cols = get_report_visible_column("7",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			campaign_list = Campaign.objects.all().distinct().values("id", "name")
 			user_list = User.objects.all().exclude(
 					user_role__access_level="Admin").exclude(is_superuser=True).values("id", "username")
 		else:
-			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
+			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).distinct()
 			campaign_list = camp.values("id", "name")
 			c_user  = c_group = []
@@ -3455,7 +3478,8 @@ class CampainwisePerformanceReportView(LoginRequiredMixin,APIView):
 		context['all_fields'] =  ('campaign','dialer_idle_time','pause_progressive_time','progressive_time','preview_time',
 				'predictive_wait_time','inbound_wait_time','blended_wait_time','ring_duration','hold_time','media_time','bill_sec','call_duration','feedback_time','break_time',
 				'dialer_login_time','total_login_time','total_calls')
-		context["user_list"] = user_list
+		# context["user_list"] = user_in_hirarchy_level(request.user.id)
+		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context['report_visible_cols'] = report_visible_cols
 		context = {**context, **kwargs['permissions']}
 		return Response(context)
@@ -3484,7 +3508,7 @@ class CampainwisePerformanceReportView(LoginRequiredMixin,APIView):
 
 		selected_campaign = request.POST.getlist("selected_campaign", "")
 
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			if selected_campaign:
 				campaign_list = Campaign.objects.filter(name__in=selected_campaign).distinct().values_list("name", flat=True)
 			else:
@@ -3588,12 +3612,12 @@ class AgentMISReportView(LoginRequiredMixin, generics.ListAPIView, pagination.Pa
 		report_visible_cols = get_report_visible_column("4",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			campaign_list = Campaign.objects.all().distinct().values("id", "name")
 			user_list = User.objects.all().exclude(
 					user_role__access_level="Admin").exclude(is_superuser=True).values("id", "username")
 		else:
-			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
+			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).distinct()
 			campaign_list = camp.values("id", "name")
 
@@ -3624,7 +3648,8 @@ class AgentMISReportView(LoginRequiredMixin, generics.ListAPIView, pagination.Pa
 		'NC','Invalid Number',"RedialCount", "AlternateDial", "PrimaryDial", "NF(No Feedback)"]
 		all_fields = tmp_list + list(all_fields)
 		context["all_fields"] = all_fields
-		context["user_list"] = user_list
+		# context["user_list"] = user_in_hirarchy_level(request.user.id)
+		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context['report_visible_cols'] = report_visible_cols
 		context = {**context, **kwargs['permissions']}
 		return Response(context)
@@ -3665,12 +3690,12 @@ class CampaignMISReportView(LoginRequiredMixin, generics.ListAPIView, pagination
 		report_visible_cols = get_report_visible_column("6",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			campaign_list = Campaign.objects.all().distinct().values("id", "name")
 			user_list = User.objects.all().exclude(
 					user_role__access_level="Admin").exclude(is_superuser=True).values("id", "username")
 		else:
-			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
+			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).distinct()
 			campaign_list = camp.values("id", "name")
 
@@ -3697,7 +3722,7 @@ class CampaignMISReportView(LoginRequiredMixin, generics.ListAPIView, pagination
 		tmp_list = ["Campaign", "Total Dispo Count", "AutoFeedback", "AbandonedCall", "NC", "Invalid Number", "RedialCount", "AlternateDial", "PrimaryDial", "NF(No Feedback)"]
 		all_fields = tmp_list + list(set(all_fields))
 		context["all_fields"] = all_fields
-		context["user_list"] = user_list
+		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context['report_visible_cols'] = report_visible_cols
 		context = {**context, **kwargs['permissions']}
 		return Response(context)
@@ -5668,7 +5693,7 @@ class NotificationAPIView(LoginRequiredMixin, APIView):
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
 			agent = False
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			campaigns = list(Campaign.objects.all().values_list("name", flat=True))
 			notifications = Notification.objects.filter(viewed=False)
 			agent = False
