@@ -4733,21 +4733,21 @@ $("#cancel-dnc-uploaded-file, #confirm-dnc-upload-file").click(function() {
     });
 })
 
-$("#api_weburl").change(function(){
-    $.ajax({
-        type: 'get',
-        url: $("#api_weburl").val(),
-        success: function(){
-            $("#api_url_err_msg").html();
-        },
-        error: function(xhr, status, data) {
-            $("#api_weburl").val('')
-            $("#api_url_err_msg").html(`<span class="help-block form-error">Invalid API Url</span>`)
-            $("#api_weburl").removeClass('valid');
-            $("#api_weburl").addClass('error');
-        }
-      });
-});
+// $("#api_weburl").change(function(){
+//     $.ajax({
+//         type: 'get',
+//         url: $("#api_weburl").val(),
+//         success: function(){
+//             $("#api_url_err_msg").html();
+//         },
+//         error: function(xhr, status, data) {
+//             $("#api_weburl").val('')
+//             $("#api_url_err_msg").html(`<span class="help-block form-error">Invalid API Url</span>`)
+//             $("#api_weburl").removeClass('valid');
+//             $("#api_weburl").addClass('error');
+//         }
+//       });
+// });
 
 $(document).on('click', '#thirdparty_url', function() {
     if (this.checked == true) {
