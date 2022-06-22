@@ -644,8 +644,11 @@ class LoginAgentLiveDataView(LoginRequiredMixin, APIView):
 				if 'name' not in data:
 					data['name'] = ''
 				if data['name']==' ':
-					usr_obj =	User.objects.filter(username=data['username']).first()
+					usr_obj = User.objects.filter(username=data['username']).first()
 					data['name'] = usr_obj.first_name + "  " + usr_obj.last_name
+				if 'state' in data and  data['state']=='Idle':
+					if 'dial_number' in data and data['dial_number']:  
+						data['dial_number'] = ''
 				data['extension'] = agent
 				data['role_name'] = ''
 				la_data.append(data)
