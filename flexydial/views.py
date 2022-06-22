@@ -385,27 +385,35 @@ class DeleteEntryApiView(APIView):
 				'action_name':"5",'event_type':'INACTIVE'})
 		return Response({"msg": "Selected entries deleted"})
 
-def user_hierarchy_func(username):
-	"""this function takes the username and returns usernames based on reporting_to hierarchy"""
-	username=[str(username).strip()]
-	lst_1=lst_2=lst_3=[]
-	users_1=User.objects.filter(reporting_to__username__in=username)
-	if users_1:
-		lst_1=list(users_1.values_list('username',flat=True))
-	if lst_1:
-		users_2=User.objects.filter(reporting_to__username__in=lst_1)
-		if users_2:
-			lst_2=list(users_2.values_list('username',flat=True))
-	if lst_2:
-		users_3=User.objects.filter(reporting_to__username__in=lst_2)
-		if users_3:
-			lst_3=list(users_3.values_list('username',flat=True))
+def user_in_hirarchy_level(user_id):
+	return list(User.objects.filter(id__in=user_hierarchy_func(user_id)).values("id", "username"))
 
-	if username[0]=='admin':#ad admin username is python superuser need to download all
+def user_hierarchy_func(user_id,users_list=""):
+	"""this function takes the username and returns usernames based on reporting_to hierarchy"""
+	users_id=User.objects.filter(id=user_id).values_list('id',flat=True)
+	lst_1=lst_2=lst_3=[]
+	if users_list:
+		users_1=User.objects.filter(reporting_to__id__in=users_list)
+	else:
+		users_1=User.objects.filter(reporting_to__id__in=[str(i) for i in users_id]).values_list('id',flat=True)
+	if users_1:
+		lst_1=list(users_1.values_list('id',flat=True))
+	if lst_1:
+		users_2=User.objects.filter(reporting_to__id__in=lst_1)
+		if users_2:
+			lst_2=list(users_2.values_list('id',flat=True))
+	if lst_2:
+		users_3=User.objects.filter(reporting_to__id__in=lst_2)
+		if users_3:
+			lst_3=list(users_3.values_list('id',flat=True))
+	if users_id[0]=='admin':#ad admin username is python superuser need to download all
 		username=list(User.objects.exclude(username='admin').values_list("username",flat=True))
-	users_list=lst_1+lst_2+lst_3+username
+	if users_list:
+		users_list = [int(i) for i in users_list]+lst_1+lst_2+lst_3
+	else:
+		users_list = lst_1+lst_2+lst_3
 	users_list=list(set(users_list))#using set because reporting_to given of python superuser admin, it's not possible but given intentionally(shell, users bulk, db).
-	return users_list
+	return [str(i) for i in users_list]
 
 
 from callcenter.models import UserVariable
@@ -430,7 +438,7 @@ def csvDownload(fields, model, file_type, user="", exclude=[],
 
 			ref_users=user_hierarchy_func(user)
 
-			users=UserVariable.objects.filter(user__username__in=ref_users)
+			users=UserVariable.objects.filter(user__id__in=ref_users)
 			user_feilds = users.values_list('user__username','user__email','user__password','user__user_role__name', 'user__first_name', 'user__last_name', 'wfh_numeric', 'user__employee_id','user__reporting_to__username','domain__name','user__call_type','user__is_active','user__trunk__name','user__caller_id')
 
 
@@ -454,7 +462,7 @@ def csvDownload(fields, model, file_type, user="", exclude=[],
 		if model=='User':
 			# users = UserVariable.objects.filter(user__created_by=user)
 			ref_users=user_hierarchy_func(user)
-			users=UserVariable.objects.filter(user__username__in=ref_users)
+			users=UserVariable.objects.filter(user__id__in=ref_users)
 
 			user_feilds = users.values_list('user__username','user__email','user__password','user__user_role__name', 'user__first_name', 'user__last_name', 'wfh_numeric', 'user__employee_id','user__reporting_to__username','domain__name','user__call_type','user__is_active','user__trunk__name','user__caller_id')
 			for row in user_feilds:
@@ -616,7 +624,7 @@ def get_active_campaign(request):
 	admin = False
 	if request.user.user_role and request.user.user_role.access_level == 'Admin':
 		admin = True
-	if request.user.is_superuser or admin:
+	if request.user.is_superuser:
 		active_camps = Campaign.objects.filter(status="Active")
 		camp = active_camps.values_list("name", flat=True)
 		active_camp = list(active_camps.values_list("id",flat=True))

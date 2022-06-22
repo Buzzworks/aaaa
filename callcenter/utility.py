@@ -33,7 +33,7 @@ from .models import (CampaignSchedule, Switch, DialTrunk, User, Group,
 from flexydial.constants import (Status,CALL_MODE, CAMPAIGN_STRATEGY_CHOICES, DIAL_RATIO_CHOICES, CDR_DOWNLOAD_COl,QC_FEEDBACK_COL,PasswordChangeType)
 from .serializers import (GroupSerializer,CallDetailSerializer, CallBackContactSerializer,
 	SetCallBackContactSerializer, DncSerializer, CallDetailReportSerializer, AgentActivityReportSerializer, CurrentCallBackSerializer, AbandonedcallSerializer, CallRecordingFeedbackSerializer)
-from flexydial.views import (get_paginated_object, data_for_pagination, sendSMS, create_admin_log_entry)
+from flexydial.views import (get_paginated_object, data_for_pagination, sendSMS, create_admin_log_entry,user_hierarchy_func)
 import numpy as np
 import socket, errno, xmlrpc.client
 import sys
@@ -149,7 +149,11 @@ def user_hierarchy(request,camp_name):
 	"""
 	this is the function defined to get the user reporting hirerarchy
 	"""	
-	users = User.objects.exclude(id=request.user.id)
+	# users = User.objects.exclude(id=request.user.id)
+	if request.user.is_superuser:
+		users = User.objects.exclude(id=request.user.id)
+	else:
+		users = User.objects.filter(id__in=user_hierarchy_func(request.user.id)).all()
 	admin=False
 	if request.user.user_role and request.user.user_role.access_level == 'Admin':
 		admin = True
@@ -178,7 +182,11 @@ def user_hierarchy_object(user,camp_name=[]):
 	"""
 	this is the function defined user hierarcy object data
 	"""	
-	users = User.objects.exclude(id=user.id).all()
+	# users = User.objects.exclude(id=user.id).all()
+	if user.is_superuser:
+		users = User.objects.exclude(id=user.id)
+	else:
+		users = User.objects.filter(id__in=user_hierarchy_func(user.id)).all()
 	if user.is_superuser:
 		total_camp_users =users
 	elif user.user_role and user.user_role.access_level == 'Admin':
@@ -416,7 +424,11 @@ def get_pre_campaign_create_info(request):
 	department_id = groups.values_list("id", flat=True)
 	data["call_time"] = CampaignSchedule.objects.values("id", "name")
 	data["switch_detail"] = Switch.objects.values("name", "id")
-	user_list = User.objects.values("id", "username")
+	# user_list = User.objects.values("id", "username")
+	if request.user.is_superuser:
+		user_list=User.objects.all().values("id", "username")
+	else:
+		user_list = User.objects.filter(id__in=user_hierarchy_func(request.user.id)).values("id", "username")
 	data["users"] = user_list
 	data["phone_extensions"] = UserVariable.objects.filter(
 		user__isnull=True).values("id", "extension")
@@ -465,7 +477,11 @@ def get_pre_campaign_edit_info(pk, request):
 	groups = Group.objects.all()
 	data["is_non_admin"] = check_non_admin_user(request.user)
 	data['non_user'] = []
-	users = User.objects.all()
+	# users = User.objects.all()
+	if request.user.is_superuser:
+		users=User.objects.all()
+	else:
+		users = User.objects.filter(id__in=user_hierarchy_func(request.user.id))
 	if data["is_non_admin"]:
 		groups = groups.filter(Q(user_group=request.user)|Q(created_by=request.user))
 		data['user_groups'] = groups.values_list('id',flat=True)
