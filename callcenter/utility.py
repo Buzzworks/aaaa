@@ -67,7 +67,7 @@ def diff_time_in_seconds(timestamp):
 
 def check_non_admin_user(user):
 	""" check user is adim or not """
-	if (user.is_superuser or (user.user_role and user.user_role.access_level == 'Admin')):
+	if (user.is_superuser):
 		return False
 	return True
 
@@ -153,7 +153,7 @@ def user_hierarchy(request,camp_name):
 	if request.user.is_superuser:
 		users = User.objects.exclude(id=request.user.id)
 	else:
-		users = User.objects.filter(id__in=user_hierarchy_func(request.user.id)).all()
+		users = User.objects.filter(id__in=user_hierarchy_func(request.user.id))
 	admin=False
 	if request.user.user_role and request.user.user_role.access_level == 'Admin':
 		admin = True
@@ -477,7 +477,7 @@ def get_pre_campaign_edit_info(pk, request):
 	groups = Group.objects.all()
 	data["is_non_admin"] = check_non_admin_user(request.user)
 	data['non_user'] = []
-	# users = User.objects.all()
+	users = User.objects.all()
 	if request.user.is_superuser:
 		users=User.objects.all()
 	else:

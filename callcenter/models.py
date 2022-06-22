@@ -126,10 +126,14 @@ class Group(models.Model):
 	@property
 	def users(self):
 		return list(User.objects.filter(group=self).exclude(is_superuser=True).values("username","id"))
-
-	@property
-	def allusers(self):
-		return list(User.objects.all().exclude(group=self).exclude(is_superuser=True).values("username", "id"))
+		return 
+	# @property
+	def allusers(self,request):
+		from flexydial.views import user_hierarchy_func
+		if request.user.is_superuser:
+			return list(User.objects.all().exclude(group=self).exclude(is_superuser=True).values("username", "id"))
+		else:
+			return list(User.objects.filter(id__in=user_hierarchy_func(request.user.id)).exclude(group=self).exclude(is_superuser=True).values("username", "id"))
 
 	@property
 	def users_name(self):
