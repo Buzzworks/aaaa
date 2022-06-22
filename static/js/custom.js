@@ -4254,10 +4254,18 @@ function open_third_party_api(data){
             api_url = api_url + '&'
         }
     }
-    var usr_fields = ['user_id','username','user_extension','campaign_id', 'campaign_name']
+    var usr_fields = ['user_id','username','user_extension','campaign_id', 'campaign_name','numeric','dialed_uuid']
     $.each(Object.keys(data['parameters']),function(index,val){
-        api_url = `${api_url}${val}=`
+        param_value = data['parameters'][val]
+        param_key = val
+        if (param_key == "custom"){
+            for (var key2 in param_value){
+                param_key = key2
+                param_value = param_value[key2]
+            }
+        }
         if(usr_fields.indexOf(val) !== -1){
+            api_url = `${api_url}${param_value}=`
             switch(val){
                 case 'user_id':
                     api_url = api_url + user_id
@@ -4274,18 +4282,34 @@ function open_third_party_api(data){
                 case 'campaign_name':
                     api_url = api_url + campaign_name
                     break
+                case 'numeric':
+                    api_url = api_url + call_info_vue.dailed_numeric
+                    break
+                case 'dialed_uuid':
+                    api_url = api_url + session_details[extension]['dialed_uuid']
+                    break
             }
-        }
-        var crm_field = data['parameters'][val].split(':')
-        if(crm_field.length > 1){
-            if(crm_field[0] in crm_field_vue.field_data && crm_field[1] in crm_field_vue.field_data[crm_field[0]]){
-                if(dap_details_data != ""){
-                     api_url = api_url + $.base64.encode(crm_field_vue.field_data[crm_field[0]][crm_field[1]])
-                }else{
-                    api_url = api_url + crm_field_vue.field_data[crm_field[0]][crm_field[1]]
+            
+        }else{
+            console.log(param_key,param_value);
+            var crm_field = param_key.split(':')
+        
+            if(crm_field.length > 1){
+                api_url = `${api_url}${param_value}=`
+                if(crm_field[0] in crm_field_vue.field_data && crm_field[1] in crm_field_vue.field_data[crm_field[0]]){
+                    if(dap_details_data != ""){
+                        api_url = api_url +(crm_field_vue.field_data[crm_field[0]][crm_field[1]])
+                        console.log(api_url,'----utrl1----')
+                    }else{
+                        api_url = api_url + crm_field_vue.field_data[crm_field[0]][crm_field[1]]
+                        console.log(api_url,'----utrl2----')
+                    }
                 }
-            }
+            }else{
+                api_url = `${api_url}${param_key}=${param_value}`
+                }
         }
+
         if (Object.keys(data['parameters']).length-1 != index){
             api_url = api_url + '&'
         }

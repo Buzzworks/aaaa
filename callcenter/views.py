@@ -7238,7 +7238,7 @@ class ThirdPartyCreateAPIView(LoginRequiredMixin,APIView):
 		context['campaigns'] = campaigns.exclude(apicampaign__in=ThirdPartyApi.objects.all())
 		context['api_status'] = Status
 		context['api_modes'] = API_MODE
-		context['user_fields'] = ['user_id','username','user_extension','campaign_id', 'campaign_name']
+		context['user_fields'] = ['user_id','username','user_extension','campaign_id', 'campaign_name','numeric','dialed_uuid']
 		context = {**context,**kwargs['permissions']}
 		return Response(context)
 	def post(self,request,**kwargs):
@@ -7270,7 +7270,7 @@ class ThirdPartyEditAPIView(LoginRequiredMixin,APIView):
 			context['non_user_campaign'] = list(thirdparty_obj.campaign.exclude(id__in=campaigns.values_list('id',flat=True)).values_list('name',flat=True))
 		context['campaigns'] = campaigns.exclude(apicampaign__in=ThirdPartyApi.objects.all())
 		context['thirdparty_obj'] = thirdparty_obj
-		context['user_fields'] = ['user_id','username','user_extension','campaign_id', 'campaign_name']
+		context['user_fields'] = ['user_id','username','user_extension','campaign_id', 'campaign_name','numeric','dialed_uuid']
 		crm_obj = CrmField.objects.filter(campaign__name__in=list(thirdparty_obj.campaign.values_list('name',flat=True)))
 		if thirdparty_obj.campaign.exists():
 			if crm_obj:

@@ -110,7 +110,7 @@
 						</div>
 					</div>
 				</div>
-				<div class="col-md-6 d-none" id="api_parameters_div"> 
+				<!--<div class="col-md-6 d-none" id="api_parameters_div"> 
 					<div class="form-group row">
 						<label for="api_parameters" class="col-sm-4 col-form-label">API Parameters:</label>
 						<div class="col-sm-8">
@@ -118,8 +118,9 @@
 							</select>
 						</div>
 					</div>
-				</div>
+				</div>-->
 			</div>
+			{% include "campaign/api_parameters_expansion.html" %} 
 			<div class="row mt-4">
 				<div class="col-sm-6">
 					<div class="alert alert-danger d-none thirdarty-err-msg" id="thirdparty-err-msg"></div>

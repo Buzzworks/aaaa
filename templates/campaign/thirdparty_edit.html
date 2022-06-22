@@ -118,7 +118,7 @@
 						</div>
 					</div>
 				</div>
-				<div class="col-md-6" id="api_parameters_div"> 
+				<!--<div class="col-md-6" id="api_parameters_div"> 
 					<div class="form-group row">
 						<label for="api_parameters" class="col-sm-4 col-form-label">API Parameters:</label>
 						<div class="col-sm-8"> 	
@@ -132,8 +132,9 @@
 							</select>
 						</div>
 					</div>
-				</div>
+				</div>-->
 			</div>
+			{% include "campaign/api_parameters_edit_expansion.html" %}
 			<div class="row mt-4">
 				<div class="col-sm-6">
 					<div class="alert alert-danger thirdarty-err-msg d-none" id="thirdparty-err-msg"></div>
@@ -177,9 +178,9 @@
 	var dynamic_api = {{thirdparty_obj.dynamic_api|lower}}
 	if(dynamic_api == true){
 		$('#dynamic_api').prop("checked",true)
-		$('#api_parameters_div').removeClass('d-none')
+		$('#api_divs').removeClass('d-none')
 	}else{
-		$('#api_parameters_div').addClass('d-none')
+		$('#api_divs').addClass('d-none')
 		$('#api_parameters').val('').trigger('change')
 	}
 	var itemsToKeep = {{non_user_campaign|safe}}
@@ -189,5 +190,14 @@
 			showDangerToast(`Opration can't perform`,`${event.params.args.data.text} campaign does not belong in your scope`,'top-right')
 		}
 	})
+	$("#api_parameters").change(function(){
+        if($(this).val() == "custom"){
+            $("#alias_check").removeClass("d-none")
+			$("#alias_name").addClass("d-none")
+        }else{
+			$("#alias_check").addClass("d-none")
+			$("#alias_name").removeClass("d-none")
+		}
+    })
 </script>
 {% endblock extra-js %}

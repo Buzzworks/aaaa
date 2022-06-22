@@ -6591,57 +6591,90 @@ $('[name="gateway_mode"]').change(function(){
 //Thirdparty Api Modules Js 
 
 $(document).on('click','#create-thirdparty-btn,#edit-thirdparty-btn ', function(){
-     var current_element = $(this)
-    var api_mode_method = {}
-      var mode_selected = $('#api_mode_select').val() 
-    api_mode_method[mode_selected] = $('#api_weburl').val() 
-    api_mode_method['parameters'] = {}
-    $.each($('#api_parameters').select2('data'), function(index, val) {
-        api_mode_method['parameters'][val['text']] = val['id']
-    })
-    $('#weburl').val(JSON.stringify(api_mode_method))
-    $('#dynamic_api').val($('#dynamic_api').prop('checked'))
-    $('#click_url').val($('#click_url').prop('checked'))
-    var  url =  '/CampaignManagement/third-party-api/create/'
-    var form_data = $('#thirdparty-create-form').serialize()
-    var form = $("#thirdparty-create-form")
-     if ($(this).hasClass("edit-thirdparty-btn")) {
-        url = '/CampaignManagement/third-party-api/' + thirdparty_id + '/'
-        var form_data = $('#thirdparty-edit-form').serialize()
-        var form = $("#thirdparty-edit-form")
-    }
+    var current_element = $(this)
+   var api_mode_method = {}
+     var mode_selected = $('#api_mode_select').val() 
+   api_mode_method[mode_selected] = $('#api_weburl').val() 
+   api_mode_method['parameters'] = {}
+   // $.each($('#api_parameters').select2('data'), function(index, val) {
+   //     api_mode_method['parameters'][val['text']] = val['id']
+   // })
+//     var api_para = []
+//     $('.para').each(function(index,val){
+//       api_para.push($(this).val())
+//     })
+//     var api_alias_name = []
+//     $('.alias').each(function(index,val){
+//         api_alias_name.push($(this).val())
+//     })  
 
-    if(/^(http|https|ftp):\/\/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$/i.test($("#api_weburl").val())==false){
-        $("#api_weburl").val('')
-    } 
+//     const obj = {};
+//     api_para.forEach((element, index) => {
+//     obj[element] = api_alias_name[index];
+//    });
+//    api_alias_type.forEach((element, index) => {
+//     obj[element] = api_alias_key[index];
+//    });
+//    console.log(obj);
+   const obj = {};
+   $('.para-block').each(function(index,val){
+       parameter = $(this).find('.para').val();
+       if (parameter == "custom"){
+           alias_obj= {}
+           alias_key = $(this).find('.alias_key').val();
+           value = $(this).find('.alias_value').val();
+           alias_obj[alias_key] = value
+           obj[parameter] = alias_obj
+       }else{
+           obj[parameter] = $(this).find('.alias').val();
+       }
 
-    if(form.isValid()=== true){   
-      $.ajax({
-            type: 'post',
-            headers: {
-                "X-CSRFToken": csrf_token
-            },
-            url:url ,
-            data: form_data,
-            success: function(data) {
-            if (current_element.hasClass("edit-thirdparty-btn")) {
-                showSwal('success-message', 'Thirdparty Crm Updated Successfully', '/CampaignManagement/third-party-api/')
-            }else{
-                showSwal('success-message', 'Thirdparty Crm Created Successfully', '/CampaignManagement/third-party-api/')
-                }
-            },
-            error:function(data){
-              if (data['responseJSON']['name']){
-                    $("#thirdparty_name_exist").html(`<span class="help-block form-error">${data['responseJSON']['name']}</span>`).addClass("has-error")
-                    $("#thirdparty_name_exist").removeClass("valid").addClass("error")                  
-                }
-                 if (data['responseJSON']['campaign']){
-                    $("#camp_exists").html(`<span class="help-block form-error">${data['responseJSON']['campaign']}</span>`).addClass("has-error")
-                    $("#camp_exists").removeClass("valid").addClass("error")                  
-                }
-            }
-        })
-    }
+   });
+//    api_mode_method['parameters'] = obj
+   api_mode_method['parameters'] =obj
+   $('#weburl').val(JSON.stringify(api_mode_method))
+   $('#dynamic_api').val($('#dynamic_api').prop('checked'))
+   $('#click_url').val($('#click_url').prop('checked'))
+   var  url =  '/CampaignManagement/third-party-api/create/'
+   var form_data = $('#thirdparty-create-form').serialize()
+   var form = $("#thirdparty-create-form")
+    if ($(this).hasClass("edit-thirdparty-btn")) {
+       url = '/CampaignManagement/third-party-api/' + thirdparty_id + '/'
+       var form_data = $('#thirdparty-edit-form').serialize()
+       var form = $("#thirdparty-edit-form")
+   }
+
+   if(/^(http|https|ftp):\/\/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$/i.test($("#api_weburl").val())==false){
+       $("#api_weburl").val('')
+   } 
+
+   if(form.isValid()=== true){   
+     $.ajax({
+           type: 'post',
+           headers: {
+               "X-CSRFToken": csrf_token
+           },
+           url:url ,
+           data: form_data,
+           success: function(data) {
+           if (current_element.hasClass("edit-thirdparty-btn")) {
+               showSwal('success-message', 'Thirdparty Crm Updated Successfully', '/CampaignManagement/third-party-api/')
+           }else{
+               showSwal('success-message', 'Thirdparty Crm Created Successfully', '/CampaignManagement/third-party-api/')
+               }
+           },
+           error:function(data){
+             if (data['responseJSON']['name']){
+                   $("#thirdparty_name_exist").html(`<span class="help-block form-error">${data['responseJSON']['name']}</span>`).addClass("has-error")
+                   $("#thirdparty_name_exist").removeClass("valid").addClass("error")                  
+               }
+                if (data['responseJSON']['campaign']){
+                   $("#camp_exists").html(`<span class="help-block form-error">${data['responseJSON']['campaign']}</span>`).addClass("has-error")
+                   $("#camp_exists").removeClass("valid").addClass("error")                  
+               }
+           }
+       })
+   }
 })
 
 $(document).on('change','#api_campaign_crm,#api_campaign_vb',function(){
@@ -6676,7 +6709,7 @@ $(document).on('change','#api_campaign_crm,#api_campaign_vb',function(){
             vb_crm_data = data['crm_field']
             $('#api_parameters').html("")
             if(select_length != 0){ 
-                 var user_info = ['user_id','username','user_extension','campaign_id', 'campaign_name']
+                 var user_info = ['user_id','username','user_extension','campaign_id', 'campaign_name','custom','numeric','dialed_uuid']
                     $.each(user_info,function(index,val){
                        $('#api_parameters').append("<option value="+val+">"+val+"</option>")
                     })
