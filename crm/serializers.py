@@ -298,7 +298,7 @@ class UniqueSerializer(serializers.ModelSerializer):
 				if cdr_fb and 'sub_dispo' in cdr_fb:
 					sub=cdr_fb['sub_dispo']
 					if sub:
-						cdr_feedback["secondary_dispo"]=cdr_fb[sub]
+						cdr_feedback["secondary_dispo"]=sub
 		return cdr_feedback
 
 	def get_pl(self,obj):
@@ -329,4 +329,3 @@ class UniqueSerializer(serializers.ModelSerializer):
 			if 'pl' in obj['customer_raw_data'] and 'filler2' in obj['customer_raw_data']['pl']:
 				pl['filler2']=obj['customer_raw_data']['pl']['filler2']
 		return pl
-		
