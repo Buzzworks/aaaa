@@ -77,17 +77,20 @@ def get_temp_contact(user, campaign, portfolio=False):
 	if not portfolio:
 		if TempContactInfo.objects.filter(campaign=campaign, status='NotDialed').exists():
 			temp_contact = TempContactInfo.objects.filter(campaign=campaign, status='NotDialed').order_by('priority','modified_date').first()
-			temp_contact.status = 'Locked'
-			temp_contact.save()
+			if temp_contact:
+				temp_contact.status = 'Locked'
+				temp_contact.save()
 	else:
 		if TempContactInfo.objects.filter(user=user, campaign=campaign, status='NotDialed').exists():
 			temp_contact = TempContactInfo.objects.filter(user=user, campaign=campaign, status='NotDialed').order_by('priority','modified_date').first()
-			temp_contact.status = 'Locked'
-			temp_contact.save()
+			if temp_contact:
+				temp_contact.status = 'Locked'
+				temp_contact.save()
 		elif TempContactInfo.objects.filter(Q(campaign=campaign, status='NotDialed'),(Q(user='')|Q(user=None))).exists():
 			temp_contact = TempContactInfo.objects.filter(Q(campaign=campaign, status='NotDialed'),(Q(user='')|Q(user=None))).order_by('priority','modified_date').first()
-			temp_contact.status = 'Locked'
-			temp_contact.save()
+			if temp_contact:
+				temp_contact.status = 'Locked'
+				temp_contact.save()
 	return temp_contact
 
 
