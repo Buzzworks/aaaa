@@ -1017,7 +1017,9 @@ class GroupListApiView(LoginRequiredMixin, APIView):
 		column_name = request.GET.get('column_name', '')
 		queryset = Group.objects.all()
 		if check_non_admin_user(request.user):
-			queryset = queryset.filter(Q(user_group=request.user)|Q(created_by=request.user)).distinct()
+			list_user = user_hierarchy_func(request.user.id)
+			list_user.append(str(request.user.id))
+			queryset = queryset.filter(Q(user_group=request.user)|Q(created_by__id__in=list_user)).distinct()
 		if search_by and column_name:
 			queryset = queryset.filter(**{column_name+"__istartswith": search_by.lower()})
 		queryset_list = list(queryset.values_list("id", flat=True))
@@ -1052,7 +1054,7 @@ class GroupListApiView(LoginRequiredMixin, APIView):
 			group_obj = group.save(created_by=request.user)
 			if request.data['add_users_save']:
 				user_save_list = request.data['add_users_save'].split(",")
-				user_save_queryset = User.objects.filter(id__in=user_hierarchy_func(request.user.id))
+				user_save_queryset = User.objects.filter(id__in=user_save_list)
 				for user in user_save_queryset:
 					user.group.add(group_obj)
 			create_admin_log_entry(request.user, "group","1",'CREATED',group_obj.name)
@@ -1069,7 +1071,7 @@ class GroupModifyApiView(APIView):
 		serializer = self.serializer_class(group)
 		serializer.data['id'] = pk
 		return JsonResponse({'querysets': serializer.data, 'queryset':group.users,
-				'allusers':group.allusers})
+				'allusers':group.allusers(request)})
 
 	def put(self, request, pk, format=None):
 		user_remove_list = user_add_list = []
@@ -1955,7 +1957,9 @@ class CampaignListApiView(LoginRequiredMixin, APIView):
 		page_info = data_for_pagination(request)
 		campaign = Campaign.objects.all()
 		if check_non_admin_user(request.user):
-			campaign = campaign.filter(Q(users=request.user)|Q(group__in=request.user.group.all())|Q(created_by=request.user)).distinct()
+			list_user = user_hierarchy_func(request.user.id)
+			list_user.append(str(request.user.id))
+			campaign = campaign.filter(Q(users=request.user)|Q(group__in=request.user.group.all())|Q(created_by__id__in=list_user)).distinct()
 		if page_info["search_by"] and page_info["column_name"]:
 			if page_info["column_name"] == "switch":
 				campaign = campaign.filter(switch__name__istartswith=page_info["search_by"])
