@@ -64,6 +64,14 @@ module.exports = {
 		})
 		django_req.write(body)
 		django_req.end()
+		django_req.on('uncaughtException', function (err) {
+			util.log("****************")
+			util.log(err);
+		});
+		django_req.on('error',(err)=>{
+			util.log("---------------")
+			util.log(err)
+		})
 	},
 	inboundcall_route: function(req,caller_id,dialed_uuid,server,destination_number,callback) {
 	var body = JSON.stringify({"caller_id":caller_id,"dialed_uuid":dialed_uuid,"server":server,"destination_number":destination_number});
@@ -126,6 +134,14 @@ module.exports = {
 	});
 	django_req.write(body)
 	django_req.end()
+	django_req.on('uncaughtException', function (err) {
+		util.log("****************")
+		util.log(err);
+	});
+	django_req.on('error',(err)=>{
+		util.log("---------------")
+		util.log(err)
+	})
 	},
 
 	inboundcall_dis_alert: function(answered_agent,dialed_uuid,state,callback) {
@@ -199,5 +215,13 @@ module.exports = {
 	});
 	w_django_req.write(w_body)
 	w_django_req.end()
+	w_django_req.on('uncaughtException', function (err) {
+		util.log("****************")
+		util.log(err);
+	});
+	w_django_req.on('error',(err)=>{
+		util.log("---------------")
+		util.log(err)
+	})
 	},
 }
