@@ -13,7 +13,7 @@ const options =
 					 cert: fs.readFileSync('flexydial.crt')
 				};
 var socket_server = https.createServer(options);
-var io = require('socket.io')(socket_server,{cookie:false});
+var io = require('socket.io')(socket_server);
 socket_server.listen(3233,'0.0.0.0')
 
 const redis_adapter = require("socket.io-redis")
