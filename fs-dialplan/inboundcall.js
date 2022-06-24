@@ -65,6 +65,7 @@ module.exports = {
 				}catch(e){
 					util.log("--------------")
 					util.log(e)
+					util.log(server)
 					// django_req.write(body)
 					django_req.end()
 					return
@@ -141,6 +142,7 @@ module.exports = {
 					});
 				}catch(e){
 					util.log("--------------")
+					util.log(server)
 					util.log(e)
 					// django_req.write(body)
 					django_req.end()
