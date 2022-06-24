@@ -5897,8 +5897,9 @@ class AgentLiveDataAPIView(APIView):
 					user=user.extension), campaign=campaign, schedule_time__lte=datetime.now())
 					.exclude(numeric__in=snoozed_cb).exclude(status='Locked')
 					.values_list('numeric',flat=True))
+			print('log::portifolio::campaign::',campaign,"-requestuser::",user)
 			campaign_obj = Campaign.objects.filter(name=campaign).first()
-			if campaign_obj.portifolio:
+			if campaign_obj and campaign_obj.portifolio:
 				contact_count = Contact.objects.filter(user=user.username, campaign=campaign, phonebook__status='Active').aggregate(dialled_assingned_calls=Count('status',filter=~Q(status__in=['Queued','NotDialed','Locked'])),notdialed_assigned_calls=Count('status', filter=Q(status__in=['Queued','NotDialed','Locked'])))
 			lead_count = LeadBucket.objects.filter(Q(verified_to=user.username, contact__campaign=campaign),Q(contact__phonebook__status='Active')|Q(contact__phonebook=None)).aggregate(campaign_leads_count=Count('id',filter=Q(reverify_lead=False)),campaign_requeue_leads_count=Count('id',filter=Q(reverify_lead=True)))
 		context = {"total_callbacks":total_callbacks,'notifications':notifications,

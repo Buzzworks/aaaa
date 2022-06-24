@@ -63,8 +63,9 @@ module.exports = {
 					}
 					callback(err=null,data)
 				}catch(e){
+					util.log("--------------")
 					util.log(e)
-					django_req.write(body)
+					// django_req.write(body)
 					django_req.end()
 					return
 				}
@@ -139,8 +140,9 @@ module.exports = {
 							}
 					});
 				}catch(e){
+					util.log("--------------")
 					util.log(e)
-					django_req.write(body)
+					// django_req.write(body)
 					django_req.end()
 					return
 				}
@@ -176,7 +178,7 @@ module.exports = {
 				}
 			}catch(e){
 				util.log(e)
-				django_req.write(body)
+				// django_req.write(body)
 				django_req.end()
 				return
 			}
@@ -201,6 +203,7 @@ module.exports = {
 					}
 				});
 			}catch(e){
+				util.log("--------------")
 				util.log(e)
 				django_req.write(body)
 				django_req.end()
@@ -230,9 +233,8 @@ module.exports = {
 				});
 			});client.connect(8021, '0.0.0.0')
 		}catch(e){
+			util.log("--------------")
 			util.log(e)
-			django_req.write(body)
-			django_req.end()
 			return
 		}
 	},
@@ -254,7 +256,7 @@ module.exports = {
 			});
 		}catch(e){
 			util.log(e)
-			django_req.write(body)
+			util.log("--------------")
 			django_req.end()
 			return
 		}

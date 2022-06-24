@@ -74,6 +74,7 @@ def check_non_admin_user(user):
 def get_temp_contact(user, campaign, portfolio=False):
 	""" Get temp contact data"""
 	temp_contact = None
+	print('log::get_temp_contact::campaign::',campaign,"-requestuser::",user)
 	if not portfolio:
 		if TempContactInfo.objects.filter(campaign=campaign, status='NotDialed').exists():
 			temp_contact = TempContactInfo.objects.filter(campaign=campaign, status='NotDialed').order_by('priority','modified_date').first()
