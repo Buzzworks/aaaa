@@ -1072,6 +1072,7 @@ class SaveAgentBreakApiView(LoginRequiredMixin, APIView):
 		updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status"))
 		if request.user.extension not in updated_agent_dict:
 			updated_agent_dict[request.user.extension] = {}
+			print('Log::AGENTSTATUS_extension_not_available:: ',AGENTS,activity_dict)
 		updated_agent_dict[request.user.extension].update(AGENTS[request.user.extension])
 		settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
 

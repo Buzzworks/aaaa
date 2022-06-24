@@ -833,11 +833,11 @@ class CallDetail(models.Model):
 	site = models.ForeignKey(Site, default=settings.SITE_ID,
 			on_delete=models.SET_NULL,null=True,related_name='CallDetail')
 	campaign = models.ForeignKey(Campaign,on_delete=models.SET_NULL,null=True,db_index=True)
-	campaign_name = models.CharField(default='', max_length=50,null=True)
+	campaign_name = models.CharField(default='', max_length=50,null=True,db_index=True)
 	user = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,db_index=True)
 	phonebook = models.CharField(default='',max_length=50,  null=True)
 	contact_id = models.BigIntegerField(blank=True, null=True, db_index=True)
-	customer_cid = models.CharField(default='', max_length=50,null=True)
+	customer_cid = models.CharField(default='', max_length=50,null=True,db_index=True)
 	callflow = models.CharField(default='', max_length=50, null=True)
 	callmode = models.CharField(default='', max_length=50, null=True)
 	destination_extension = models.CharField(default='', max_length=50, null=True)
