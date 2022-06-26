@@ -21,7 +21,7 @@ var redis = require('redis');
 leadlist_details_data = redis.createClient({host: process.env.REDIS_URL,port: process.env.REDIS_PORT});
 leadlist_details_data.subscribe('lead-details');
 
-
+'use strict';
 io.on('connection', function(socket) {
 	socket.on('new',function(data){
 		util.log(data)

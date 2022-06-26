@@ -20,7 +20,7 @@ redisClient.on('ready',function() {
 redisClient.on('error',function() {
  console.log("Error in Redis");
 });
-
+'use strict';
 module.exports = {
 	availale_agents: function(req,caller_id,dialed_uuid,server,destination_number,intiate_time,callback) {
 		var body = JSON.stringify({"caller_id":caller_id,"dialed_uuid":dialed_uuid,"server":server,"destination_number":destination_number,"intiate_time":intiate_time});
