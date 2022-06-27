@@ -643,9 +643,10 @@ class LoginAgentLiveDataView(LoginRequiredMixin, APIView):
 					data["login_duration"] = ':'.join(str(tdelta).split(':')[:3])
 				if 'name' not in data:
 					data['name'] = ''
-				if data['name']==' ':
+				if data['name'] == '':
 					usr_obj = User.objects.filter(username=data['username']).first()
-					data['name'] = usr_obj.first_name + "  " + usr_obj.last_name
+					if usr_obj:
+						data['name'] = usr_obj.first_name + "  " + usr_obj.last_name
 				if 'state' in data and  data['state']=='Idle':
 					if 'dial_number' in data and data['dial_number']:  
 						data['dial_number'] = ''

@@ -18,12 +18,12 @@ class SessionIdleMiddleware:
 		else:
 			ip = request.META.get('REMOTE_ADDR')
 		if request.user.is_authenticated:
-			if 'ip_address' not in request.session:
-				request.session['ip_address'] = ip
-			else:
-				if request.session['ip_address'] != ip:
-					# print("SecurityError :: Using Unautherized way to access the account by... "+ip+" to the user " + request.user + " to ip " + request.session['ip_address'])
-					return render(request, '404.html')
+			# if 'ip_address' not in request.session:
+			# 	request.session['ip_address'] = ip
+			# else:
+			# 	if request.session['ip_address'] != ip:
+			# 		# print("SecurityError :: Using Unautherized way to access the account by... "+ip+" to the user " + request.user + " to ip " + request.session['ip_address'])
+			# 		return render(request, '404.html')
 			if 'last_request' in request.session:
 				elapsed = time.time() - request.session['last_request']
 				if elapsed > settings.SESSION_IDLE_TIMEOUT:
