@@ -44,7 +44,7 @@ from .utility import (save_contact, validate_uploaded_phonebook, truncate_file,
 	get_customize_customer_data, get_user_crm_data, upload_crm, validate_uploaded_crm,download_contactinfo_csv,
 	download_crmfields_csv, crm_field_value_schema,get_customizable_crm_fields_with_datatype,crm_field_datatype_validation)
 from callcenter.utility import (get_object, create_agentactivity, get_formatted_agent_activities,
-	get_model_data,set_agentReddis,get_report_visible_column, get_campaign_users, check_non_admin_user,get_agent_status,set_agent_status)
+	get_model_data,set_agentReddis,get_report_visible_column, get_campaign_users, check_non_admin_user,get_agent_status,set_agent_status,get_all_keys_data)
 from callcenter.decorators import (check_read_permission,
 		check_create_permission, check_update_permission,
 		)
@@ -432,7 +432,7 @@ class CrmEditPhonebookApiView(LoginRequiredMixin,APIView):
 			'phonebook': phonebook, 'order_by':ORDER_BY,'search_type':SEARCH_TYPE
 			}
 		curr_campaign_name = Campaign.objects.filter(id=phonebook.campaign).values_list('name',flat=True).first()
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+		AGENTS = get_all_keys_data()
 		if AGENTS:
 			all_agents = list(AGENTS.keys())
 			for extension in all_agents:

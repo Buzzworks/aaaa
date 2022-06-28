@@ -12,9 +12,9 @@ from callcenter.models import (Campaign,CallDetail,AgentActivity,User,
 	Notification,PhonebookBucketCampaign, DiallerEventLog,AdminLogEntry, Switch)
 from crm.models import Contact,TempContactInfo,Phonebook,DownloadReports, PhoneBookUpload
 from django.db.models import Q, Count, F
-from callcenter.utility import (get_current_users, download_call_detail_report, download_agent_perforance_report, campaignwise_performance_report,
+from callcenter.utility import (get_agent_status, get_all_keys_data, get_current_users, download_call_detail_report, download_agent_perforance_report, campaignwise_performance_report,
 	download_agent_mis, download_agent_activity_report, download_campaignmis_report, download_callbackcall_report,
-	download_abandonedcall_report,set_download_progress_redis, download_call_recordings, download_contactinfo_report, download_phonebookinfo_report,
+	download_abandonedcall_report, set_agent_status,set_download_progress_redis, download_call_recordings, download_contactinfo_report, download_phonebookinfo_report,
 	download_billing_report, camp_list_users, DownloadCssQuery, download_call_recording_feedback_report,download_management_performance_report,download_alternate_contact_report, freeswicth_server,download_pendingcontacts_report)
 from dialer.dialersession import fs_administration_hangup
 
@@ -357,7 +357,7 @@ def create_logout_entry(extension):
 		user = User.objects.filter(properties__extension=extension)
 		if user.exists():
 			user = user.first()
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps({}))
+			AGENTS = get_agent_status(extension)
 			if AGENTS:
 				if AGENTS[extension]['screen'] == 'AgentScreen':
 					actvity_dict = {}
@@ -403,26 +403,22 @@ def session_expire_check():
 	""" checking the session expry for an agents"""
 	try:
 		session_extension = [agent.extension for agent in get_current_users()]
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-					pickle.dumps(AGENTS))
+		AGENTS = get_all_keys_data()
 		r_campaigns = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps(CAMPAIGNS))
-		Agents = [i for i,k in AGENTS.items() if 'wfh' not in k or k['wfh'] == False]
-		for reddis_ext in Agents:
+		agents = [i for i,k in AGENTS.items() if 'wfh' not in k or k['wfh'] == False]
+		for reddis_ext in agents:
 			if reddis_ext not in session_extension:
 				try:
 					fs_administration_hangup(AGENTS[reddis_ext]['dialerSession_switch'],uuids=AGENTS[reddis_ext]['dialerSession_uuid'])
-				except:
+				except Exception as e:
 					pass
 				create_logout_entry(reddis_ext)
 				if AGENTS[reddis_ext]['campaign']:
 					campaign=Campaign.objects.get(name=AGENTS[reddis_ext]['campaign'])
 					pbc_obj = PhonebookBucketCampaign.objects.filter(id=campaign.id)
-					if pbc_obj.exists():
-						if pbc_obj.first().agent_login_count > 0:
-							pbc_obj.update(agent_login_count=F('agent_login_count')-1)
-				updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-				del updated_agent_dict[reddis_ext]
-				settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+					if pbc_obj.exists() and pbc_obj.first().agent_login_count > 0:
+						pbc_obj.update(agent_login_count=F('agent_login_count')-1)
+				set_agent_status(reddis_ext,AGENTS[reddis_ext],True)
 				for r_campaign in r_campaigns:
 					unique_extensions = list(set(r_campaigns[r_campaign]))
 					if reddis_ext in unique_extensions:
@@ -578,7 +574,7 @@ def kill_unused_fs_channel():
 				channel_df.columns = channel_df.iloc[0]
 				channel_df = channel_df[1:]
 				channel_df = channel_df.loc[channel_df.state.isin(['CS_EXCHANGE_MEDIA','CS_EXECUTE']) & (channel_df.cid_num.str.len() <5)]['uuid']
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps({}))
+			AGENTS = get_all_keys_data()
 			if not channel_df.empty and AGENTS.values():
 				agent_redis_df = pd.DataFrame.from_dict(AGENTS.values())
 				agent_redis_df = agent_redis_df[agent_redis_df.dialerSession_uuid.astype(bool)] #To remove blank uuids from redis

@@ -16,7 +16,7 @@ from callcenter.models import DNC,CallDetail,Switch
 from crm.models import TempContactInfo, Contact
 import pickle
 from datetime import datetime,timedelta
-from callcenter.utility import trunk_channels_count, set_campaign_channel
+from callcenter.utility import get_all_keys_data, trunk_channels_count, set_campaign_channel
 from django.db import connections
 from django.db import transaction
 
@@ -253,7 +253,7 @@ def fsdial(campaign):
 
 				#Getting count of Predictive Mode Users who are all not in Idle Mode.
 				total_pd_agents = 0
-				AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+				AGENTS = get_all_keys_data()
 				for i in AGENTS:
 					if AGENTS[i]['call_type'] in ['predictive','blended'] and AGENTS[i]['state'] not in ['Idle']:
 						if AGENTS[i]['campaign'] == campaign.name:

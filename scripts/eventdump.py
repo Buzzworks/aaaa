@@ -31,7 +31,7 @@ import inspect,json
 from django.db.models import Q, F
 from callcenter.schedulejobs import add_leadrecycle_db
 from django.apps import apps
-from callcenter.utility import format_time, PasswordChangeAndLockedReminder
+from callcenter.utility import format_time, PasswordChangeAndLockedReminder, get_agent_status, set_agent_status
 import inspect
 import pickle
 
@@ -331,11 +331,11 @@ def custom_dump(campaign, user, dispo_code, uuid, name, e_type, created):
 							username = ''
 					else:
 						username = ''
-					AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps({}))
+					AGENTS = get_agent_status(username)
 					if username in AGENTS and AGENTS[username]['wfh']:
 						AGENTS[username]['call_type'] = call_type
 						AGENTS[username]['state'] = state
-						settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+						set_agent_status(username,AGENTS[username])
 					if dispo_code in campaign_obj.wfh_dispo:
 						primary_disposition = campaign_obj.wfh_dispo[dispo_code]
 				if primary_disposition=='CallBack':
@@ -436,8 +436,7 @@ def event_dump(kwargs):
 					notification_obj.save()				
 		if wfh:
 			wfh_agents = {}
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-			pickle.dumps({}))
+			AGENTS = get_agent_status(username)
 			if username in AGENTS and AGENTS[username]['wfh'] or kwargs.get('wfh_call'):
 				models=['CallDetail','DiallerEventLog']
 			wfh_agents = pickle.loads(settings.R_SERVER.get("wfh_agents") or pickle.dumps(wfh_agents))

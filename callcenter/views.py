@@ -679,8 +679,7 @@ class ActiveAgentLiveDataAPIView(LoginRequiredMixin, APIView):
 			contact_count = [{'username':'','assign_data_count':0,'dialed_data_count':0,'notdialed_data_count':0}]
 		df_contact = pd.DataFrame(list(contact_count))
 		data = pd.merge(df_user, df_contact, on='username', how='right').fillna(0).astype({"assign_data_count":'int', "dialed_data_count":'int',"notdialed_data_count":'int'})
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-		login_agents = pd.DataFrame.from_dict(AGENTS,orient='index')
+		login_agents = get_all_keys_data_df()
 		data = pd.merge(data, login_agents[['username','state','call_count','extension']], on='username', how='left').fillna({'state':'Logout','call_count':0, 'extension':''}).astype({'call_count':int})
 		active_agents_data = list(data.T.to_dict().values())
 		return JsonResponse({'active_agent_data':active_agents_data})
@@ -904,11 +903,11 @@ class UsersEditApiView(LoginRequiredMixin, APIView):
 		'''
 		user = get_object(pk, "callcenter", "User")
 		serializer = self.serializer(user, data=request.data)
-		user_obj=request.data['extension']
-		agent_status_data=pickle.loads(settings.R_SERVER.get("agent_status"))
-		if agent_status_data.__contains__(user_obj):
-			agent_status_data[user_obj]['name']=request.data['first_name']+" "+request.data['last_name']
-			settings.R_SERVER.set("agent_status",pickle.dumps(agent_status_data))
+		extension=request.data['extension']
+		AGENTS = get_agent_status(extension)
+		if AGENTS.__contains__(extension):
+			AGENTS[extension]['name']=request.data['first_name']+" "+request.data['last_name']
+			set_agent_status(extension,AGENTS[extension])
 		user_variable_serializer = UserVariableSerializer(
 				user.properties, data=request.data)
 		if serializer.is_valid():
@@ -1855,7 +1854,6 @@ class CampaignEditApiView(LoginRequiredMixin, APIView):
 
 	def get(self, request, pk, format=None, **kwargs):
 		data = get_pre_campaign_edit_info(pk, request)
-		print(data['campaign'])
 		all_trunk = DialTrunk.objects.filter(status="Active")
 		data["trunk_list"] = list(all_trunk.annotate(text=F('name')).values("text","id","did_range"))
 		data["request"] = request
@@ -1866,7 +1864,7 @@ class CampaignEditApiView(LoginRequiredMixin, APIView):
 		data["transfer_options"] = TRANSFER_MODE
 		data['enable_wfh'] = pickle.loads(settings.R_SERVER.get('enable_wfh') or pickle.dumps(False))
 		data['enable_vb'] = pickle.loads(settings.R_SERVER.get('enable_vb') or pickle.dumps(False))
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+		AGENTS = get_all_keys_data()
 		if AGENTS:
 			all_agents = list(AGENTS.keys())
 			for extension in all_agents:
@@ -4777,7 +4775,7 @@ def inbound_agents_availability(request):
 		c_max_wait_time = 25
 		no_agent_audio = False
 		try:
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+			AGENTS = get_all_keys_data()
 			caller_data=json.loads(request.body.decode('utf-8'))
 			skill_obj = SkilledRouting.objects.filter(skill_id__did__contains = caller_data["caller_id"],status='Active')
 			if skill_obj:
@@ -4832,7 +4830,7 @@ def inbound_agents_availability(request):
 						dial_method =campaign_obj.first().dial_method
 						campaign = campaign_obj.first().slug
 						r_campaigns = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps(CAMPAIGNS))
-						AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+						AGENTS = get_all_keys_data()
 						if dial_method['inbound']:
 							queue_call=True
 							callback = campaign_obj[0].queued_busy_callback
@@ -4877,14 +4875,13 @@ def inbound_agents_availability(request):
 												if AGENTS[active_user]['status'] == 'Ready' and AGENTS[active_user]['state'] not in ['InCall','Predictive Wait','Blended Wait']:
 													extensions.append(active_user)
 						else:
-							if stk_obj:
-								if campaign_obj[0].slug in r_campaigns:
-									unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))
-									if stk_obj.agent.extension in unique_extensions:
-										user=stk_obj.agent.extension
-										if AGENTS[user]['status'] == 'Ready' and AGENTS[user]['state'] in ['Inbound Wait','Blended Wait']:
-											extensions.append(user)
-											stickyagent = True
+							if stk_obj and campaign_obj[0].slug in r_campaigns:
+								unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))
+								if stk_obj.agent.extension in unique_extensions:
+									user=stk_obj.agent.extension
+									if AGENTS[user]['status'] == 'Ready' and AGENTS[user]['state'] in ['Inbound Wait','Blended Wait']:
+										extensions.append(user)
+										stickyagent = True
 			if campaign != '':
 				settings.R_SERVER.sadd(campaign, caller_data['dialed_uuid'])
 			else:
@@ -4993,7 +4990,7 @@ def rec_check_agent_availabilty(request):
 	c_max_wait_time = 25
 	no_agent_audio = False
 	try:
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+		AGENTS = get_all_keys_data()
 		caller_data=json.loads(request.body.decode('utf-8'))
 		skill_obj = SkilledRouting.objects.filter(skill_id__did__contains = caller_data["caller_id"],status='Active')
 		if skill_obj:
@@ -5048,7 +5045,7 @@ def rec_check_agent_availabilty(request):
 					dial_method =campaign_obj.first().dial_method
 					campaign = campaign_obj.first().slug
 					r_campaigns = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps(CAMPAIGNS))
-					AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))                        
+					AGENTS = get_all_keys_data()
 					if dial_method['inbound']:
 						queue_call=True
 						callback = campaign_obj[0].queued_busy_callback
@@ -5264,7 +5261,7 @@ class GetAvailableAgentsAPIView(APIView):
 	def post(self, request):
 		campaign = request.POST.get("campaign")
 		agent_extension = []
-		all_agents = pickle.loads(settings.R_SERVER.get("agent_status"))
+		all_agents = get_all_keys_data()
 		for extension in all_agents:
 			if extension != request.user.extension:
 				rule = [all_agents[extension]["state"] == "Idle",
