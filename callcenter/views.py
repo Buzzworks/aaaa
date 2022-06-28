@@ -425,9 +425,14 @@ class EmergencyLogoutApiView(LoginRequiredMixin, APIView):
 		active_sessions = Session.objects.filter(expire_date__gte=datetime.now())
 		for session in active_sessions:
 			if session.get_decoded().get('_auth_user_id') == str(userId):
-				last_request = datetime.fromtimestamp(session.get_decoded().get('last_request'))
 				now = datetime.now()
-				if role_name != "agent" or (now-last_request).seconds>=30:
+				try:
+					last_request = datetime.fromtimestamp(session.get_decoded().get('last_request'))
+					last_req_diff = (now-last_request).seconds
+				except Exception as e:
+					print(e)
+					last_req_diff = 30
+				if role_name != "agent" or last_req_diff>=30:
 					agent_activity_data['user'] = user
 					agent_activity_data["event"] = "Force logout by "+request.user.role_name+" "+request.user.username
 					agent_activity_data["event_time"] = datetime.now()
@@ -461,9 +466,14 @@ class EmergencyLogoutAllUserApiView(LoginRequiredMixin, APIView):
 					role_name = "admin"
 				else:
 					role_name = user.user_role.name
-				last_request = datetime.fromtimestamp(session.get_decoded().get('last_request'))
 				now = datetime.now()
-				if role_name == "agent" and (now-last_request).seconds>=30:
+				try:
+					last_request = datetime.fromtimestamp(session.get_decoded().get('last_request'))
+					last_req_diff = (now-last_request).seconds
+				except Exception as e:
+					print(e)
+					last_req_diff = 30
+				if role_name == "agent" and last_req_diff>=30:
 					agent_activity_data['user'] = user
 					agent_activity_data["event"] = "Force logout by "+request.user.role_name+" "+request.user.username
 					agent_activity_data["event_time"] = datetime.now()
