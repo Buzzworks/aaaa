@@ -50,7 +50,7 @@ from callcenter.decorators import (check_read_permission,
 		)
 from .decorators import (crm_field_validation,phonebook_validation)
 
-from flexydial.views import (csvDownload, data_for_pagination,data_for_vue_pagination, get_paginated_object, get_active_campaign, create_admin_log_entry)
+from flexydial.views import (csvDownload, data_for_pagination,data_for_vue_pagination, get_paginated_object, get_active_campaign, create_admin_log_entry,user_hierarchy_func)
 from crm.models import Phonebook
 from datetime import datetime
 import dateutil.parser
@@ -784,7 +784,8 @@ class ContactInfoApiView(LoginRequiredMixin, APIView):
 
 	def get(self, request, **kwargs):
 		add_crm_field = True
-		campaign_list = Campaign.objects.values("name", "id")
+		# campaign_list = Campaign.objects.values("name", "id")
+		campaign_list = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)))).distinct().values("name", "id")
 		phonebook = list(Phonebook.objects.values(
 		"id", "name", "campaign", "status"))
 		disposition = list(Disposition.objects.values("id","name"))
@@ -849,7 +850,9 @@ class ContactInfoApiView(LoginRequiredMixin, APIView):
 			if filter_by_phonebook:
 				contacts = contacts.filter(phonebook__id__in=filter_by_phonebook)
 			if filter_by_user:
-				contacts = contacts.filter(user__in=filter_by_user)
+				# contacts = contacts.filter(user__in=filter_by_user)
+				user_in_hirarchy=user_hierarchy_func(request.user,filter_by_user)
+				contacts = contacts.filter(user__in=user_in_hirarchy)
 			if numeric:
 				contacts = contacts.filter(numeric=numeric)
 			if disposition:
@@ -1041,6 +1044,8 @@ class SaveAgentBreakApiView(LoginRequiredMixin, APIView):
 			activity_dict["event_time"] =login_time
 
 		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status"))
+		if request.user.extension not in AGENTS:
+			AGENTS[request.user.extension]={}
 		if request.POST.get("break_name", ""):
 			AGENTS[request.user.extension]['status'] = request.POST.get("break_name")
 			if request.POST["break_name"] not in ["Ready","NotReady"]:
