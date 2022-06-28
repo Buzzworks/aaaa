@@ -9,7 +9,7 @@ import json
 import uuid
 from callcenter.models import (Campaign,DataUploadLog, CALLBACK_MODE)
 from flexydial.constants import (Status, CONTACT_STATUS, ORDER_BY)
-# from crm.s3_fileoperations import fileTransferToS3, s3fileDownloadToServer
+from crm.s3_fileoperations import fileTransferToS3, s3fileDownloadToServer
 
 # Create your models here.
 short_uuid = str(uuid.uuid4())[:8]
