@@ -44,7 +44,7 @@ from .utility import (save_contact, validate_uploaded_phonebook, truncate_file,
 	get_customize_customer_data, get_user_crm_data, upload_crm, validate_uploaded_crm,download_contactinfo_csv,
 	download_crmfields_csv, crm_field_value_schema,get_customizable_crm_fields_with_datatype,crm_field_datatype_validation)
 from callcenter.utility import (get_object, create_agentactivity, get_formatted_agent_activities,
-	get_model_data,set_agentReddis,get_report_visible_column, get_campaign_users, check_non_admin_user)
+	get_model_data,set_agentReddis,get_report_visible_column, get_campaign_users, check_non_admin_user,get_agent_status,set_agent_status)
 from callcenter.decorators import (check_read_permission,
 		check_create_permission, check_update_permission,
 		)
@@ -1043,7 +1043,7 @@ class SaveAgentBreakApiView(LoginRequiredMixin, APIView):
 			login_time = dateutil.parser.parse(login_time)
 			activity_dict["event_time"] =login_time
 
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status"))
+		AGENTS = get_agent_status(request.user.extension)
 		if request.user.extension not in AGENTS:
 			AGENTS[request.user.extension]={}
 		if request.POST.get("break_name", ""):
@@ -1061,25 +1061,16 @@ class SaveAgentBreakApiView(LoginRequiredMixin, APIView):
 				set_agentReddis(AGENTS,request.user)
 		status = {'ori_uuid':'','status':True}
 		if 'event' in request.POST:
-			if request.POST.get('event')=='Start Break':
-				if 'uuid' in request.POST:
-					if request.POST.get('uuid'):
-						on_break(request.POST.get('sip_ip'),uuid=request.POST.get('uuid'))
+			if request.POST.get('event')=='Start Break' and 'uuid' in request.POST and request.POST.get('uuid'):
+				on_break(request.POST.get('sip_ip'),uuid=request.POST.get('uuid'))
 
-			if request.POST.get('event')=='End Break':
-				if 'extension' in request.POST:
-					if request.POST.get('extension'):
-						status = start_sip_session(request.POST.get('sip_ip'), extension=request.POST.get('extension',''), call_type=request.POST.get('call_type',''),
-							campaign_name=request.POST.get("campaign_name", ""))
-						if 'ori_uuid' not in status or status['ori_uuid']=='':
-							status['ori_uuid'] = ''
-							status['status'] = False
-		updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status"))
-		if request.user.extension not in updated_agent_dict:
-			updated_agent_dict[request.user.extension] = {}
-			print('Log::AGENTSTATUS_extension_not_available:: ',AGENTS,activity_dict)
-		updated_agent_dict[request.user.extension].update(AGENTS[request.user.extension])
-		settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+			if request.POST.get('event')=='End Break' and 'extension' in request.POST and request.POST.get('extension'):
+					status = start_sip_session(request.POST.get('sip_ip'), extension=request.POST.get('extension',''), call_type=request.POST.get('call_type',''),
+						campaign_name=request.POST.get("campaign_name", ""))
+					if 'ori_uuid' not in status or status['ori_uuid']=='':
+						status['ori_uuid'] = ''
+						status['status'] = False
+		set_agent_status(request.user.extension,AGENTS[request.user.extension])
 
 		if request.POST.get("break_time", "") :
 			activity_dict["break_type"] = request.POST.get("break_type")

@@ -73,7 +73,7 @@ from .utility import (redirect_user, get_object, get_pre_campaign_edit_info,
 		get_model_data, validate_uploaded_dnc,upload_dnc_nums,submit_feedback, customer_detials, convert_into_timedelta,
 		total_list_users,camp_list_users,user_hierarchy, user_hierarchy_object, update_contact_on_css, get_transform_key, update_contact_on_portifolio,
 		validate_third_party_token,get_temp_contact,get_contact_data, upload_template_sms,get_crm_fields_dict, channel_trunk_single_call, DownloadCssQuery,get_campaign_did, get_group_did,DownloadCssQuery,diff_time_in_seconds,
-		save_report_column_visibility, get_report_visible_column,save_email_log, get_used_did, get_used_did_by_pk,convert_into_timeformat, email_connection, check_non_admin_user, getDaemonsStatus,upload_holiday_dates,read_status)
+		save_report_column_visibility, get_report_visible_column,save_email_log, get_used_did, get_used_did_by_pk,convert_into_timeformat, email_connection, check_non_admin_user, getDaemonsStatus,upload_holiday_dates,read_status,get_agent_status,set_agent_status,get_all_keys_data_df,get_all_keys_data)
 
 from .decorators import (user_validation, group_validation,campaign_validation,
 		campaign_edit_validation, phone_validation, dispo_validation, relationtag_validation,
@@ -204,12 +204,9 @@ def common_functionality_to_store_data(data, user):
 	create_agentactivity(agent_data)
 	if data.get("event", "") != "Duplicate window" and not "Force Logout" in data.get("event", "") and not "Internet connection failure" in data.get("event",""):
 		AGENTS = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-				pickle.dumps(AGENTS))
-		set_agentReddis(AGENTS,user)
-		updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-		updated_agent_dict[user.extension]= AGENTS[user.extension]
-		settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+		AGENTS = get_agent_status(user.extension)
+		AGENTS = set_agentReddis(AGENTS,user)
+		set_agent_status(user.extension,AGENTS[user.extension])
 	status = {}
 	if agent_state in ['InCall','Feedback']:
 		status = submit_feedback(user,data)
@@ -242,7 +239,6 @@ class LoginAPIView(APIView):
 			error_dict = {"error": "captcha is imporoper",'forgot_password':'',"cap_form":cap_form}
 			return Response(error_dict)
 		serializer = LoginSerializer(data=request.data)
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps({}))
 		PASSWORD_ATTEMPTS = pickle.loads(settings.R_SERVER.get("password_attempt_status") or pickle.dumps({}))
 		forgot_password = False
 		password_obj = PasswordManagement.objects.filter().first()
@@ -254,6 +250,7 @@ class LoginAPIView(APIView):
 			user = authenticate(username=username, password=password)
 			if user is not None:
 				if user.is_active:
+					AGENTS = get_agent_status(user.extension)
 					session_extension = [agent.extension for agent in get_current_users()
 									if agent.extension == user.extension]
 					if session_extension:
@@ -264,14 +261,11 @@ class LoginAPIView(APIView):
 						AGENTS[user.extension] = {}
 					login(request, user)
 					AGENTS = set_agentReddis(AGENTS,user)
-					AGENTS[user.extension]['name'] = user.first_name + ' ' + user.last_name
 					AGENTS[user.extension]['screen'] = 'AgentScreen'
 					AGENTS[user.extension]['login_time'] = datetime.now().strftime('%H:%M:%S')
 					AGENTS[user.extension]['login_date_time']=datetime.now()
 					AGENTS[user.extension]['call_count'] = CallDetail.objects.filter(user__username=user.username,created__date=date.today()).count()
-					updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-					updated_agent_dict[user.extension] = AGENTS[user.extension]
-					settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+					set_agent_status(user.extension,AGENTS[user.extension])
 					#set password attempt count to zero
 					PASSWORD_ATTEMPTS[username] = 0
 					settings.R_SERVER.set('password_attempt_status',pickle.dumps(PASSWORD_ATTEMPTS))
@@ -302,9 +296,7 @@ class LoginAPIView(APIView):
 					login_activity = False
 					if request.user.is_superuser or (request.user.user_role and request.user.user_role.access_level in ['Admin','Manager','Supervisor']):
 						AGENTS[user.extension]['screen'] = 'AdminScreen'
-						updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-						updated_agent_dict[user.extension].update(AGENTS[user.extension])
-						settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+						set_agent_status(user.extension,AGENTS[user.extension])
 						login_activity = True
 					if request.user.is_superuser:
 						login_activity = True
@@ -346,11 +338,10 @@ class LogoutAPIView(LoginRequiredMixin, APIView):
 	def get(self,request,makeInactive=''):
 		logout_activity =  False
 		AGENTS = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps(AGENTS))
+		AGENTS = get_agent_status(request.user.extension)
 		if request.user.extension in AGENTS.keys():
 			del AGENTS[request.user.extension]
-			settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+			set_agent_status(request.user.extension,AGENTS,True)
 		r_campaigns = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps(CAMPAIGNS))
 		for campaign in r_campaigns:
 			unique_extensions = list(set(r_campaigns[campaign]))
@@ -438,9 +429,10 @@ class EmergencyLogoutApiView(LoginRequiredMixin, APIView):
 					agent_activity_data["event_time"] = datetime.now()
 					create_agentactivity(agent_activity_data)
 					session.delete()
-					AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-					del AGENTS[extension]
-					settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+					AGENTS = get_agent_status(extension)
+					if extension in AGENTS.keys():
+						del AGENTS[extension]
+						set_agent_status(extension,AGENTS,True)
 					return JsonResponse({"success":"Force logout is successfull"})
 				else:
 					return JsonResponse({"user_logged_in":"True"})
@@ -478,18 +470,18 @@ class EmergencyLogoutAllUserApiView(LoginRequiredMixin, APIView):
 					agent_activity_data["event"] = "Force logout by "+request.user.role_name+" "+request.user.username
 					agent_activity_data["event_time"] = datetime.now()
 					create_agentactivity(agent_activity_data)
-					AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+					AGENTS = get_agent_status(user.extension)
 					if user.extension in AGENTS:
 						del AGENTS[user.extension]
-						settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+						set_agent_status(user.extension,AGENTS,True)
 					session.delete()
 				elif role_name != "agent":
 					create_admin_log_entry(request.user, "","7",'LOGOUT',user.username)
 					session.delete()
-					AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+					AGENTS = get_agent_status(user.extension)
 					if user.extension in AGENTS:
 						del AGENTS[user.extension]
-						settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+						set_agent_status(user.extension,AGENTS,True)
 				else:
 					user_list.append(user.extension)
 		return JsonResponse({"user_list": user_list})
@@ -505,26 +497,26 @@ class DashBoardApiView(LoginRequiredMixin, APIView):
 	template_name = "admin/dashboard.html"
 
 	def get(self, request, **kwargs):
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps({}))
+		AGENTS = {}
 		camp_name, active_camp, noti_count = get_active_campaign(request)
 		team_extensions = user_hierarchy(request,camp_name)
 		agent_count = UserVariable.objects.filter(extension__in=team_extensions).values_list('user_id',flat=True).count()
-		la_count = lo_count = dl_count = pg_count = pd_count = pv_count = ic_count = mu_count = 0
+		la_count = lo_count = dl_count = pg_count = pd_count = pv_count = ic_count = mu_count = brk_count = 0
+
 		ac_camp_count = lead_list_count = al_list_count = ll_data_count = 0
 		bridge_call = {}
 		# agent related counts and bridge call data
-		total_agents_df = pd.DataFrame.from_dict(AGENTS,orient='index')
-		c_agents_df = total_agents_df.index.isin(team_extensions)
-		agents_df = total_agents_df[c_agents_df]
-		brk_count = len(agents_df[agents_df['state'].str.lower() == 'onbreak'])
-		dl_count = len(agents_df[(agents_df['dialer_login_status'] == True) & (agents_df['state'].str.lower() != 'onbreak')])
-		la_count = len(agents_df[(agents_df['dialer_login_status'] == False) & (agents_df['state'].str.lower() != 'onbreak')])
-		on_call_agent = agents_df[(agents_df['state']=='InCall') & (agents_df['dial_number']) & (agents_df['call_timestamp']!='')]
-		pg_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='progressive'])
-		ic_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='inbound'])
-		pd_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='predictive'])
-		pv_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='preview'])
-		mu_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='manual'])
+		agents_df=get_all_keys_data_df(team_extensions)
+		if len(agents_df):
+			brk_count = len(agents_df[agents_df['state'].str.lower() == 'onbreak'])
+			dl_count = len(agents_df[(agents_df['dialer_login_status'] == True) & (agents_df['state'].str.lower() != 'onbreak')])
+			la_count = len(agents_df[(agents_df['dialer_login_status'] == False) & (agents_df['state'].str.lower() != 'onbreak')])
+			on_call_agent = agents_df[(agents_df['state']=='InCall') & (agents_df['dial_number']) & (agents_df['call_timestamp']!='')]
+			pg_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='progressive'])
+			ic_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='inbound'])
+			pd_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='predictive'])
+			pv_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='preview'])
+			mu_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='manual'])
 		lo_count = agent_count - la_count - dl_count - brk_count
 		live_agent_count = la_count + dl_count + brk_count
 		ac_camp_count = len(active_camp)
@@ -608,18 +600,17 @@ class OnCallAgentData(LoginRequiredMixin, APIView):
 
 	def get(self, request):
 		bridge_call = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps({}))
+		agent_dict = {}
 		camp, active_camp, noti_count = get_active_campaign(request)
 		team_extensions = user_hierarchy(request,camp)
-		for agent, data in AGENTS.items():
+		agent_dict = get_all_keys_data(team_extensions)
+		for agent, data in agent_dict.items():
 			if agent in team_extensions and data['state']=='InCall' and data['dial_number']:
 				if data['call_timestamp']=='' or data['call_timestamp'] == None:
 					call_timestamp = int(str(round(time.time() * 1000))[:13])
+					AGENTS = get_agent_status(agent)
 					AGENTS[agent].update({'call_timestamp':call_timestamp})
-					updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-					updated_agent_dict[agent].update(AGENTS[agent])
-					settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+					set_agent_status(agent,AGENTS[agent])
 				if 'name' not in data:
 					data['name'] = ''
 				bridge_call[agent] = data
@@ -633,36 +624,35 @@ class LoginAgentLiveDataView(LoginRequiredMixin, APIView):
 
 	def get(self, request):
 		la_data = []
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps(AGENTS))
+		agent_dict = {}
 		camp, active_camp, noti_count = get_active_campaign(request)
 		team_extensions = user_hierarchy(request,camp)
-		for agent, data in AGENTS.items():
-			if agent in team_extensions:
-				if data["event_time"]:
-					tdelta = datetime.strptime(datetime.now().strftime('%H:%M:%S'), '%H:%M:%S') - datetime.strptime(data['event_time'], '%H:%M:%S')
-					data["event_time"] = ':'.join(str(tdelta).split(':')[:3])
-				if 'login_date_time' in data and data["login_date_time"]:
-					today_date_time=datetime.now()
-					redis_login_date_time=data['login_date_time']
-					tdelta=(today_date_time-redis_login_date_time)
-					tdelta = str(tdelta).split(".")[0]
-					data['login_duration']=str(tdelta)
-				elif 'login_time' in data and data["login_time"]:
-					tdelta = datetime.strptime(datetime.now().strftime('%H:%M:%S'), '%H:%M:%S') - datetime.strptime(data['login_time'], '%H:%M:%S')
-					data["login_duration"] = ':'.join(str(tdelta).split(':')[:3])
-				if 'name' not in data:
-					data['name'] = ''
-				if data['name'] == '':
-					usr_obj = User.objects.filter(username=data['username']).first()
-					if usr_obj:
-						data['name'] = usr_obj.first_name + "  " + usr_obj.last_name
-				if 'state' in data and  data['state']=='Idle':
-					if 'dial_number' in data and data['dial_number']:  
-						data['dial_number'] = ''
-				data['extension'] = agent
-				data['role_name'] = ''
-				la_data.append(data)
+		agent_dict = get_all_keys_data(team_extensions)
+		for agent, data in agent_dict.items():
+			if data["event_time"]:
+				tdelta = datetime.strptime(datetime.now().strftime('%H:%M:%S'), '%H:%M:%S') - datetime.strptime(data['event_time'], '%H:%M:%S')
+				data["event_time"] = ':'.join(str(tdelta).split(':')[:3])
+			if 'login_date_time' in data and data["login_date_time"]:
+				today_date_time=datetime.now()
+				redis_login_date_time=data['login_date_time']
+				tdelta=(today_date_time-redis_login_date_time)
+				tdelta = str(tdelta).split(".")[0]
+				data['login_duration']=str(tdelta)
+			elif 'login_time' in data and data["login_time"]:
+				tdelta = datetime.strptime(datetime.now().strftime('%H:%M:%S'), '%H:%M:%S') - datetime.strptime(data['login_time'], '%H:%M:%S')
+				data["login_duration"] = ':'.join(str(tdelta).split(':')[:3])
+			if 'name' not in data:
+				data['name'] = ''
+			if data['name'] == '':
+				usr_obj = User.objects.filter(username=data['username']).first()
+				if usr_obj:
+					data['name'] = usr_obj.first_name + "  " + usr_obj.last_name
+			if 'state' in data and  data['state']=='Idle':
+				if 'dial_number' in data and data['dial_number']:  
+					data['dial_number'] = ''
+			data['extension'] = agent
+			data['role_name'] = ''
+			la_data.append(data)
 		return JsonResponse({"la_data":la_data})
 
 class ActiveAgentLiveDataAPIView(LoginRequiredMixin, APIView):
@@ -3864,14 +3854,13 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 			activity_dict["break_type"] = ""
 			create_agentactivity(activity_dict)
 		AGENTS = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps(AGENTS))
 		extension =request.user.extension
 		call_type = request.user.call_type
 		caller_id = campaign.caller_id
 		sip_udp_port = campaign.switch.sip_udp_port
 		wss_port = campaign.switch.wss_port
 		rpc_port = campaign.switch.rpc_port
+		AGENTS = get_agent_status(extension)
 		disposition = DispositionSerializer(campaign.disposition.filter(status='Active'), many=True).data
 		on_call_dispositions = []
 		not_on_call_dispostion = []
@@ -3941,9 +3930,7 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 			AGENTS[extension]['event_time'] = datetime.now().strftime('%H:%M:%S')
 			AGENTS[extension]['dialerSession_switch'] = campaign.switch.ip_address
 			AGENTS[extension]['dialerSession_uuid'] = status['ori_uuid']
-			updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-			updated_agent_dict[extension] = AGENTS[extension]
-			settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+			set_agent_status(extension,AGENTS[extension])
 		template = []
 		email_gateway = {}
 		disabled_sms_tab = False
@@ -3994,8 +3981,7 @@ class ManualDial(LoginRequiredMixin, APIView):
 	login_url = '/'
 	def post(self, request):
 		AGENTS = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps(AGENTS))
+		AGENTS = get_agent_status(request.user.extension)
 		status = {}
 		dial_number = request.POST.get('dial_number', '')
 		contact_id = request.POST.get('contact_id', '')
@@ -4081,9 +4067,7 @@ class ManualDial(LoginRequiredMixin, APIView):
 			AGENTS[request.user.extension]['state'] = "InCall"
 			AGENTS[request.user.extension]['event_time'] = datetime.now().strftime('%H:%M:%S')
 			AGENTS[request.user.extension]['dial_number'] = dial_number
-			updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-			updated_agent_dict[request.user.extension].update(AGENTS[request.user.extension])
-			settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+			set_agent_status(request.user.extension,AGENTS[request.user.extension])
 		else:
 			if is_callback == 'true':
 				current_cb = CurrentCallBack.objects.filter(numeric = dial_number,campaign=campaign_name,
@@ -4137,16 +4121,9 @@ class HangupCall(LoginRequiredMixin, APIView):
 		hangup_status=hangup(request.POST.get('switch'),uuid=request.POST.get('uuid'),
 						hangup_type=hangup_type,extension=extension, campaign = campaign, agent_uuid_id=agent_uuid_id)
 		if request.POST.get('page_reload','false') == 'true':
-
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-					pickle.dumps(AGENTS))
+			AGENTS = get_agent_status(request.user.extension)
 			set_agentReddis(AGENTS,request.user)
-			updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-			updated_agent_dict[request.user.extension].update(AGENTS[request.user.extension])
-			settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
-
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps(AGENTS))
+			set_agent_status(request.user.extension,AGENTS[request.user.extension])
 
 		return Response(hangup_status)
 
@@ -4171,10 +4148,7 @@ class PreviewUpdateContactStatus(APIView):
 	"""
 	def post(self, request):
 		AGENTS = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps(AGENTS))
-		if request.user.extension not in AGENTS:
-			AGENTS[request.user.extension]={}
+		AGENTS = get_agent_status(request.user.extension)
 		contact_info = {}
 		contact_dialled = {}
 		campaign = request.POST.get("campaign_name", "")
@@ -4217,14 +4191,11 @@ class PreviewUpdateContactStatus(APIView):
 			if not contact_id:
 				AGENTS[request.user.extension]['state'] = "Idle"
 				AGENTS[request.user.extension]['event_time'] = datetime.now().strftime('%H:%M:%S')
-		updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-		updated_agent_dict[request.user.extension].update(AGENTS[request.user.extension])
-		settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
-		if dial_number and dial_number !="null" and update_status:
-			if contact_id:
-				temp_contact = TempContactInfo.objects.filter(numeric=dial_number, status='Locked', id=contact_id)
-				if temp_contact.exists():
-					temp_contact.update(status='NotDialed')
+		set_agent_status(user.extension,AGENTS[user.extension])
+		if dial_number and dial_number !="null" and update_status and contact_id:
+			temp_contact = TempContactInfo.objects.filter(numeric=dial_number, status='Locked', id=contact_id)
+			if temp_contact.exists():
+				temp_contact.update(status='NotDialed')
 		return JsonResponse({"contact_info": contact_info})
 
 class SkipCallContactStatus(APIView):
@@ -4237,11 +4208,10 @@ class SkipCallContactStatus(APIView):
 		dial_number= request.POST.get('dial_number','')
 		contact_id = request.POST.get('contact_id', '')
 		AGENTS = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps(AGENTS))
+		AGENTS = get_agent_status(request.user.extension)
 		AGENTS[request.user.extension]['state'] = "Idle"
 		AGENTS[request.user.extension]['event_time'] = datetime.now().strftime('%H:%M:%S')
-		settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+		set_agent_status(request.user.extension,AGENTS[request.user.extension])
 		#Trac Agent Activity
 		agent_activity_data = []
 		agent_activity_data = get_formatted_agent_activities(request.POST)
@@ -4306,10 +4276,7 @@ class DispoSubmit(LoginRequiredMixin, APIView):
 	login_url = '/'
 	def post(self, request):
 		AGENTS = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps(AGENTS))
-		if request.user.extension not in AGENTS:
-			AGENTS[request.user.extension]={}
+		AGENTS = get_agent_status(request.user.extension)
 		campaign_name = request.POST.get('campaign')
 		call_type = request.POST.get('call_type', '')
 		switch_ip = request.POST.get('switch_ip', '')
@@ -4354,9 +4321,7 @@ class DispoSubmit(LoginRequiredMixin, APIView):
 		AGENTS[request.user.extension]['call_count'] = CallDetail.objects.filter(user__username=request.user.username,created__date=date.today()).count()
 		AGENTS[request.user.extension]['dial_number'] = ''
 		AGENTS[request.user.extension]['campaign'] = campaign_name
-		updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-		updated_agent_dict[request.user.extension].update(AGENTS[request.user.extension])
-		settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+		set_agent_status(request.user.extension,AGENTS[request.user.extension])
 		print("Disp Submit", request.user, request.POST.get("primary_dispo",''), request.POST.get("feedback",{}))
 		return Response(status)
 
@@ -4391,20 +4356,20 @@ class AutoDialApiView(LoginRequiredMixin, APIView):
 			status = autodial_session(switch,extension=extension,uuid=uuid,
 					sip_error=request.POST.get('sip_error','false'))
 			if 'success' in status:
-				AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+				AGENTS = get_agent_status(request.user.extension)
 				AGENTS[request.user.extension]['call_type'] = 'predictive'
 				AGENTS[request.user.extension]['state'] = 'Predictive Wait'
 				AGENTS[request.user.extension]['event_time'] = datetime.now().strftime('%H:%M:%S')
-				settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+				set_agent_status(request.user.extension,AGENTS[request.user.extension])
 			return Response(status)
 		if autodial_status == 'false':
 			status = autodial_session_hangup(switch,extension=extension,uuid=uuid)
 			if 'success' in status:
-				AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+				AGENTS = get_agent_status(request.user.extension)
 				AGENTS[request.user.extension]['call_type'] = ''
 				AGENTS[request.user.extension]['state'] = 'Idle'
 				AGENTS[request.user.extension]['event_time'] = datetime.now().strftime('%H:%M:%S')
-				settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+				set_agent_status(request.user.extension,AGENTS[request.user.extension])
 			return Response(status)
 
 class InboundApiView(LoginRequiredMixin, APIView):
@@ -4438,18 +4403,18 @@ class InboundApiView(LoginRequiredMixin, APIView):
 			status = autodial_session(switch,extension=extension,uuid=uuid,
 					sip_error=request.POST.get('sip_error','false'))
 			if 'success' in status:
-				AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+				AGENTS = get_agent_status(request.user.extension)
 				AGENTS[request.user.extension]['call_type'] = 'Inbound'
 				AGENTS[request.user.extension]['state'] = 'Inbound Wait'
-				settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+				set_agent_status(request.user.extension,AGENTS[request.user.extension])
 			return Response(status)
 		if inbound_status == 'false':
 			status = autodial_session_hangup(switch,extension=extension,uuid=uuid)
 			if 'success' in status:
-				AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+				AGENTS = get_agent_status(request.user.extension)
 				AGENTS[request.user.extension]['call_type'] = ''
 				AGENTS[request.user.extension]['state'] = 'Idle'
-				settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+				set_agent_status(request.user.extension,AGENTS[request.user.extension])
 			return Response(status)
 
 class BlendedApiView(LoginRequiredMixin, APIView):
@@ -4483,18 +4448,18 @@ class BlendedApiView(LoginRequiredMixin, APIView):
 			status = autodial_session(switch,extension=extension,uuid=uuid,
 					sip_error=request.POST.get('sip_error','false'))
 			if 'success' in status:
-				AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+				AGENTS = get_agent_status(request.user.extension)
 				AGENTS[request.user.extension]['call_type'] = 'blended'
 				AGENTS[request.user.extension]['state'] = 'Blended Wait'
-				settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+				set_agent_status(request.user.extension,AGENTS[request.user.extension])
 			return Response(status)
 		if blended_status == 'false':
 			status = autodial_session_hangup(switch,extension=extension,uuid=uuid)
 			if 'success' in status:
-				AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+				AGENTS = get_agent_status(request.user.extension)
 				AGENTS[request.user.extension]['call_type'] = ''
 				AGENTS[request.user.extension]['state'] = 'Idle'
-				settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+				set_agent_status(request.user.extension,AGENTS[request.user.extension])
 			return Response(status)
 
 class NdncListAPIView(LoginRequiredMixin, APIView):
@@ -4675,12 +4640,12 @@ class AutodialCustomerDetail(APIView):
 		if not contact_id:
 			contact_id = 0
 		if dial_number and dial_number !="null":
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+			AGENTS = get_agent_status(request.user.extension)
 			AGENTS[request.user.extension]['state'] = 'InCall'
 			AGENTS[request.user.extension]['event_time'] = datetime.now().strftime('%H:%M:%S')
 			AGENTS[request.user.extension]['dial_number'] = dial_number
 			AGENTS[request.user.extension]['call_timestamp'] = request.POST.get("call_timestamp", "")[:13]
-			settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+			set_agent_status(request.user.extension,AGENTS[request.user.extension])
 			campaign_object = Campaign.objects.get(name=campaign)
 			contact = Contact.objects.filter(id=contact_id)
 			if contact.exists():
@@ -4745,11 +4710,11 @@ class InboundCustomerDetail(APIView):
 			create_agentactivity(agent_data)
 			delete_inbound_number(campaign, dial_number, user)
 			if dial_number and dial_number !="null":
-				AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+				AGENTS = get_agent_status(request.user.extension)
 				AGENTS[request.user.extension]['state'] = 'InCall'
 				AGENTS[request.user.extension]['dial_number'] = dial_number
 				AGENTS[request.user.extension]['call_timestamp'] = request.POST.get("call_timestamp", "")[:13]
-				settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+				set_agent_status(request.user.extension,AGENTS[request.user.extension])
 				campaign_object = Campaign.objects.get(name=campaign)
 				data=customer_detials(campaign,dial_number,campaign_object)
 				return JsonResponse(data)
@@ -5330,9 +5295,9 @@ class WebrtcSessionSetVar(APIView):
 				,dialed_uuid=request.POST.get("Unique-ID"),extension=request.user.extension,call_type='webrtc')
 		if request.POST.get('update_autodial_session',False):
 			autodial_session(request.POST.get("variable_sip_from_host"), extension=request.user.extension,uuid=request.POST.get("Unique-ID"), sip_error='false')
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+		AGENTS = get_agent_status(request.user.extension)
 		AGENTS[request.user.extension]['dialerSession_uuid'] = request.POST.get("Unique-ID")
-		settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+		set_agent_status(request.user.extension,AGENTS[request.user.extension])
 		return JsonResponse({"success":"successfully"})
 
 class InternalTransferCallHangup(APIView):
@@ -5350,8 +5315,7 @@ class TransferCustomerDetail(APIView):
 	def post(self, request):
 		contact_info = []
 		AGENTS = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps(AGENTS))
+		AGENTS = get_agent_status(request.user.extension)
 		contact_info = []
 		campaign = request.POST.get("campaign_name", "")
 		user = request.POST.get("extension", "")
@@ -5367,10 +5331,7 @@ class TransferCustomerDetail(APIView):
 			AGENTS[request.user.extension]['call_timestamp'] = AGENTS[transfer_agent]['call_timestamp']
 			AGENTS[request.user.extension]['call_type'] = 'transfer'
 			AGENTS[transfer_agent]['call_timestamp'] = ""
-			updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-			updated_agent_dict[request.user.extension].update(AGENTS[request.user.extension])
-			updated_agent_dict[transfer_agent].update(AGENTS[transfer_agent])
-			settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+			set_agent_status(request.user.extension,AGENTS[request.user.extension])
 			contact_info_obj = Contact.objects.filter(numeric=dial_number, id=contact_id)
 			if contact_info_obj:
 				contact_info = ContactSerializer(contact_info_obj[0]).data
@@ -5403,10 +5364,10 @@ class CustomerInfoAPIView(APIView):
 			sip_extension = request.user.extension
 		if call_timestamp==None or call_timestamp=='':
 			call_timestamp = int(str(round(time.time() * 1000))[:13])
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+		AGENTS = get_agent_status(sip_extension)
 		if sip_extension in AGENTS:
 			AGENTS[sip_extension].update({'call_timestamp':call_timestamp})
-			settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+			set_agent_status(sip_extension,AGENTS[sip_extension])
 
 		campaign_name = request.GET.get('campaign_name', '')
 		campaign_object = Campaign.objects.get(name=campaign_name)
@@ -6520,13 +6481,12 @@ class ChangeAgentState(APIView):
 	def post(self,request):
 		AGENTS = {}
 		extension = request.user.extension
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-		if AGENTS:
-			if ''+str(extension)+'' in AGENTS:
-				AGENTS[''+str(extension)+'']['status'] = request.POST.get('status')
-				AGENTS[''+str(extension)+'']['state'] = request.POST.get('state')
-				AGENTS[''+str(extension)+'']['event_time'] = datetime.now().strftime('%H:%M:%S')
-		settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+		AGENTS = get_agent_status(extension)
+		if AGENTS and ''+str(extension)+'' in AGENTS:
+			AGENTS[''+str(extension)+'']['status'] = request.POST.get('status')
+			AGENTS[''+str(extension)+'']['state'] = request.POST.get('state')
+			AGENTS[''+str(extension)+'']['event_time'] = datetime.now().strftime('%H:%M:%S')
+		set_agent_status(extension,AGENTS[extension])
 		return Response({"status":"Agent Status Updatedp"})
 
 class ResetAgentAvailabilityStatus(APIView):
@@ -7622,9 +7582,9 @@ class SwitchingScreens(LoginRequiredMixin,APIView):
 				'return_to_agent':False,'return_to_admin':False
 		}
 		if form_id  == 'admin_to_agent_switchscreen':
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps({}))
+			AGENTS = get_agent_status(extension)
 			AGENTS[extension]['screen'] = 'AgentScreen'
-			settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+			set_agent_status(extension,AGENTS[extension])
 			redirect_dict['return_to_agent'] =True
 			time = datetime.strptime("0:0:0", '%H:%M:%S').time()
 			login_time = datetime.now()
@@ -7648,9 +7608,9 @@ class SwitchingScreens(LoginRequiredMixin,APIView):
 			activity_dict["campaign_name"] = ''
 			create_agentactivity(activity_dict)
 			AdminLogEntry.objects.create(created_by=request.user, change_message=request.user.username+" switched to Admin screen ",action_name='2',event_type='SWITCH TO ADMIN')
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps({}))
+			AGENTS = get_agent_status(extension)
 			AGENTS[extension]['screen'] = 'AdminScreen'
-			settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+			set_agent_status(extension,AGENTS[extension])
 		return JsonResponse(redirect_dict)
 
 @method_decorator(check_read_permission, name='get')

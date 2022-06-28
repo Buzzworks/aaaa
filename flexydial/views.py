@@ -74,8 +74,7 @@ def get_login_campaign():
 	""" 
 	get the login campaings  from redis
 	"""
-	AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") )
-	total_agents_df = pd.DataFrame.from_dict(AGENTS,orient='index')
+	total_agents_df = get_all_keys_data_df()
 	campaign_pd = total_agents_df[(total_agents_df['campaign']!="")]    
 	agent_logged_in_campaign=campaign_pd['campaign'].tolist()
 	return agent_logged_in_campaign
@@ -84,8 +83,7 @@ def get_login_agent():
 	""" 
 	get the login agents from redis
 	"""
-	AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") )
-	total_agents_df = pd.DataFrame.from_dict(AGENTS,orient='index')
+	total_agents_df = get_all_keys_data_df()
 	campaign_pd = total_agents_df[(total_agents_df['username']!="")]    
 	agent_logged_in=campaign_pd['username'].tolist()
 	return agent_logged_in
@@ -819,3 +817,30 @@ class CustomPasswordResetForm(SetPasswordForm):
 		if commit:
 			user.save()
 		return user
+
+def get_agent_status(extension,full_key = False):
+	if full_key:
+		return pickle.loads(settings.R_SERVER.get(extension) or pickle.dumps({}))
+	return pickle.loads(settings.R_SERVER.get("flexydial_"+extension) or pickle.dumps({}))
+def set_agent_status(extension,agent_dict,delete=False):
+	if delete:
+		return settings.R_SERVER.delete("flexydial_"+extension)
+	updated_agent_dict = get_agent_status("flexydial_"+extension)
+	if extension not in updated_agent_dict and not delete:
+		updated_agent_dict[extension] = {}
+	updated_agent_dict[extension] = agent_dict
+	return settings.R_SERVER.set("flexydial_"+extension, pickle.dumps(updated_agent_dict))
+def get_all_keys_data_df(team_extensions=''):
+	keysdata = settings.R_SERVER.scan_iter("flexydial_*")
+	total_agents_df = pd.DataFrame()
+	if team_extensions:
+		team_extensions =[bytes("flexydial_"+s, encoding='utf-8')  for s in team_extensions]
+		for k in keysdata:
+			if k in team_extensions:
+				AGENTS = get_agent_status(k,True)
+				total_agents_df = pd.concat([total_agents_df,pd.DataFrame.from_dict(AGENTS,orient='index')], ignore_index = True)
+	else:
+		for k in keysdata:
+			AGENTS = get_agent_status(k,True)
+			total_agents_df = pd.concat([total_agents_df,pd.DataFrame.from_dict(AGENTS,orient='index')], ignore_index = True)
+	return total_agents_df

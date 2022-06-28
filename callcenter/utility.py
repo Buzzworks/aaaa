@@ -3761,3 +3761,50 @@ def PasswordChangeAndLockedReminder():
 					break
 	except Exception as e:
 		print("Error in sending password change reminder and locked mails",e)
+
+def get_agent_status(extension,full_key = False):
+	if full_key:
+		return pickle.loads(settings.R_SERVER.get(extension) or pickle.dumps({}))
+	return pickle.loads(settings.R_SERVER.get("flexydial_"+extension) or pickle.dumps({}))
+
+def set_agent_status(extension,agent_dict,delete=False):
+	if delete:
+		return settings.R_SERVER.delete("flexydial_"+extension)
+	updated_agent_dict = get_agent_status("flexydial_"+extension)
+	if extension not in updated_agent_dict:
+		updated_agent_dict[extension] = {}
+	if extension in agent_dict:
+		updated_agent_dict[extension] = agent_dict[extension]	
+	else:
+		updated_agent_dict[extension] = agent_dict
+	return settings.R_SERVER.set("flexydial_"+extension, pickle.dumps(updated_agent_dict))
+
+def get_all_keys_data_df(team_extensions=''):
+	keysdata = settings.R_SERVER.scan_iter("flexydial_*")
+	total_agents_df = pd.DataFrame()
+	if team_extensions:
+		team_extensions =[bytes("flexydial_"+s, encoding='utf-8')  for s in team_extensions]
+		for k in keysdata:
+			if k in team_extensions:
+				AGENTS = get_agent_status(k,True)
+				total_agents_df = pd.concat([total_agents_df,pd.DataFrame.from_dict(AGENTS,orient='index')], ignore_index = True)
+	else:
+		for k in keysdata:
+			AGENTS = get_agent_status(k,True)
+			total_agents_df = pd.concat([total_agents_df,pd.DataFrame.from_dict(AGENTS,orient='index')], ignore_index = True)
+	return total_agents_df
+
+def get_all_keys_data(team_extensions=""):
+	keysdata = settings.R_SERVER.scan_iter("flexydial_*")
+	agent_dict = {}
+	if team_extensions:
+		team_extensions =[bytes("flexydial_"+s, encoding='utf-8')  for s in team_extensions]
+		for k in keysdata:
+			if k in team_extensions:
+				AGENTS = get_agent_status(k,True)
+				agent_dict.update(AGENTS)	
+	else:
+		for k in keysdata:
+			AGENTS = get_agent_status(k,True)
+			agent_dict.update(AGENTS)
+	return agent_dict
