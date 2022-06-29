@@ -615,8 +615,8 @@ def Execute():
 						   id='phonebook_data_bucket', jobstore='list')
 	sched.add_job(generate_report,'interval', seconds=5, start_date=execution_time,
 						   id='generate_report', jobstore='list')
-	# sched.add_job(session_expire_check,'interval', minutes=1.5, start_date=execution_time,
-						#    id='session_expire_check', jobstore='list')
+	sched.add_job(session_expire_check,'interval', minutes=1.5, start_date=execution_time,
+						   id='session_expire_check', jobstore='list')
 	sched.add_job(update_queued_contact,'interval', hours=1, start_date=execution_time,
 						   id='update_queued_contact', jobstore='list')
 	sched.add_job(create_calldetial_missing_contact,'interval', minutes=30, start_date=execution_time,
