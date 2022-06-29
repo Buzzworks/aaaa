@@ -433,8 +433,10 @@ def csvDownload(fields, model, file_type, user="", exclude=[],
 		writer.writerow(list(fields))
 		if model=='User':
 			# users = UserVariable.objects.filter(user__created_by=user)
-
-			ref_users=user_hierarchy_func(user.id)
+			if user.is_superuser:
+				ref_users = list(User.objects.all().exclude(is_superuser=True).values("username", "id"))
+			else:
+				ref_users = user_hierarchy_func(user.id)
 
 			users=UserVariable.objects.filter(user__id__in=ref_users)
 			user_feilds = users.values_list('user__username','user__email','user__password','user__user_role__name', 'user__first_name', 'user__last_name', 'wfh_numeric', 'user__employee_id','user__reporting_to__username','domain__name','user__call_type','user__is_active','user__trunk__name','user__caller_id')
@@ -459,7 +461,10 @@ def csvDownload(fields, model, file_type, user="", exclude=[],
 			ws.write(row_num,col_num, columns[col_num])
 		if model=='User':
 			# users = UserVariable.objects.filter(user__created_by=user)
-			ref_users=user_hierarchy_func(user.id)
+			if user.is_superuser:
+				ref_users = list(User.objects.all().exclude(is_superuser=True).values("username", "id"))
+			else:
+				ref_users = user_hierarchy_func(user.id)
 			users=UserVariable.objects.filter(user__id__in=ref_users)
 
 			user_feilds = users.values_list('user__username','user__email','user__password','user__user_role__name', 'user__first_name', 'user__last_name', 'wfh_numeric', 'user__employee_id','user__reporting_to__username','domain__name','user__call_type','user__is_active','user__trunk__name','user__caller_id')
