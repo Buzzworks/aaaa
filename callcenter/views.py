@@ -4189,7 +4189,7 @@ class PreviewUpdateContactStatus(APIView):
 			if not contact_id:
 				AGENTS[request.user.extension]['state'] = "Idle"
 				AGENTS[request.user.extension]['event_time'] = datetime.now().strftime('%H:%M:%S')
-		set_agent_status(user.extension,AGENTS[user.extension])
+		set_agent_status(request.user.extension,AGENTS[request.user.extension])
 		if dial_number and dial_number !="null" and update_status and contact_id:
 			temp_contact = TempContactInfo.objects.filter(numeric=dial_number, status='Locked', id=contact_id)
 			if temp_contact.exists():
@@ -6483,7 +6483,7 @@ class ChangeAgentState(APIView):
 			AGENTS[''+str(extension)+'']['status'] = request.POST.get('status')
 			AGENTS[''+str(extension)+'']['state'] = request.POST.get('state')
 			AGENTS[''+str(extension)+'']['event_time'] = datetime.now().strftime('%H:%M:%S')
-		set_agent_status(extension,AGENTS[extension])
+		set_agent_status(extension,AGENTS)
 		return Response({"status":"Agent Status Updatedp"})
 
 class ResetAgentAvailabilityStatus(APIView):
