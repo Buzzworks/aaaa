@@ -104,13 +104,19 @@ class ContactListSerializer(serializers.ModelSerializer):
 	phonebook = serializers.StringRelatedField()
 	contact_info = serializers.ReadOnlyField()
 	alt_numeric = serializers.SerializerMethodField()
-	last_dialed_date = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
+	last_dialed_date = serializers.SerializerMethodField()
 	created_date = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
 	modified_date = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
 	verified_to = serializers.SerializerMethodField()
 	class Meta:
 		model = Contact
 		fields = '__all__'
+
+	def get_last_dialed_date(self,obj):
+		if obj.dial_count == 0:
+			return ""
+		else:
+			return obj.last_dialed_date.strftime("%m-%d-%Y %H:%M:%S")
 
 	def get_alt_numeric(self, obj):
 		alt_number = {}
