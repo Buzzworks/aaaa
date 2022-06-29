@@ -1444,6 +1444,7 @@ class ThirdPartyApiDisposition(models.Model):
 	callBackDate = models.CharField(max_length=25, default='')
 	callBackTime = models.CharField(max_length=25, default='')
 	flexyAgentId = models.CharField(max_length=10, default='')
+	callid = models.CharField(max_length=100, default='')
 	created = models.DateTimeField(auto_now_add=True)
 
 	def __str__(self):

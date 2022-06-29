@@ -4613,7 +4613,7 @@ class DNCUploadApiView(APIView):
 class ThirdPartyApiDispositionUpdateView(APIView):
 	permission_classes = [AllowAny]
 	def post(self,request):
-		serializer = ThirdPartyApiDispositionSerializer(data=request.data)	
+		serializer = ThirdPartyApiDispositionSerializer(data=request.data)
 		if serializer.is_valid():
 			try:
 				serializer.save()
@@ -4625,13 +4625,8 @@ class ThirdPartyApiDispositionUpdateView(APIView):
 				agent_status = pickle.loads(settings.R_SERVER.get("agent_status"))
 				for ext in agent_status:
 					if agent_status[ext]['dial_number'] == str(mobile_number):
-						agent_campaign = agent_status[ext]['campaign'] 
-						api_disp = Campaign.objects.get(name = agent_campaign).api_disposition
-						if api_disp:
-							extension = agent_status[ext]['extension']
-							break
-						else:
-							return JsonResponse({"error": f" {agent_campaign} Campaign not having Permission for the API Disposition"}, status=400)			
+						extension = agent_status[ext]['extension']
+						break			
 				if extension:
 					redis_data = {
 						"extension": extension,
@@ -4639,8 +4634,8 @@ class ThirdPartyApiDispositionUpdateView(APIView):
 						"disposition_desc": request.data['disposition_desc']
 					}
 					settings.R_SERVER.publish('api_disp_extension',message=json.dumps(redis_data))	
-					return JsonResponse({"message": "Successfully Registered Dispositions."}, status=200)
-				return JsonResponse({"error": "Call either closed or user refreshed the browser."}, status=400)
+					return JsonResponse({"message": "Dispositions successfully saved.."}, status=200)
+				return JsonResponse({"message": "Dispositions successfully saved.."}, status=200)
 			except Exception as e:
 				return JsonResponse({"error": f"Something Went Wrong, Kindly Contact Administrator. {e}"}, status=400)
 		else:

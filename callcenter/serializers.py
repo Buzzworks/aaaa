@@ -1026,6 +1026,7 @@ class ThirdPartyApiDispositionSerializer(serializers.ModelSerializer):
 	callBabkDate = serializers.CharField(required=False)
 	callBabkTime = serializers.CharField(required=False)
 	flexiAgentId = serializers.CharField(required=False)
+	callid = serializers.CharField(required=False)
 	
 	class Meta:
 		model = ThirdPartyApiDisposition
