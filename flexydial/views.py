@@ -837,7 +837,7 @@ def set_agent_status(extension,agent_dict,delete=False):
 	if extension not in updated_agent_dict and not delete:
 		updated_agent_dict[extension] = {}
 	updated_agent_dict[extension] = agent_dict
-	return settings.R_SERVER.set("flexydial_"+extension, pickle.dumps(updated_agent_dict))
+	return settings.R_SERVER.set("flexydial_"+extension, pickle.dumps(updated_agent_dict),ex=settings.REDIS_KEY_EXPIRE_IN_SEC)
 def get_all_keys_data_df(team_extensions=''):
 	keysdata = settings.R_SERVER.scan_iter("flexydial_*")
 	total_agents_df = pd.DataFrame()

@@ -3764,7 +3764,15 @@ def PasswordChangeAndLockedReminder():
 
 def get_agent_status(extension,full_key = False):
 	if full_key:
-		return pickle.loads(settings.R_SERVER.get(extension) or pickle.dumps({}))
+		keys_list = ['username', 'name', 'login_status', 'campaign', 'dialer_login_status', 'dialer_login_time', 'status', 'state', 'event_time', 'call_type', 'dial_number', 'call_timestamp', 'extension', 'dialerSession_uuid', 'screen', 'login_time', 'call_count']
+		agent_keys = []
+		agent_dict = pickle.loads(settings.R_SERVER.get(extension) or pickle.dumps({}))
+		if extension in agent_dict:
+			agent_keys = agent_dict[extension].keys()
+		if agent_keys.sort() != keys_list.sort():
+			agent_dict = default_agent_status(extension,agent_dict)
+			agent_dict[extension] = agent_dict
+		return agent_dict
 	return pickle.loads(settings.R_SERVER.get("flexydial_"+extension) or pickle.dumps({}))
 
 def set_agent_status(extension,agent_dict,delete=False):
@@ -3773,35 +3781,42 @@ def set_agent_status(extension,agent_dict,delete=False):
 	updated_agent_dict = get_agent_status("flexydial_"+extension)
 	if extension not in updated_agent_dict:
 		updated_agent_dict[extension] = {}
+	agent_dict = default_agent_status(extension,agent_dict)
 	if extension in agent_dict:
-		updated_agent_dict[extension] = agent_dict[extension]	
+		updated_agent_dict[extension].update(agent_dict[extension])
 	else:
-		updated_agent_dict[extension] = agent_dict
-	return settings.R_SERVER.set("flexydial_"+extension, pickle.dumps(updated_agent_dict))
+		updated_agent_dict[extension].update(agent_dict)
+	return settings.R_SERVER.set("flexydial_"+extension, pickle.dumps(updated_agent_dict),ex=settings.REDIS_KEY_EXPIRE_IN_SEC)
 
 def default_agent_status(extension,agent_dict):
-	if 'username' not in agent_dict[extension]:
+	if extension in agent_dict:
+		agent_dict = agent_dict[extension]
+	if 'username' not in agent_dict:
 		username = first_name = last_name = ""
-		user_var = UserVariable.objects.filter(extension = 1000).first()
+		user_var = UserVariable.objects.filter(extension=extension).first()
 		if user_var:
-			username = user_var.username
-			first_name = user_var.first_name
-			last_name = user_var.last_name
+			username = user_var.user.username
+			first_name = user_var.user.first_name
+			last_name = user_var.user.last_name
+		print('Log::default::username_is_missing::',extension,username)
+		agent_dict['username'] = username
+		agent_dict['name'] = first_name + ' ' + last_name
 
-		agent_dict[extension]['username'] = username
-		agent_dict[extension]['name'] = first_name + ' ' + last_name
-	agent_dict[extension]['login_status'] = True if "login_status" not in agent_dict[extension] else agent_dict[extension]['login_status']
-	agent_dict[extension]['campaign'] = '' if "campaign" not in agent_dict[extension] else agent_dict[extension]['campaign']
-	agent_dict[extension]['dialer_login_status'] = False if "dialer_login_status" not in agent_dict[extension] else agent_dict[extension]['dialer_login_status']
-	agent_dict[extension]['dialer_login_time'] = '' if "dialer_login_time" not in agent_dict[extension] else agent_dict[extension]['dialer_login_time']
-	agent_dict[extension]['status'] = 'NotReady' if "status" not in agent_dict[extension] else agent_dict[extension]['status']
-	agent_dict[extension]['state'] = '' if "state" not in agent_dict[extension] else agent_dict[extension]['state']
-	agent_dict[extension]['event_time'] = '' if "event_time" not in agent_dict[extension] else agent_dict[extension]['event_time']
-	agent_dict[extension]['call_type'] = '' if "call_type" not in agent_dict[extension] else agent_dict[extension]['call_type']
-	agent_dict[extension]['dial_number'] = '' if "dial_number" not in agent_dict[extension] else agent_dict[extension]['dial_number']
-	agent_dict[extension]['call_timestamp'] = '' if "call_timestamp" not in agent_dict[extension] else agent_dict[extension]['call_timestamp']
-	agent_dict[extension]['extension'] = extension if "extension" not in agent_dict[extension] else agent_dict[extension]['extension']
-	agent_dict[extension]['dialerSession_uuid'] = '' if "dialerSession_uuid" not in agent_dict[extension] else agent_dict[extension]['dialerSession_uuid']
+	agent_dict['login_status'] = True if "login_status" not in agent_dict else agent_dict['login_status']
+	agent_dict['campaign'] = '' if "campaign" not in agent_dict else agent_dict['campaign']
+	agent_dict['dialer_login_status'] = False if "dialer_login_status" not in agent_dict else agent_dict['dialer_login_status']
+	agent_dict['dialer_login_time'] = '' if "dialer_login_time" not in agent_dict else agent_dict['dialer_login_time']
+	agent_dict['status'] = 'NotReady' if "status" not in agent_dict else agent_dict['status']
+	agent_dict['state'] = '' if "state" not in agent_dict else agent_dict['state']
+	agent_dict['event_time'] = '' if "event_time" not in agent_dict else agent_dict['event_time']
+	agent_dict['call_type'] = '' if "call_type" not in agent_dict else agent_dict['call_type']
+	agent_dict['dial_number'] = '' if "dial_number" not in agent_dict else agent_dict['dial_number']
+	agent_dict['call_timestamp'] = '' if "call_timestamp" not in agent_dict else agent_dict['call_timestamp']
+	agent_dict['extension'] = extension if "extension" not in agent_dict else agent_dict['extension']
+	agent_dict['dialerSession_uuid'] = '' if "dialerSession_uuid" not in agent_dict else agent_dict['dialerSession_uuid']
+	agent_dict['screen'] = 'AgentScreen' if "screen" not in agent_dict else agent_dict['screen']
+	agent_dict['call_count'] = 0 if "call_count" not in agent_dict else agent_dict['call_count']
+	agent_dict['login_time'] = '' if "login_time" not in agent_dict else agent_dict['login_time']
 	return agent_dict
 
 def get_all_keys_data_df(team_extensions=''):
