@@ -3777,16 +3777,21 @@ def get_agent_status(extension,full_key = False):
 
 def set_agent_status(extension,agent_dict,delete=False):
 	if delete:
+		print("RedisDelete ",extension)
 		return settings.R_SERVER.delete("flexydial_"+extension)
 	updated_agent_dict = get_agent_status("flexydial_"+extension)
+	print("RedisAvailable ",updated_agent_dict)
 	if extension not in updated_agent_dict:
 		updated_agent_dict[extension] = {}
+	print("RedisNeedInsert ",agent_dict)
 	agent_dict = default_agent_status(extension,agent_dict)
+	print("RedisAfterKeysMissCheck ",agent_dict)
 	if extension in agent_dict:
 		updated_agent_dict[extension].update(agent_dict[extension])
 	else:
 		updated_agent_dict[extension].update(agent_dict)
 	status = settings.R_SERVER.set("flexydial_"+extension, pickle.dumps(updated_agent_dict),ex=settings.REDIS_KEY_EXPIRE_IN_SEC)
+	print("RedisUpdatedDict ",updated_agent_dict,"   status::" ,status)
 	if status!=True:
 		print("Log::RedisError:: ",status)
 	return status
