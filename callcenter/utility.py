@@ -3786,7 +3786,10 @@ def set_agent_status(extension,agent_dict,delete=False):
 		updated_agent_dict[extension].update(agent_dict[extension])
 	else:
 		updated_agent_dict[extension].update(agent_dict)
-	return settings.R_SERVER.set("flexydial_"+extension, pickle.dumps(updated_agent_dict),ex=settings.REDIS_KEY_EXPIRE_IN_SEC)
+	status = settings.R_SERVER.set("flexydial_"+extension, pickle.dumps(updated_agent_dict),ex=settings.REDIS_KEY_EXPIRE_IN_SEC)
+	if status!=True:
+		print("Log::RedisError:: ",status)
+	return status
 
 def default_agent_status(extension,agent_dict):
 	if extension in agent_dict:
