@@ -436,6 +436,10 @@ class EmergencyLogoutApiView(LoginRequiredMixin, APIView):
 					return JsonResponse({"success":"Force logout is successfull"})
 				else:
 					return JsonResponse({"user_logged_in":"True"})
+		AGENTS = get_agent_status(extension)
+		if extension in AGENTS.keys():
+			del AGENTS[extension]
+			set_agent_status(extension,AGENTS,True)
 		return JsonResponse({"error": "User is already in logout state"})
 
 class EmergencyLogoutAllUserApiView(LoginRequiredMixin, APIView):
@@ -1868,7 +1872,7 @@ class CampaignEditApiView(LoginRequiredMixin, APIView):
 		if AGENTS:
 			all_agents = list(AGENTS.keys())
 			for extension in all_agents:
-				if str(extension) in AGENTS and AGENTS[str(extension)]['campaign']==data['campaign'].name:
+				if str(extension) in AGENTS and 'campaign' in AGENTS[str(extension)] and AGENTS[str(extension)]['campaign']==data['campaign'].name:
 					data['is_edit'] = False
 					break
 		all_trunk = DialTrunk.objects.filter(status="Active")
@@ -5005,7 +5009,7 @@ def rec_check_agent_availabilty(request):
 			user_extension = None
 			if user_obj.exists():
 				user_extension = user_obj.first().extension
-			if user_extension and user_extension in AGENTS.keys():
+			if user_extension and user_extension in AGENTS.keys() and 'campaign' in AGENTS[user_extension]:
 				campaign = AGENTS[user_extension]['campaign']
 				queue_call=False
 				if campaign:

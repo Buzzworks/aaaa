@@ -388,30 +388,34 @@ def user_in_hirarchy_level(user_id):
 
 def user_hierarchy_func(user_id,users_list=""):
 	"""this function takes the username and returns usernames based on reporting_to hierarchy"""
-	users_id=User.objects.filter(id=user_id).values_list('id',flat=True)
-	lst_1=lst_2=lst_3=[]
-	if users_list:
-		users_1=User.objects.filter(reporting_to__id__in=users_list)
+	user_obj = User.objects.get(id=user_id)
+	if user_obj.is_superuser:
+		users_list = list(User.objects.all().values_list("id",flat=True))
+	elif str(user_obj.user_role) == 'admin':
+		users_list = list(User.objects.all().exclude(is_superuser=True).values_list("id",flat=True))
 	else:
-		users_1=User.objects.filter(reporting_to__id__in=[str(i) for i in users_id]).values_list('id',flat=True)
-	if users_1:
-		lst_1=list(users_1.values_list('id',flat=True))
-	if lst_1:
-		users_2=User.objects.filter(reporting_to__id__in=lst_1)
-		if users_2:
-			lst_2=list(users_2.values_list('id',flat=True))
-	if lst_2:
-		users_3=User.objects.filter(reporting_to__id__in=lst_2)
-		if users_3:
-			lst_3=list(users_3.values_list('id',flat=True))
-	if users_id[0]=='admin':#ad admin username is python superuser need to download all
-		username=list(User.objects.exclude(username='admin').values_list("username",flat=True))
-	if users_list:
-		users_list = [int(i) for i in users_list]+lst_1+lst_2+lst_3
-	else:
-		users_list = lst_1+lst_2+lst_3
+		users_id=User.objects.filter(id=user_id).values_list('id',flat=True)
+		lst_1=lst_2=lst_3=[]
+		if users_list:
+			users_1=User.objects.filter(reporting_to__id__in=users_list)
+		else:
+			users_1=User.objects.filter(reporting_to__id__in=[str(i) for i in users_id]).values_list('id',flat=True)
+		if users_1:
+			lst_1=list(users_1.values_list('id',flat=True))
+		if lst_1:
+			users_2=User.objects.filter(reporting_to__id__in=lst_1)
+			if users_2:
+				lst_2=list(users_2.values_list('id',flat=True))
+		if lst_2:
+			users_3=User.objects.filter(reporting_to__id__in=lst_2)
+			if users_3:
+				lst_3=list(users_3.values_list('id',flat=True))
+		if users_list:
+			users_list = [int(i) for i in users_list]+lst_1+lst_2+lst_3
+		else:
+			users_list = lst_1+lst_2+lst_3
 	users_list=list(set(users_list))#using set because reporting_to given of python superuser admin, it's not possible but given intentionally(shell, users bulk, db).
-	return [str(i) for i in users_list]
+	return users_list
 
 
 from callcenter.models import UserVariable

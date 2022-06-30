@@ -3779,6 +3779,31 @@ def set_agent_status(extension,agent_dict,delete=False):
 		updated_agent_dict[extension] = agent_dict
 	return settings.R_SERVER.set("flexydial_"+extension, pickle.dumps(updated_agent_dict))
 
+def default_agent_status(extension,agent_dict):
+	if 'username' not in agent_dict[extension]:
+		username = first_name = last_name = ""
+		user_var = UserVariable.objects.filter(extension = 1000).first()
+		if user_var:
+			username = user_var.username
+			first_name = user_var.first_name
+			last_name = user_var.last_name
+
+		agent_dict[extension]['username'] = username
+		agent_dict[extension]['name'] = first_name + ' ' + last_name
+	agent_dict[extension]['login_status'] = True if "login_status" not in agent_dict[extension] else agent_dict[extension]['login_status']
+	agent_dict[extension]['campaign'] = '' if "campaign" not in agent_dict[extension] else agent_dict[extension]['campaign']
+	agent_dict[extension]['dialer_login_status'] = False if "dialer_login_status" not in agent_dict[extension] else agent_dict[extension]['dialer_login_status']
+	agent_dict[extension]['dialer_login_time'] = '' if "dialer_login_time" not in agent_dict[extension] else agent_dict[extension]['dialer_login_time']
+	agent_dict[extension]['status'] = 'NotReady' if "status" not in agent_dict[extension] else agent_dict[extension]['status']
+	agent_dict[extension]['state'] = '' if "state" not in agent_dict[extension] else agent_dict[extension]['state']
+	agent_dict[extension]['event_time'] = '' if "event_time" not in agent_dict[extension] else agent_dict[extension]['event_time']
+	agent_dict[extension]['call_type'] = '' if "call_type" not in agent_dict[extension] else agent_dict[extension]['call_type']
+	agent_dict[extension]['dial_number'] = '' if "dial_number" not in agent_dict[extension] else agent_dict[extension]['dial_number']
+	agent_dict[extension]['call_timestamp'] = '' if "call_timestamp" not in agent_dict[extension] else agent_dict[extension]['call_timestamp']
+	agent_dict[extension]['extension'] = extension if "extension" not in agent_dict[extension] else agent_dict[extension]['extension']
+	agent_dict[extension]['dialerSession_uuid'] = '' if "dialerSession_uuid" not in agent_dict[extension] else agent_dict[extension]['dialerSession_uuid']
+	return agent_dict
+
 def get_all_keys_data_df(team_extensions=''):
 	keysdata = settings.R_SERVER.scan_iter("flexydial_*")
 	total_agents_df = pd.DataFrame()
