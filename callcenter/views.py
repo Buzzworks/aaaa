@@ -64,7 +64,7 @@ from flexydial.views import (check_permission, get_paginated_object, data_for_pa
 		data_for_vue_pagination, sendSMS, csvDownloadTemplate, create_admin_log_entry, sendsmsparam,user_hierarchy_func,user_in_hirarchy_level)
 from callcenter.signals import (fs_pre_del_user)
 from callcenter.schedulejobs import (leadrecycle_add,leadrecycle_del,schedulereports_download,sched,remove_scheduled_job)
-from .utility import (redirect_user, get_object, get_pre_campaign_edit_info,
+from .utility import (delete_all_unexpired_sessions_for_user, delete_session, redirect_user, get_object, get_pre_campaign_edit_info,
 		get_pre_campaign_create_info, validate_data, filter_queryset, paginate_queryset, get_paginated_response,
 		validate_uploaded_users_file, upload_users, get_current_users, set_agentReddis,
 		create_agentactivity, get_formatted_agent_activities, get_campaign_users, get_agent_mis,get_campaign_mis,
@@ -251,11 +251,8 @@ class LoginAPIView(APIView):
 			if user is not None:
 				if user.is_active:
 					AGENTS = get_agent_status(user.extension)
-					session_extension = [agent.extension for agent in get_current_users()
-									if agent.extension == user.extension]
-					if session_extension:
-						return Response({"error": "You are already LogIn","cap_form":cap_form})
-					elif user.user_role == None and not user.is_superuser:
+					stats = delete_all_unexpired_sessions_for_user(user)
+					if user.user_role == None and not user.is_superuser:
 						return Response({"error": "User Role is not defined to this user.Please Contact To your admin",'forgot_password':forgot_password})
 					else:
 						AGENTS[user.extension] = {}
@@ -428,7 +425,7 @@ class EmergencyLogoutApiView(LoginRequiredMixin, APIView):
 					agent_activity_data["event"] = "Force logout by "+request.user.role_name+" "+request.user.username
 					agent_activity_data["event_time"] = datetime.now()
 					create_agentactivity(agent_activity_data)
-					session.delete()
+					delete_session(session)
 					AGENTS = get_agent_status(extension)
 					if extension in AGENTS.keys():
 						del AGENTS[extension]
@@ -478,10 +475,10 @@ class EmergencyLogoutAllUserApiView(LoginRequiredMixin, APIView):
 					if user.extension in AGENTS:
 						del AGENTS[user.extension]
 						set_agent_status(user.extension,AGENTS,True)
-					session.delete()
+					delete_session(session)
 				elif role_name != "agent":
 					create_admin_log_entry(request.user, "","7",'LOGOUT',user.username)
-					session.delete()
+					delete_session(session)
 					AGENTS = get_agent_status(user.extension)
 					if user.extension in AGENTS:
 						del AGENTS[user.extension]

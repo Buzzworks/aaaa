@@ -51,6 +51,7 @@ import random
 from django.core.mail import EmailMessage,EmailMultiAlternatives, get_connection
 import xlwt
 from xlwt import Workbook
+from importlib import import_module
 import xlrd
 from xlutils.copy import copy
 import subprocess
@@ -246,6 +247,54 @@ def get_current_users():
 	# Query all logged in users based on id list
 	return User.objects.filter(id__in=user_id_list)
 
+def delete_session(session):
+	"""this method is used to get all user sessions form
+    django session
+    """
+	try:		
+		if settings.SESSION_ENGINE:
+			SessionStore = import_module(settings.SESSION_ENGINE).SessionStore
+			s = SessionStore(session_key=session.session_key)
+			s.delete()
+		else:
+			session.delete()
+	except Exception as e:
+		print("ERROR:: delete_session function ",e)
+
+def all_unexpired_sessions_for_user(user):
+       """this method is used to get all user sessions form
+       django session
+       """
+       user_sessions = []
+       all_sessions  = Session.objects.filter(expire_date__gte=timezone.now())
+       for session in all_sessions:
+               session_data = session.get_decoded()
+               if user.pk == int(session_data.get('_auth_user_id')):
+                       user_sessions.append(session.pk)
+       return Session.objects.filter(pk__in=user_sessions)
+
+def delete_all_unexpired_sessions_for_user(user, session_to_omit=None):
+	"""this method is used to delete user sessions from
+    django session
+    """
+	session_list = all_unexpired_sessions_for_user(user)
+	if session_to_omit is not None:
+		session_list.exclude(session_key=session_to_omit.session_key)
+	# session_list.delete()
+	agent_activity_data = {}
+	for session in session_list:
+		session_data = session.get_decoded()
+		last_req = ""
+		last_req = session_data.get('last_request','')
+		if last_req:
+			last_req = datetime.fromtimestamp(last_req)
+		print("AlreadyLoginLog::",user.username,"session_expiry:: ",session.expire_date," last_request :: ",last_req)
+		agent_activity_data['user'] = user
+		agent_activity_data["event"] = "Old Login Session clear"
+		agent_activity_data["event_time"] = datetime.now()
+		create_agentactivity(agent_activity_data)
+		delete_session(session)
+	return True
 
 def redirect_user(request, user):
 	"""
@@ -3779,21 +3828,20 @@ def set_agent_status(extension,agent_dict,delete=False):
 	if delete:
 		print("RedisDelete ",extension)
 		return settings.R_SERVER.delete("flexydial_"+extension)
-	updated_agent_dict = get_agent_status("flexydial_"+extension)
-	print("RedisAvailable ",updated_agent_dict)
+	updated_agent_dict = get_agent_status(extension)
+	print("RedisAvailable ",extension,updated_agent_dict)
 	if extension not in updated_agent_dict:
 		updated_agent_dict[extension] = {}
 	print("RedisNeedInsert ",agent_dict)
 	agent_dict = default_agent_status(extension,agent_dict)
-	print("RedisAfterKeysMissCheck ",agent_dict)
 	if extension in agent_dict:
 		updated_agent_dict[extension].update(agent_dict[extension])
 	else:
 		updated_agent_dict[extension].update(agent_dict)
+	print("RedisUpdatedDict ",updated_agent_dict)
 	status = settings.R_SERVER.set("flexydial_"+extension, pickle.dumps(updated_agent_dict),ex=settings.REDIS_KEY_EXPIRE_IN_SEC)
-	print("RedisUpdatedDict ",updated_agent_dict,"   status::" ,status)
 	if status!=True:
-		print("Log::RedisError:: ",status)
+		print("Log::RedisError:: ",status,updated_agent_dict)
 	return status
 
 def default_agent_status(extension,agent_dict):
