@@ -1,27 +1,26 @@
 (function () {
-util = require('util');
-esl = require('esl');
-var fs = require('fs');
-var https = require('https');
-var inbound = require("./inboundcall.js");
-var transfer_call = require("./transfercall_route.js");
-var MEDIA_ROOT = '/var/lib/flexydial/media'
-// Socket io initialization starts
-const options =
-				{
-					 key: fs.readFileSync('flexydial.key'),
-					 cert: fs.readFileSync('flexydial.crt')
-				};
-var socket_server = https.createServer(options);
-var io = require('socket.io')(socket_server);
-socket_server.listen(3233,'0.0.0.0')
-
-
-var redis = require('redis');
-leadlist_details_data = redis.createClient({host: process.env.REDIS_URL,port: process.env.REDIS_PORT});
-leadlist_details_data.subscribe('lead-details');
-
-'use strict';
+	util = require('util');
+	esl = require('esl');
+	var fs = require('fs');
+	var https = require('https');
+	var inbound = require("./inboundcall.js");
+	var transfer_call = require("./transfercall_route.js");
+	var MEDIA_ROOT = '/var/lib/flexydial/media'
+	// Socket io initialization starts
+	const options =
+	{
+		key: fs.readFileSync('flexydial.key'),
+		cert: fs.readFileSync('flexydial.crt')
+	};
+	var socket_server = https.createServer(options);
+	var io = require('socket.io')(socket_server);
+	socket_server.listen(3233,'0.0.0.0')
+	socket_server.timeout = 0;
+	
+	var redis = require('redis');
+	leadlist_details_data = redis.createClient({host: process.env.REDIS_URL,port: process.env.REDIS_PORT});
+	leadlist_details_data.subscribe('lead-details');
+	
 io.on('connection', function(socket) {
 	socket.on('new',function(data){
 		util.log(data)
@@ -176,7 +175,7 @@ server.on("error", function(err){
 	util.log(err.stack)
 })
 server.listen(8084, '0.0.0.0');
-
+server.timeout = 0;
 outbound_server = esl.createCallServer();
 outbound_server.on('CONNECT', function (req) {
     //util.log(req.body)
@@ -270,6 +269,7 @@ outbound_server.on("error", function(err){
 	util.log(err.stack)
 })
 outbound_server.listen(8085, '0.0.0.0');
+outbound_server.timeout = 0;
 inbound_server = esl.createCallServer();
 inbound_server.on('CONNECT', function (req) {
 		var channel_data = req.body;
@@ -488,7 +488,7 @@ inbound_server.on("error", function(err){
 		util.log(err.stack)
 })
 inbound_server.listen(8087, '0.0.0.0');
-
+inbound_server.timeout = 0;
 autodial_server = esl.createCallServer();
 autodial_server.on('CONNECT', function (req) {
 				var channel_data = req.body;
@@ -568,7 +568,7 @@ autodial_server.on("error", function(err){
 	util.log(err.stack)
 })
 autodial_server.listen(8086, '0.0.0.0');
-
+autodial_server.timeout = 0;
 }).call(this);
 
 // Emergency logout event from admin

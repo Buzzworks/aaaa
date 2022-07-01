@@ -842,7 +842,7 @@ def get_agent_status(extension,full_key = False):
 def set_agent_status(extension,agent_dict,delete=False):
 	if delete:
 		return settings.R_SERVER.delete("flexydial_"+extension)
-	updated_agent_dict = get_agent_status("flexydial_"+extension)
+	updated_agent_dict = get_agent_status(extension)
 	if extension not in updated_agent_dict and not delete:
 		updated_agent_dict[extension] = {}
 	updated_agent_dict[extension] = agent_dict
