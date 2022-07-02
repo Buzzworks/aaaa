@@ -5,6 +5,8 @@
   <settings>
 	<!--<param name="odbc-dsn" value="dsn:user:pass"/>-->
 	<!--<param name="dbname" value="/dev/shm/callcenter.db"/>-->
+			<param name="odbc-dsn" value="$${CC_DSN}" />
+			<param name="cc-instance-id" value="$${SERVER_ID}"/>
   </settings>
 {% load check_user %}
   <queues>

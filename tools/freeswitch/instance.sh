@@ -29,7 +29,7 @@ cp /usr/share/freeswitch/conf/flexydial /etc/freeswitch/ -r
 function ubuntu(){
 echo 'deb http://download.opensuse.org/repositories/home:/ganapathi/xUbuntu_20.04/ /' | sudo tee /etc/apt/sources.list.d/home:ganapathi.list
 curl -fsSL https://download.opensuse.org/repositories/home:ganapathi/xUbuntu_20.04/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home_ganapathi.gpg > /dev/null
-sudo apt update
+sudo apt -y update
 sudo apt -y install freeswitch freeswitch-meta-flexydial freeswitch-mod-lua  freeswitch-mod-shout  freeswitch-mod-xml-curl freeswitch-mod-xml-rpc
 cp /usr/share/freeswitch/conf/flexydial /etc/freeswitch/ -r
 }
