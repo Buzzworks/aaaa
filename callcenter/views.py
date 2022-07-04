@@ -3312,7 +3312,7 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 				first_login_time = agentactivity.filter(event='LOGIN').order_by('created').first().created.strftime("%Y-%m-%d %H:%M:%S")
 			calldetail_cal['last_logout_time'] = last_logout_time
 			calldetail_cal['first_login_time'] = first_login_time
-			calldetail_cal['total_unique_connected_calls'] = calldetail.exclude(uniqueid=None).distinct('uniqueid').order_by('uniqueid').count()
+			calldetail_cal['total_unique_connected_calls'] = calldetail.distinct('customer_cid').order_by('customer_cid').count()
 			if user.reporting_to:
 				calldetail_cal['supervisor_name'] = user.reporting_to.username
 			calldetail_cal['full_name'] = user.first_name+" "+user.last_name
