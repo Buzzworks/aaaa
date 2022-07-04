@@ -831,24 +831,32 @@ def get_agent_status(extension,full_key = False):
 		keys_list = ['username', 'name', 'login_status', 'campaign', 'dialer_login_status', 'dialer_login_time', 'status', 'state', 'event_time', 'call_type', 'dial_number', 'call_timestamp', 'extension', 'dialerSession_uuid', 'screen', 'login_time', 'call_count']
 		agent_keys = []
 		agent_dict = pickle.loads(settings.R_SERVER.get(extension) or pickle.dumps({}))
-		if extension in agent_dict:
-			agent_keys = agent_dict[extension].keys()
-		if not set(agent_keys).issuperset(set(keys_list)):
-			agent_dict = default_agent_status(extension,agent_dict)
-			agent_dict[extension] = agent_dict
+		extension1 = list(extension.split("_"))
+		if extension1 and len(extension1)==2 and extension1[1] in agent_dict:
+			agent_keys = agent_dict[extension1[1]].keys()
+		if len(extension1)==2 and not set(agent_keys).issuperset(set(keys_list)):
+			agent_dict[extension1[1]] = default_agent_status(extension1[1],agent_dict)
 		return agent_dict
 	return pickle.loads(settings.R_SERVER.get("flexydial_"+extension) or pickle.dumps({}))
 
 def set_agent_status(extension,agent_dict,delete=False):
 	if delete:
+		# print("RedisDelete ",extension)
 		return settings.R_SERVER.delete("flexydial_"+extension)
 	updated_agent_dict = get_agent_status(extension)
-	if extension not in updated_agent_dict and not delete:
+	# print("RedisAvailable ",extension,updated_agent_dict)
+	if extension not in updated_agent_dict:
 		updated_agent_dict[extension] = {}
-	updated_agent_dict[extension] = agent_dict
+	# print("RedisNeedInsert ",agent_dict)
+	agent_dict = default_agent_status(extension,agent_dict)
+	if extension in agent_dict:
+		updated_agent_dict[extension].update(agent_dict[extension])
+	else:
+		updated_agent_dict[extension].update(agent_dict)
+	print("RedisUpdatedDict ",updated_agent_dict)
 	status = settings.R_SERVER.set("flexydial_"+extension, pickle.dumps(updated_agent_dict),ex=settings.REDIS_KEY_EXPIRE_IN_SEC)
 	if status!=True:
-		print("Log::RedisError:: ",status)
+		print("Log::RedisError:: ",status,updated_agent_dict)
 	return status
 
 def default_agent_status(extension,agent_dict):
@@ -880,6 +888,7 @@ def default_agent_status(extension,agent_dict):
 	agent_dict['screen'] = 'AgentScreen' if "screen" not in agent_dict else agent_dict['screen']
 	agent_dict['call_count'] = 0 if "call_count" not in agent_dict else agent_dict['call_count']
 	agent_dict['login_time'] = '' if "login_time" not in agent_dict else agent_dict['login_time']
+
 	return agent_dict
 
 def get_all_keys_data_df(team_extensions=''):
@@ -889,10 +898,25 @@ def get_all_keys_data_df(team_extensions=''):
 		team_extensions =[bytes("flexydial_"+s, encoding='utf-8')  for s in team_extensions]
 		for k in keysdata:
 			if k in team_extensions:
-				AGENTS = get_agent_status(k,True)
+				AGENTS = get_agent_status(k.decode('utf-8'),True)
 				total_agents_df = pd.concat([total_agents_df,pd.DataFrame.from_dict(AGENTS,orient='index')], ignore_index = True)
 	else:
 		for k in keysdata:
-			AGENTS = get_agent_status(k,True)
+			AGENTS = get_agent_status(k.decode('utf-8'),True)
 			total_agents_df = pd.concat([total_agents_df,pd.DataFrame.from_dict(AGENTS,orient='index')], ignore_index = True)
 	return total_agents_df
+
+def get_all_keys_data(team_extensions=""):
+	keysdata = settings.R_SERVER.scan_iter("flexydial_*")
+	agent_dict = {}
+	if team_extensions:
+		team_extensions =[bytes("flexydial_"+s, encoding='utf-8')  for s in team_extensions]
+		for k in keysdata:
+			if k in team_extensions:
+				AGENTS = get_agent_status(k.decode('utf-8'),True)
+				agent_dict.update(AGENTS)	
+	else:
+		for k in keysdata:
+			AGENTS = get_agent_status(k.decode('utf-8'),True)
+			agent_dict.update(AGENTS)
+	return agent_dict
