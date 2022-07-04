@@ -497,7 +497,7 @@ $(document).on('click','.td-call-number',function(){
 					setTimeout(
 					function(){
 						callmode = 'manual'
-						do_manual_call(mont_uniquecall_data.numeric,mont_uniquecall_data.cdrfeedback.contact_id)
+						do_manual_call(mont_uniquecall_data.numeric,mont_uniquecall_data.contact_id)
 						swal.close();
 						$('#crm-home').click()
 					},3000)
