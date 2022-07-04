@@ -531,7 +531,6 @@ def thirdparty_edit_validation(function):
 		data_obj = get_object(kwargs["pk"], "callcenter", "ThirdPartyApi")
 		name = request.POST.get('name',"")
 		campaign = request.POST.get('campaign',"")
-		print()
 		if name:
 			if ThirdPartyApi.objects.filter(name__iexact=name).exclude(id=data_obj.id).exists():
 				return JsonResponse({"name":"ThirdPartyApi with this name already exists"}, status=500)

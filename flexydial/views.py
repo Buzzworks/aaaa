@@ -833,7 +833,7 @@ def get_agent_status(extension,full_key = False):
 		agent_dict = pickle.loads(settings.R_SERVER.get(extension) or pickle.dumps({}))
 		if extension in agent_dict:
 			agent_keys = agent_dict[extension].keys()
-		if agent_keys.sort() != keys_list.sort():
+		if not set(agent_keys).issuperset(set(keys_list)):
 			agent_dict = default_agent_status(extension,agent_dict)
 			agent_dict[extension] = agent_dict
 		return agent_dict

@@ -3817,7 +3817,7 @@ def get_agent_status(extension,full_key = False):
 		agent_dict = pickle.loads(settings.R_SERVER.get(extension) or pickle.dumps({}))
 		if extension in agent_dict:
 			agent_keys = agent_dict[extension].keys()
-		if agent_keys.sort() != keys_list.sort():
+		if not set(agent_keys).issuperset(set(keys_list)):
 			agent_dict = default_agent_status(extension,agent_dict)
 			agent_dict[extension] = agent_dict
 		return agent_dict
@@ -3825,13 +3825,13 @@ def get_agent_status(extension,full_key = False):
 
 def set_agent_status(extension,agent_dict,delete=False):
 	if delete:
-		print("RedisDelete ",extension)
+		# print("RedisDelete ",extension)
 		return settings.R_SERVER.delete("flexydial_"+extension)
 	updated_agent_dict = get_agent_status(extension)
-	print("RedisAvailable ",extension,updated_agent_dict)
+	# print("RedisAvailable ",extension,updated_agent_dict)
 	if extension not in updated_agent_dict:
 		updated_agent_dict[extension] = {}
-	print("RedisNeedInsert ",agent_dict)
+	# print("RedisNeedInsert ",agent_dict)
 	agent_dict = default_agent_status(extension,agent_dict)
 	if extension in agent_dict:
 		updated_agent_dict[extension].update(agent_dict[extension])
