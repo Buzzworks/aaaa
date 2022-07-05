@@ -154,13 +154,13 @@ def user_hierarchy(request,camp_name):
 	this is the function defined to get the user reporting hirerarchy
 	"""	
 	# users = User.objects.exclude(id=request.user.id)
-	if request.user.is_superuser:
+	admin=False
+	if request.user.is_superuser and request.user.user_role and request.user.user_role.access_level == 'Admin':
 		users = User.objects.exclude(id=request.user.id)
+		admin = True
 	else:
 		users = User.objects.filter(id__in=user_hierarchy_func(request.user.id))
-	admin=False
-	if request.user.user_role and request.user.user_role.access_level == 'Admin':
-		admin = True
+	# if request.user.user_role and request.user.user_role.access_level == 'Admin':
 	if request.user.is_superuser:
 		team_extensions = UserVariable.objects.filter(user__in=users).values_list("extension", flat=True)
 	elif admin:
@@ -187,7 +187,8 @@ def user_hierarchy_object(user,camp_name=[]):
 	this is the function defined user hierarcy object data
 	"""	
 	# users = User.objects.exclude(id=user.id).all()
-	if user.is_superuser:
+	if user.is_superuser and user.user_role and user.user_role.access_level == 'Admin':
+		admin = True
 		users = User.objects.exclude(id=user.id)
 	else:
 		users = User.objects.filter(id__in=user_hierarchy_func(user.id)).all()
@@ -522,14 +523,12 @@ def get_pre_campaign_edit_info(pk, request):
 	data["campaign"] = object_data
 	data['dial_method'] = json.dumps(object_data.dial_method)
 	data["dial_ratio"] = DIAL_RATIO_CHOICES
-	department_id = Group.objects.values_list("id", flat=True,)
 	self_campaign = object_data.group.all().values_list("id", flat=True)
 	self_dispo = object_data.disposition.all().values_list("id", flat=True)
 	self_relationtag = object_data.relation_tag.all().values_list("id",flat=True)
 	groups = Group.objects.all()
 	data["is_non_admin"] = check_non_admin_user(request.user)
 	data['non_user'] = []
-	users = User.objects.all()
 	if request.user.is_superuser:
 		users=User.objects.all()
 	else:

@@ -432,13 +432,16 @@ class CrmEditPhonebookApiView(LoginRequiredMixin,APIView):
 			'phonebook': phonebook, 'order_by':ORDER_BY,'search_type':SEARCH_TYPE
 			}
 		curr_campaign_name = Campaign.objects.filter(id=phonebook.campaign).values_list('name',flat=True).first()
-		AGENTS = get_all_keys_data()
-		if AGENTS:
-			all_agents = list(AGENTS.keys())
-			for extension in all_agents:
-				if str(extension) in AGENTS and AGENTS[str(extension)]['campaign']==curr_campaign_name:
-					context['is_edit'] = False
-					break
+		# AGENTS = get_all_keys_data()
+		campaign_pd = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps({}))
+		if curr_campaign_name in campaign_pd and len(campaign_pd[curr_campaign_name])>0:
+			context['is_edit'] = False
+		# if AGENTS:
+		# 	all_agents = list(AGENTS.keys())
+		# 	for extension in all_agents:
+		# 		if str(extension) in AGENTS and AGENTS[str(extension)]['campaign']==curr_campaign_name:
+		# 			context['is_edit'] = False
+		# 			break
 		context = {**context, **kwargs['permissions']}
 		return Response(context)
 

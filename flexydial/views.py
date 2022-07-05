@@ -74,10 +74,14 @@ def get_login_campaign():
 	""" 
 	get the login campaings  from redis
 	"""
-	total_agents_df = get_all_keys_data_df()
-	campaign_pd = total_agents_df[(total_agents_df['campaign']!="")]    
-	agent_logged_in_campaign=campaign_pd['campaign'].tolist()
-	return agent_logged_in_campaign
+	# total_agents_df = get_all_keys_data_df()
+	# campaign_pd = total_agents_df[(total_agents_df['campaign']!="")]    
+	campaign_pd = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps({}))
+	camp_list = []
+	for key,value in campaign_pd:
+		if len(value)>0:
+			camp_list.append(key)
+	return camp_list
 
 def get_login_agent():
 	""" 
