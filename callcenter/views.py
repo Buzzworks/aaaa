@@ -4321,7 +4321,8 @@ class DispoSubmit(LoginRequiredMixin, APIView):
 		AGENTS[request.user.extension]['dial_number'] = ''
 		AGENTS[request.user.extension]['campaign'] = campaign_name
 		set_agent_status(request.user.extension,AGENTS[request.user.extension])
-		print("Disp Submit", request.user, request.POST.get("primary_dispo",''), request.POST.get("feedback",{}))
+		if settings.DEBUG:
+			print("Disp Submit", request.user, request.POST.get("primary_dispo",''), request.POST.get("feedback",{}))
 		return Response(status)
 
 class AutoDialApiView(LoginRequiredMixin, APIView):

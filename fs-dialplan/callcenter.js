@@ -189,6 +189,10 @@ outbound_server.on('CONNECT', function (req) {
 	var destination_number = req.body['Channel-Caller-ID-Number'].slice(-10)
 	var cc_agent = req.body['variable_cc_agent']
 	var dialed_uuid = req.body['Unique-ID']
+	var delay_req = 0
+	if ('variable_delay_req' in req.body){
+		delay_req = req.body['variable_delay_req']
+	}
 	setTimeout(()=>{
 		if (!('wfh_call' in req.body)){
 			req.execute("conference",req.body['variable_agent-Unique-ID']+"@sla")
@@ -202,7 +206,7 @@ outbound_server.on('CONNECT', function (req) {
 		req.execute('set', 'RECORD_DATE=${strftime(%Y-%m-%d %H:%M)}');
 		req.execute('set', 'RECORD_STEREO=true');
 		req.execute("record_session",`/var/spool/freeswitch/default/${date_time}_${destination_number}_${dialed_uuid}.mp3`)
-	},3000)
+	},delay_req)
 	util.log("outbound connected");
 	req.on('CHANNEL_ANSWER', function (req) {
 		util.log(req.body['Event-Date-Timestamp'])
