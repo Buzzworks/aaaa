@@ -851,6 +851,8 @@ class UsersCreateApiView(LoginRequiredMixin, APIView):
 					user_variable.wfh_numeric = request.POST["wfh_numeric"]
 				if request.POST.get('wfh_password',None):
 					user_variable.wfh_password = request.POST['wfh_password']
+				if request.POST.get('domain'):
+					user_variable.domain_id = request.POST.get('domain')
 				if 'w_req_callback' in request.POST:
 					user_variable.w_req_callback = request.POST['w_req_callback']
 				user_variable.save()
