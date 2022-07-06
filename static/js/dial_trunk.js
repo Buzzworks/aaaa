@@ -260,8 +260,13 @@ add_trunk_vue = new Vue({
                                     if (start_end.match(/^0+/)) {
                                         is_leading_zero = true
                                     }
+                                    let is_leading_plus = false
+                                    if(start_end.startsWith("+")){
+                                        is_leading_plus = true
+                                    }
                                     for (i = start_end; i <= end_node; i++) {
                                         let did_value = (is_leading_zero) ? i.toString().padStart(start_end_length,"0") : i.toString()
+                                        did_value = (is_leading_plus) ? did_value.toString().padStart(start_end_length,"+") : did_value.toString()
                                         select_options = {
                                             "id":i,
                                             "text":did_value,

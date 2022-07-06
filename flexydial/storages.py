@@ -4,6 +4,8 @@ from storages.backends.gcloud import GoogleCloudStorage
 from storages.utils import setting
 from urllib.parse import urljoin
 
+from flexydial.settings import GS_BUCKET_NAME
+
 class MediaStore(S3Boto3Storage):
     location = 'media'
     file_overwrite = False
@@ -18,3 +20,8 @@ class GoogleCloudMediaFileStorage(GoogleCloudStorage):
         Gives correct MEDIA_URL and not google generated url.
         """
         return urljoin(settings.MEDIA_URL, name)
+
+class staticGCloudMedia(GoogleCloudStorage):
+    bucket_name = setting(GS_BUCKET_NAME)
+    def url(self,name):
+        return urljoin(settings.STATIC_URL,name)

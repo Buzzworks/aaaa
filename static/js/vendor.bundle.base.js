@@ -9467,7 +9467,7 @@ function getNotification() {
         type: 'GET',
         url: '/api/get-notifications/',
         cache: false,
-        timeout: 5000,
+        timeout: 10000,
         success: function(data) {
             callnotifiaction_vue.notification_data = data['notification_data']
         }

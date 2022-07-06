@@ -64,7 +64,7 @@ from flexydial.views import (check_permission, get_paginated_object, data_for_pa
 		data_for_vue_pagination, sendSMS, csvDownloadTemplate, create_admin_log_entry, sendsmsparam,user_hierarchy_func,user_in_hirarchy_level)
 from callcenter.signals import (fs_pre_del_user)
 from callcenter.schedulejobs import (leadrecycle_add,leadrecycle_del,schedulereports_download,sched,remove_scheduled_job)
-from .utility import (delete_all_unexpired_sessions_for_user, delete_session, redirect_user, get_object, get_pre_campaign_edit_info,
+from .utility import (delete_all_unexpired_sessions_for_user, delete_session, get_statKey, redirect_user, get_object, get_pre_campaign_edit_info,
 		get_pre_campaign_create_info, validate_data, filter_queryset, paginate_queryset, get_paginated_response,
 		validate_uploaded_users_file, upload_users, get_current_users, set_agentReddis,
 		create_agentactivity, get_formatted_agent_activities, get_campaign_users, get_agent_mis,get_campaign_mis,
@@ -234,10 +234,12 @@ class LoginAPIView(APIView):
 	def post(self, request):
 		## Data for login validation
 		cap_form=CaptchaForm(request.POST)
-		if not cap_form.is_valid():
-			cap_form=CaptchaForm()
-			error_dict = {"error": "captcha is imporoper",'forgot_password':'',"cap_form":cap_form}
-			return Response(error_dict)
+		if not settings.DEVELOPMENT:
+			# cap_form=CaptchaForm(request.POST)
+			if not cap_form.is_valid():
+				cap_form=CaptchaForm()
+				error_dict = {"error": "captcha is imporoper",'forgot_password':'',"cap_form":cap_form}
+				return Response(error_dict)
 		serializer = LoginSerializer(data=request.data)
 		PASSWORD_ATTEMPTS = pickle.loads(settings.R_SERVER.get("password_attempt_status") or pickle.dumps({}))
 		forgot_password = False
@@ -507,17 +509,15 @@ class DashBoardApiView(LoginRequiredMixin, APIView):
 		ac_camp_count = lead_list_count = al_list_count = ll_data_count = 0
 		bridge_call = {}
 		# agent related counts and bridge call data
-		agents_df=get_all_keys_data_df(team_extensions)
-		if len(agents_df):
-			brk_count = len(agents_df[agents_df['state'].str.lower() == 'onbreak'])
-			dl_count = len(agents_df[(agents_df['dialer_login_status'] == True) & (agents_df['state'].str.lower() != 'onbreak')])
-			la_count = len(agents_df[(agents_df['dialer_login_status'] == False) & (agents_df['state'].str.lower() != 'onbreak')])
-			on_call_agent = agents_df[(agents_df['state']=='InCall') & (agents_df['dial_number']) & (agents_df['call_timestamp']!='')]
-			pg_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='progressive'])
-			ic_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='inbound'])
-			pd_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='predictive'])
-			pv_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='preview'])
-			mu_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='manual'])
+		# agents_df=get_all_keys_data_df(team_extensions)
+		brk_count = len(set(get_statKey('onbreak')) & set(team_extensions))
+		la_count = len(set(get_statKey('login_count')) & set(team_extensions))
+		dl_count = len(set(get_statKey('dialer_count')) & set(team_extensions))
+		pg_count = len(set(get_statKey('progressive')) & set(team_extensions))
+		ic_count = len(set(get_statKey('inbound')) & set(team_extensions))
+		pd_count = len(set(get_statKey('predictive')) & set(team_extensions))
+		pv_count = len(set(get_statKey('preview')) & set(team_extensions))
+		mu_count = len(set(get_statKey('manual')) & set(team_extensions))
 		lo_count = agent_count - la_count - dl_count - brk_count
 		live_agent_count = la_count + dl_count + brk_count
 		ac_camp_count = len(active_camp)

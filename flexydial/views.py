@@ -75,10 +75,10 @@ def get_login_campaign():
 	get the login campaings  from redis
 	"""
 	# total_agents_df = get_all_keys_data_df()
-	# campaign_pd = total_agents_df[(total_agents_df['campaign']!="")]    
+	# campaign_pd = total_agents_df[(total_agents_df['campaign']!="")]   
 	campaign_pd = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps({}))
 	camp_list = []
-	for key,value in campaign_pd:
+	for key,value in campaign_pd.items():
 		if len(value)>0:
 			camp_list.append(key)
 	return camp_list
@@ -844,9 +844,15 @@ def get_agent_status(extension,full_key = False):
 	return pickle.loads(settings.R_SERVER.get("flexydial_"+extension) or pickle.dumps({}))
 
 def set_agent_status(extension,agent_dict,delete=False):
+	stat_keys = ['onbreak','login_count','dialer_count','on_call_agent','progressive','inbound','predictive','preview','manual']
 	if delete:
+		settings.R_SERVER.delete("flexydial_"+extension)
 		# print("RedisDelete ",extension)
-		return settings.R_SERVER.delete("flexydial_"+extension)
+		for stat in stat_keys:
+			stat_dict = get_statKey(stat)
+			remove_redis_stat_val(stat_dict,stat,extension)
+		return True
+
 	updated_agent_dict = get_agent_status(extension)
 	# print("RedisAvailable ",extension,updated_agent_dict)
 	if extension not in updated_agent_dict:
@@ -858,10 +864,52 @@ def set_agent_status(extension,agent_dict,delete=False):
 	else:
 		updated_agent_dict[extension].update(agent_dict)
 	print("RedisUpdatedDict ",updated_agent_dict)
+	if extension in updated_agent_dict:
+		break_stat = get_statKey('onbreak')
+		login_count = get_statKey('login_count')
+		dialer_count = get_statKey('dialer_count')
+		if updated_agent_dict[extension]['state'].lower() == 'onbreak':
+			update_redis_stat_key(break_stat,'onbreak',extension)
+			remove_redis_stat_val(login_count,'login_count',extension)
+			remove_redis_stat_val(dialer_count,'dialer_count',extension)
+		else:
+			remove_redis_stat_val(break_stat,'onbreak',extension)
+			if updated_agent_dict[extension]['dialer_login_status'] == True:
+				update_redis_stat_key(dialer_count,'dialer_count',extension)
+			else:
+				update_redis_stat_key(login_count,'login_count',extension)
+		# on_call_agent = agents_df[(agents_df['state']=='InCall') & (agents_df['dial_number']) & (agents_df['call_timestamp']!='')]
+		on_call_agent = get_statKey("on_call_agent")
+		if updated_agent_dict[extension]['state'] == "InCall" and updated_agent_dict[extension]['dial_number'] and updated_agent_dict[extension]['call_timestamp']!="":
+			update_redis_stat_key(on_call_agent,'on_call_agent',extension)
+		else:
+			remove_redis_stat_val(on_call_agent,"on_call_agent",extension)
+		dial_modes = ['progressive','inbound','predictive','preview','manual']
+		for dial_mode in dial_modes:
+			dial_mode_dict = get_statKey(dial_mode)
+			if updated_agent_dict[extension]['call_type'].lower() == dial_mode:
+				update_redis_stat_key(dial_mode_dict,dial_mode,extension)
+			else:
+				remove_redis_stat_val(dial_mode_dict,dial_mode,extension)		
 	status = settings.R_SERVER.set("flexydial_"+extension, pickle.dumps(updated_agent_dict),ex=settings.REDIS_KEY_EXPIRE_IN_SEC)
 	if status!=True:
 		print("Log::RedisError:: ",status,updated_agent_dict)
 	return status
+
+def update_redis_stat_key(stat_dict, key,extension):
+	if extension not in stat_dict:
+		stat_dict.update(extension)
+		update_statKey(key,stat_dict)
+def remove_redis_stat_val(stat_dict,key,extension):
+	if extension in stat_dict:
+		stat_dict.remove(stat_dict)
+		update_statKey(key,stat_dict)
+		
+def get_statKey(key):
+	return pickle.loads(settings.R_SERVER.get(key) or pickle.dumps({}))
+
+def update_statKey(key,val):
+	return settings.R_SERVER.set(key, pickle.dumps(val),ex=settings.REDIS_KEY_EXPIRE_IN_SEC)
 
 def default_agent_status(extension,agent_dict):
 	if extension in agent_dict:
