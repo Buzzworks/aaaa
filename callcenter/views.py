@@ -456,37 +456,40 @@ class EmergencyLogoutAllUserApiView(LoginRequiredMixin, APIView):
 		user_list = []
 		for session in active_sessions:
 			if session.get_decoded().get('_auth_user_id') != str(userId):
-				user = User.objects.get(id=session.get_decoded().get('_auth_user_id'))
-				if user.is_superuser:
-					role_name = "admin"
+				if session.get_decoded().get('_auth_user_id'):
+					user = User.objects.get(id=session.get_decoded().get('_auth_user_id'))
+					if user.is_superuser:
+						role_name = "admin"
+					else:
+						role_name = user.user_role.name
+					now = datetime.now()
+					try:
+						last_request = datetime.fromtimestamp(session.get_decoded().get('last_request'))
+						last_req_diff = (now-last_request).seconds
+					except Exception as e:
+						print(e)
+						last_req_diff = 30
+					if role_name == "agent" and last_req_diff>=30:
+						agent_activity_data['user'] = user
+						agent_activity_data["event"] = "Force logout by "+request.user.role_name+" "+request.user.username
+						agent_activity_data["event_time"] = datetime.now()
+						create_agentactivity(agent_activity_data)
+						AGENTS = get_agent_status(user.extension)
+						if user.extension in AGENTS:
+							del AGENTS[user.extension]
+							set_agent_status(user.extension,AGENTS,True)
+						delete_session(session)
+					elif role_name != "agent":
+						create_admin_log_entry(request.user, "","7",'LOGOUT',user.username)
+						delete_session(session)
+						AGENTS = get_agent_status(user.extension)
+						if user.extension in AGENTS:
+							del AGENTS[user.extension]
+							set_agent_status(user.extension,AGENTS,True)
+					else:
+						user_list.append(user.extension)
 				else:
-					role_name = user.user_role.name
-				now = datetime.now()
-				try:
-					last_request = datetime.fromtimestamp(session.get_decoded().get('last_request'))
-					last_req_diff = (now-last_request).seconds
-				except Exception as e:
-					print(e)
-					last_req_diff = 30
-				if role_name == "agent" and last_req_diff>=30:
-					agent_activity_data['user'] = user
-					agent_activity_data["event"] = "Force logout by "+request.user.role_name+" "+request.user.username
-					agent_activity_data["event_time"] = datetime.now()
-					create_agentactivity(agent_activity_data)
-					AGENTS = get_agent_status(user.extension)
-					if user.extension in AGENTS:
-						del AGENTS[user.extension]
-						set_agent_status(user.extension,AGENTS,True)
 					delete_session(session)
-				elif role_name != "agent":
-					create_admin_log_entry(request.user, "","7",'LOGOUT',user.username)
-					delete_session(session)
-					AGENTS = get_agent_status(user.extension)
-					if user.extension in AGENTS:
-						del AGENTS[user.extension]
-						set_agent_status(user.extension,AGENTS,True)
-				else:
-					user_list.append(user.extension)
 		return JsonResponse({"user_list": user_list})
 
 @method_decorator(check_read_permission, name='get')
