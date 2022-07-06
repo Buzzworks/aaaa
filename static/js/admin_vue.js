@@ -30,7 +30,7 @@ function get_updates() {
     $.ajax({
         type: 'GET',
         url: location.href,
-        timeout: 5000,
+        timeout: 10000,
         cache: false,
         success: function(data) {
             $('#dashboard-noti-count').text(data["noti_count"])
@@ -566,7 +566,7 @@ $(document).ready(function() {
         if(location.pathname.indexOf("dashboard")!=-1){
             get_updates();
         }
-    },5000);
+    },20000);
 })
 
 Vue.component('model', {
