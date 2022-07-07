@@ -33,7 +33,7 @@ from .models import (CampaignSchedule, Switch, DialTrunk, User, Group,
 from flexydial.constants import (Status,CALL_MODE, CAMPAIGN_STRATEGY_CHOICES, DIAL_RATIO_CHOICES, CDR_DOWNLOAD_COl,QC_FEEDBACK_COL,PasswordChangeType)
 from .serializers import (GroupSerializer,CallDetailSerializer, CallBackContactSerializer,
 	SetCallBackContactSerializer, DncSerializer, CallDetailReportSerializer, AgentActivityReportSerializer, CurrentCallBackSerializer, AbandonedcallSerializer, CallRecordingFeedbackSerializer)
-from flexydial.views import (get_paginated_object, data_for_pagination, sendSMS, create_admin_log_entry)
+from flexydial.views import (get_paginated_object, data_for_pagination, sendSMS, create_admin_log_entry,user_hierarchy_func)
 import numpy as np
 import socket, errno, xmlrpc.client
 import sys
@@ -67,27 +67,31 @@ def diff_time_in_seconds(timestamp):
 
 def check_non_admin_user(user):
 	""" check user is adim or not """
-	if (user.is_superuser or (user.user_role and user.user_role.access_level == 'Admin')):
+	if (user.is_superuser):
 		return False
 	return True
 
 def get_temp_contact(user, campaign, portfolio=False):
 	""" Get temp contact data"""
 	temp_contact = None
+	print('log::get_temp_contact::campaign::',campaign,"-requestuser::",user)
 	if not portfolio:
 		if TempContactInfo.objects.filter(campaign=campaign, status='NotDialed').exists():
 			temp_contact = TempContactInfo.objects.filter(campaign=campaign, status='NotDialed').order_by('priority','modified_date').first()
-			temp_contact.status = 'Locked'
-			temp_contact.save()
+			if temp_contact:
+				temp_contact.status = 'Locked'
+				temp_contact.save()
 	else:
 		if TempContactInfo.objects.filter(user=user, campaign=campaign, status='NotDialed').exists():
 			temp_contact = TempContactInfo.objects.filter(user=user, campaign=campaign, status='NotDialed').order_by('priority','modified_date').first()
-			temp_contact.status = 'Locked'
-			temp_contact.save()
+			if temp_contact:
+				temp_contact.status = 'Locked'
+				temp_contact.save()
 		elif TempContactInfo.objects.filter(Q(campaign=campaign, status='NotDialed'),(Q(user='')|Q(user=None))).exists():
 			temp_contact = TempContactInfo.objects.filter(Q(campaign=campaign, status='NotDialed'),(Q(user='')|Q(user=None))).order_by('priority','modified_date').first()
-			temp_contact.status = 'Locked'
-			temp_contact.save()
+			if temp_contact:
+				temp_contact.status = 'Locked'
+				temp_contact.save()
 	return temp_contact
 
 
@@ -149,7 +153,11 @@ def user_hierarchy(request,camp_name):
 	"""
 	this is the function defined to get the user reporting hirerarchy
 	"""	
-	users = User.objects.exclude(id=request.user.id)
+	# users = User.objects.exclude(id=request.user.id)
+	if request.user.is_superuser:
+		users = User.objects.exclude(id=request.user.id)
+	else:
+		users = User.objects.filter(id__in=user_hierarchy_func(request.user.id))
 	admin=False
 	if request.user.user_role and request.user.user_role.access_level == 'Admin':
 		admin = True
@@ -178,7 +186,11 @@ def user_hierarchy_object(user,camp_name=[]):
 	"""
 	this is the function defined user hierarcy object data
 	"""	
-	users = User.objects.exclude(id=user.id).all()
+	# users = User.objects.exclude(id=user.id).all()
+	if user.is_superuser:
+		users = User.objects.exclude(id=user.id)
+	else:
+		users = User.objects.filter(id__in=user_hierarchy_func(user.id)).all()
 	if user.is_superuser:
 		total_camp_users =users
 	elif user.user_role and user.user_role.access_level == 'Admin':
@@ -416,7 +428,11 @@ def get_pre_campaign_create_info(request):
 	department_id = groups.values_list("id", flat=True)
 	data["call_time"] = CampaignSchedule.objects.values("id", "name")
 	data["switch_detail"] = Switch.objects.values("name", "id")
-	user_list = User.objects.values("id", "username")
+	# user_list = User.objects.values("id", "username")
+	if request.user.is_superuser:
+		user_list=User.objects.all().values("id", "username")
+	else:
+		user_list = User.objects.filter(id__in=user_hierarchy_func(request.user.id)).values("id", "username")
 	data["users"] = user_list
 	data["phone_extensions"] = UserVariable.objects.filter(
 		user__isnull=True).values("id", "extension")
@@ -466,6 +482,10 @@ def get_pre_campaign_edit_info(pk, request):
 	data["is_non_admin"] = check_non_admin_user(request.user)
 	data['non_user'] = []
 	users = User.objects.all()
+	if request.user.is_superuser:
+		users=User.objects.all()
+	else:
+		users = User.objects.filter(id__in=user_hierarchy_func(request.user.id))
 	if data["is_non_admin"]:
 		groups = groups.filter(Q(user_group=request.user)|Q(created_by=request.user))
 		data['user_groups'] = groups.values_list('id',flat=True)
@@ -501,30 +521,118 @@ def get_pre_campaign_edit_info(pk, request):
 	# data["campaign_call_mode"] = [i for i in call_mode_list if i[0] not  in object_data.callback_mode]
 	return data
 
-def validate_data(username, email,wfh_numeric, employee_id=''):
+from flexydial.constants import CALL_TYPE
+def validate_data(username, email,wfh_numeric, employee_id='',reporting_to='',domain='',call_protocol='',user_role='',dial_trunk='',caller_id=''):
 	"""
 	this is the function defined for validating the user information
 	"""	
 	data = {}
-	if username:
-		is_present = User.objects.filter(username=username.strip()).exists()
-		if is_present:
-			data["username"] = "This Username is already taken"
+
+	username=username.strip()
+	if username=="":
+		data['username']="username should not be empty"
+
 	if email:
-		is_present = User.objects.filter(email=email.strip()).exists()
-		if is_present:
-			data["email"] = "User with this email id is already there"
+		regex_email = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+		if not (re.fullmatch(regex_email, email)):
+			data['email']="enter proper email"
 
-	if wfh_numeric and wfh_numeric != float:
-		is_present = UserVariable.objects.filter(wfh_numeric=str(wfh_numeric).strip()).exists()
-		if is_present:
-			data['wfh_numeric'] = "wfh_numeric is already there"
+	if domain:
+		switches=list(Switch.objects.all().values_list('name',flat=True))
+		if domain not in switches:
+				data['domain']="the domain does not exists"
 
-	if employee_id:
-		is_present = User.objects.filter(employee_id=employee_id.strip()).exists()
-		if is_present:
-			data["employee_id"] = "This employee_id is already taken"
+	if call_protocol:
+		list_call_type=list(dict(CALL_TYPE).values())
+		if call_protocol not in list_call_type:
+			data['call_protocol']='the call protocol must be of'+str(list_call_type)
 
+
+	if wfh_numeric:
+		wfh_numeric=str(wfh_numeric)		
+		if not wfh_numeric.isdigit():
+					data['wfh_numeric']="wfh numeric should be only integers"
+
+	# if employee_id:
+	# 	is_present = User.objects.filter(employee_id=employee_id.strip()).exists()
+	# 	if is_present: # commenting as taking username
+	# 		data["employee_id"] = "This employee_id is already taken"
+
+
+	if reporting_to:
+		try:
+			reporting_to=reporting_to.strip()
+			reporting_user_obj = User.objects.filter(username=reporting_to)
+			user_role=UserRole.objects.get(name=user_role).access_level.lower()
+			if user_role=='admin' and reporting_to:
+				data['reporting_to']='admin cannot report to any'
+			elif user_role=='agent' and reporting_to:
+				if reporting_user_obj.exists():
+					reporting_user_role = reporting_user_obj[0].user_role.access_level.lower()
+					if reporting_user_role in ['agent']:
+						data['reporting_to']='agent cannot report agent'
+				else:
+					data['reporting_to']='given reporting user is not present'
+			elif user_role=='supervisor' and reporting_to:
+				if reporting_user_obj.exists():
+					reporting_user_role = reporting_user_obj[0].user_role.access_level.lower()
+					if reporting_user_role in ['agent','supervisor']:
+						data['reporting_to'] = 'supervisor cannot report agent, supervisor'
+				else:
+					data['reporting_to']='given reporting user is not present'
+			elif user_role=='manager' and reporting_to:
+				if reporting_user_obj.exists():
+					reporting_user_role = reporting_user_obj[0].user_role.access_level.lower()
+					if reporting_user_role in ['agent','supervisor','manager']:
+						data['reporting_to'] = 'manager cannot report agent, supervisor, manager'
+				else:
+					data['reporting_to'] = 'given reporting user is not present'
+		except Exception as e:
+			print("EXCEPTION OCCURED AT def validate_data",e)
+			#this exception will printed only if given reported_to is for admin user
+			#as admin user is superuser and not having any userrole 
+
+	if dial_trunk:
+		userobj=User.objects.filter(username=username)
+		if userobj.exists():
+			username=userobj.first()
+			campaign = Campaign.objects.filter(Q(users=username)|Q(group__in=username.group.all())).filter(status='Active').distinct()
+			trunk_group = campaign.filter(is_trunk_group=True).values_list('trunk_group__trunks__trunk',flat=True)
+			camp_trunk = campaign.filter(is_trunk_group=False).values_list('trunk',flat=True)
+			trunk_list = list(DialTrunk.objects.filter(Q(id__in=camp_trunk)|Q(id__in=trunk_group)).values_list('name',flat=True))
+			if dial_trunk not in trunk_list:
+				data['dial_trunk']='the trunks must be of '+str(trunk_list)
+		else:
+			data['dial_trunk']="the user must be not new for dial trunk"
+
+	if caller_id:
+		if caller_id.isdigit():
+			userobj=User.objects.filter(username=username)
+			if userobj.exists():
+				username=userobj.first()
+				campaign = Campaign.objects.filter(Q(users=username)|Q(group__in=username.group.all())).filter(status='Active').distinct()
+				trunk_group = campaign.filter(is_trunk_group=True).values_list('trunk_group__trunks__trunk',flat=True)
+				camp_trunk = campaign.filter(is_trunk_group=False).values_list('trunk',flat=True)
+				trunk_list = list(DialTrunk.objects.filter(Q(id__in=camp_trunk)|Q(id__in=trunk_group)).values_list('name',flat=True))
+				if dial_trunk in trunk_list:
+					trunk_obj=DialTrunk.objects.filter(name=dial_trunk).first()
+					trunk_obj_range=trunk_obj.did_range
+					trunk_obj_range=trunk_obj_range.split(",")
+					trunk_obj_range=range(int(trunk_obj_range[0]),int(trunk_obj_range[1]))
+					if not int(caller_id) in trunk_obj_range:
+						data['caller id']='the caller id must be in the range of'+str(trunk_obj_range)
+
+					exst_user=User.objects.exclude(username=str(username)).filter(trunk=trunk_obj.id,caller_id=caller_id)
+					if exst_user.exists():
+						data['caller id']="this number is already taken by user"+str(exst_user.first().username)
+
+				else:
+					data['dial_trunk__caller_id']='caller id the trunks must be of '+str(trunk_list)
+
+			else:
+				data['caller id']="the user must be not new for caller id"
+		else:
+			data['caller id']="caller id must be integer"
 	return data
 
 
@@ -538,20 +646,7 @@ def validate_uploaded_users_file(data):
 	incorrect_list = []
 	duplicate_list = []
 	if not data.empty:
-		duplicate_list = data[data.duplicated('username', keep='first')]
-		duplicate_list['description']='This username is duplicated'
-		data.drop_duplicates(subset ="username", keep = 'first', inplace = True) 
 
-		dummy_df = data[(data["wfh_numeric"] != '')]
-		duplicate_list = dummy_df[dummy_df.duplicated('wfh_numeric', keep='first')]
-		data = data.drop(duplicate_list.index.tolist())
-		duplicate_list['description']='This wfh_numeric is duplicated'
-		dummy_df= data[(data["employee_id"]!='')]
-		dup_email_list = dummy_df[dummy_df.duplicated(["employee_id"], keep='first')]
-		dup_email_list['description']='This employee_id is duplicated'
-
-		frame = [duplicate_list]
-		duplicate_list = pd.concat(frame)
 		# index_list = dup_email_list.index.tolist()
 		# data = data.drop(index_list)
 
@@ -559,8 +654,25 @@ def validate_uploaded_users_file(data):
 		data = data.replace(np.nan, '', regex=True)
 		incorrect_count =len(duplicate_list)
 
+		wfh_numeric_duplicate_df=data[data.duplicated('wfh_numeric')]
+		wfh_numerics_duplicates=set(wfh_numeric_duplicate_df['wfh_numeric'].tolist())
+
+		if "" in wfh_numerics_duplicates:
+			wfh_numerics_duplicates.remove("")
+
+		wfh_numerics_db=list(UserVariable.objects.exclude(wfh_numeric=None).values_list('wfh_numeric',flat=True))
+
+		username_duplicate_df=data[data.duplicated('username')]
+		username_duplicates=set(username_duplicate_df['username'].tolist())
+
+		duplicate = data[data.duplicated(['dial_trunk', 'caller_id'])]
+		duplicate_col=duplicate[['username','dial_trunk','caller_id']]
+		null_filter = duplicate_col["dial_trunk"] != ""
+		dfNew = duplicate_col[null_filter]
+		user_trunk_list=dfNew['username'].tolist()#this list contains which has duplicate caller id's
+
 		for index, row in data.iterrows():
-			username = row.get("username", "")
+			username = str(row.get("username", ""))
 			email = row.get("email", "")
 			
 
@@ -568,23 +680,72 @@ def validate_uploaded_users_file(data):
 			# data = {}
 			user_role = row.get("role", "")
 			group = row.get("group", "")
-			password = row.get("password", "")
+			password = str(row.get("password", ""))
+			password=password.strip()
 			wfh_numeric = row.get("wfh_numeric","")
 			employee_id = row.get("employee_id","")
 			if not username or not password:
 				data = {"Msg": "Missing value in row"}
 			
-			data = validate_data(str(username), str(email), wfh_numeric, str(employee_id))
-			if user_role:
-				check_role = UserRole.objects.filter(
-					name__iexact=user_role.strip()).exists()
-				if not check_role:
-					data["role"] = "This is not a valid role"
-			if group:
-				check_dept = Group.objects.filter(
-					name__iexact=group.strip()).exists()
-				if not check_dept:
-					data["group"] = "This is not a valid group"
+			reporting_to=row.get("reporting_to","")
+			domain=row.get("domain","")
+			call_protocol=row.get("call_protocol","")
+
+			dial_trunk=str(row.get("dial_trunk")).strip()
+			caller_id=str(row.get("caller_id")).strip()
+			data = validate_data(str(username), str(email), wfh_numeric, str(employee_id),str(reporting_to),str(domain),str(call_protocol),str(user_role),dial_trunk,caller_id)
+			check_role = UserRole.objects.filter(
+				name__iexact=user_role.strip()).exists()
+			if not check_role:
+				data["role"] = "This is not a valid role"
+
+			group=group.strip()
+			if group:	
+				group_lst=list(group.split(","))
+				for x in group_lst:
+					exist=Group.objects.filter(name=x,status="Active").exists()
+					if not exist:
+						data['group']="this "+x+" is not valid group"
+
+			if str(len(username.strip()))==0:
+				data['username']="Username must not be empty"
+			if username in username_duplicates:
+				data['username']="given username already in the file multiple times"
+			if username in user_trunk_list:#we are returning error in same caller id present in file by taking username as key
+				data['caller_id']='this domain with same caller_id exists in the file'
+			if wfh_numeric in wfh_numerics_duplicates:
+				data['wfh_numeric']="given wfh_numeric contains duplicates in file"
+
+			status=str(row.get('status')).strip()
+			str_bools=['True','False']
+			if len(status) ==0:
+				data['status']="status must be not empty"
+			elif status not in str_bools:
+				data['status']="status must be boolean only"
+
+			if wfh_numeric:
+				s=User.objects.filter(username=username)
+				if s:
+					if wfh_numeric==s[0].properties.wfh_numeric:
+						pass
+					else:
+						if wfh_numeric in wfh_numerics_db:
+							data['wfh_numeric']='given wfh numeric present in db'
+				else:
+					if wfh_numeric in wfh_numerics_db:
+						data['wfh_numeric']='given wfh numeric present in db'
+
+			user_obj=User.objects.filter(username=username)
+			if (not user_obj.exists()) and (not password):
+					data['password']="password should be not null for new users"	
+
+			if password:
+				reg = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!#%*?&]{6,20}$"
+				pat=re.compile(reg)
+				mat=re.search(pat,password)
+				if not mat:
+					data['password']="password should be strong"
+
 			if data:
 				incorrect_count = incorrect_count + 1
 				row["description"] = json.dumps(data)
@@ -608,7 +769,7 @@ def validate_uploaded_users_file(data):
 				for incorrect_row in incorrect_list:
 					incorrect_row.to_csv(
 						improper_file, index=False, header=improper_file.tell() == 0)
-				if not duplicate_list.empty:
+				if len(duplicate_list)!=0:
 					duplicate_list.to_csv(improper_file, index=False, header=improper_file.tell()==0)
 			incorrect_file_path = "/static/csv_files/improper_data.csv"
 			data["incorrect_file"] = incorrect_file_path
@@ -625,6 +786,8 @@ def upload_users(data, logged_in_user):
 	domain_obj=Switch.objects.filter().first()	
 	for index, row in data.iterrows():
 		username = row.get("username", "")
+		username=str(username).strip()
+		username=re.sub("\s", "_", username)
 		email = row.get("email", "")
 		email_password = str(row.get("email_password", ""))
 		password = row.get("password", "").strip()
@@ -634,32 +797,71 @@ def upload_users(data, logged_in_user):
 		last_name = row.get("last_name","")
 		wfh_numeric = row.get("wfh_numeric","")
 		employee_id = row.get("employee_id","")
+		user_is_active=row.get("status")
+		user_obj_exists=User.objects.filter(username=username).exists()
+		
+
 		user, created = User.objects.get_or_create(username=username)
 		if user_role:
 			role = UserRole.objects.get(name__iexact=user_role.strip())
 			user.user_role = role
 		if group:
-			group = Group.objects.get(name__iexact=group.strip())
-			user.group.add(group)
-		user.set_password(password)
+			group_lst=list(group.split(","))
+			group_objs=Group.objects.filter(name__in=group_lst)
+			user.group.clear()
+			user.group.add(*group_objs)
+		else:
+			user.group.clear() 
+
+		if user_obj_exists:
+			if password:
+				user.set_password(password)
+			else:
+				pass
+		else:
+			user.set_password(password)
 		user.email = email.strip()
 		user.first_name = first_name
 		user.last_name = last_name
 		user.created_by = logged_in_user
 		user.email_password = email_password.strip()
+		user.is_active=user_is_active
 		if employee_id:
 			user.employee_id = employee_id
+		Reporting_User = row.get('reporting_to')
+		if Reporting_User:
+			reporting_user_obj = User.objects.get(username=Reporting_User)
+			user.reporting_to = reporting_user_obj
+		call_protocol=row.get("call_protocol")
+		if call_protocol:
+			call_type_dict=dict(CALL_TYPE)
+			call_protocol_key = [k for k, v in call_type_dict.items() if v == call_protocol]#we need to store the call type key as we get value from dict we are getting key from calltype
+			user.call_type=call_protocol_key[0]
+		user_trunk=row.get('dial_trunk')
+		if user_trunk:
+			trunk_obj=DialTrunk.objects.get(name=user_trunk)
+			print("trunk obj is",trunk_obj)
+			user.trunk=trunk_obj
+		caller_id=row.get('caller_id')
+
+		user.caller_id=caller_id
+
 		user.save()
 		if created:
 			user_variable = UserVariable()
 			user_variable.user = user
+			extension_exist = UserVariable.objects.all().values_list('extension',flat=True)
+			extension = sorted(list(set(four_digit_number) - set(extension_exist)))[0]
+			user_variable.extension = extension
 		else:
 			user_variable = UserVariable.objects.get(user=user)
-
-		extension_exist = UserVariable.objects.all().values_list('extension',flat=True)
-		extension = sorted(list(set(four_digit_number) - set(extension_exist)))[0]
-		user_variable.extension = extension
-		UserVariable.domain=domain_obj
+		domain=row.get('domain')
+		if not domain:
+			UserVariable.domain=domain_obj
+		else:
+			domain_obj=Switch.objects.get(name=domain) 
+			UserVariable.domain=domain_obj
+		
 		if wfh_numeric == '':
 			user_variable.wfh_numeric = None
 		else:
@@ -1102,7 +1304,7 @@ def convert_into_timedelta(given_time):
 		return timedelta(hours=given_time.hour, minutes=given_time.minute, seconds=given_time.second)
 	elif type(given_time) == str:
 		given_time_list = given_time.split(':')
-		return timedelta(hours=int(given_time_list[0]),minutes=int(given_time_list[1]), seconds=int(given_time_list[2]))
+		return timedelta(hours=int(given_time_list[0]),minutes=int(given_time_list[1]), seconds=int(float(given_time_list[2])))
 	else:
 		return timedelta(seconds=0)
 
@@ -1699,6 +1901,7 @@ def download_call_detail_report(filters, user, col_list, serializer_class, downl
 				sub_dispo += ", "
 		sub_dispo += "from callcenter_calldetail left join callcenter_diallereventlog on callcenter_diallereventlog.session_uuid = callcenter_calldetail.session_uuid left join callcenter_cdrfeedbck on callcenter_cdrfeedbck.calldetail_id=callcenter_calldetail.id left join callcenter_user usr on usr.id = callcenter_calldetail.user_id left join callcenter_user supr on supr.id = usr.reporting_to_id left join (select sms.session_uuid as session_uuid, string_agg(template.name, ', ') as name from callcenter_smslog sms left join callcenter_smstemplate template on sms.template_id = template.id group by sms.session_uuid) sms on sms.session_uuid = callcenter_calldetail.session_uuid " + where
 		download_folder = settings.MEDIA_ROOT+"/download/"+datetime.now().strftime("%m.%d.%Y")+"/"+str(user.id)+"/"
+		download_sw_file = "/download/"+datetime.now().strftime("%m.%d.%Y")+"/"+str(user.id)+"/"
 		if not os.path.exists(download_folder):
 			os.makedirs(download_folder)
 		# file_path = download_folder+str(user.id)+'_'+str('call_details')+'_'+str(datetime.now().strftime("%m.%d.%Y.%H.%M.%S"))+".xls"
@@ -1708,11 +1911,13 @@ def download_call_detail_report(filters, user, col_list, serializer_class, downl
 		db_connection = "postgresql://{user}:{password}@{host}:{port}/{db_name}".format(user = db_settings['USER'], password=db_settings['PASSWORD'], host = db_settings['HOST'], db_name = db_settings['NAME'], port = db_settings['PORT'])
 		if download_type == 'xls':
 			file_path = download_folder+str(user.id)+'_'+str('call_details')+'_'+str(datetime.now().strftime("%m.%d.%Y.%H.%M.%S"))+".xlsx"
+			file_nfs_path = download_sw_file+str(user.id)+'_'+str('call_details')+'_'+str(datetime.now().strftime("%m.%d.%Y.%H.%M.%S"))+".xlsx"
 			with pd.ExcelWriter(file_path, engine="xlsxwriter",options={'remove_timezone': True}) as writer:
 				df = pd.read_sql(sub_dispo,db_connection)
 				df.to_excel(writer, sheet_name = "Sheet1", header = True, index = False)
 		else:
 			file_path = download_folder+str(user.id)+'_'+str('call_details')+'_'+str(datetime.now().strftime("%m.%d.%Y.%H.%M.%S"))+".csv"
+			file_nfs_path = download_sw_file+str(user.id)+'_'+str('call_details')+'_'+str(datetime.now().strftime("%m.%d.%Y.%H.%M.%S"))+".csv"
 			df = pd.read_sql(sub_dispo,db_connection)
 			df.to_csv(file_path, index = False)
 		f = open(file_path, 'rb')
@@ -3604,3 +3809,49 @@ def PasswordChangeAndLockedReminder():
 	except Exception as e:
 		print("Error in sending password change reminder and locked mails",e)
 
+def get_agent_status(extension,full_key = False):
+	if full_key:
+		return pickle.loads(settings.R_SERVER.get(extension) or pickle.dumps({}))
+	return pickle.loads(settings.R_SERVER.get("flexydial_"+extension) or pickle.dumps({}))
+
+def set_agent_status(extension,agent_dict,delete=False):
+	if delete:
+		return settings.R_SERVER.delete("flexydial_"+extension)
+	updated_agent_dict = get_agent_status("flexydial_"+extension)
+	if extension not in updated_agent_dict:
+		updated_agent_dict[extension] = {}
+	if extension in agent_dict:
+		updated_agent_dict[extension] = agent_dict[extension]	
+	else:
+		updated_agent_dict[extension] = agent_dict
+	return settings.R_SERVER.set("flexydial_"+extension, pickle.dumps(updated_agent_dict))
+
+def get_all_keys_data_df(team_extensions=''):
+	keysdata = settings.R_SERVER.scan_iter("flexydial_*")
+	total_agents_df = pd.DataFrame()
+	if team_extensions:
+		team_extensions =[bytes("flexydial_"+s, encoding='utf-8')  for s in team_extensions]
+		for k in keysdata:
+			if k in team_extensions:
+				AGENTS = get_agent_status(k,True)
+				total_agents_df = pd.concat([total_agents_df,pd.DataFrame.from_dict(AGENTS,orient='index')], ignore_index = True)
+	else:
+		for k in keysdata:
+			AGENTS = get_agent_status(k,True)
+			total_agents_df = pd.concat([total_agents_df,pd.DataFrame.from_dict(AGENTS,orient='index')], ignore_index = True)
+	return total_agents_df
+
+def get_all_keys_data(team_extensions=""):
+	keysdata = settings.R_SERVER.scan_iter("flexydial_*")
+	agent_dict = {}
+	if team_extensions:
+		team_extensions =[bytes("flexydial_"+s, encoding='utf-8')  for s in team_extensions]
+		for k in keysdata:
+			if k in team_extensions:
+				AGENTS = get_agent_status(k,True)
+				agent_dict.update(AGENTS)	
+	else:
+		for k in keysdata:
+			AGENTS = get_agent_status(k,True)
+			agent_dict.update(AGENTS)
+	return agent_dict

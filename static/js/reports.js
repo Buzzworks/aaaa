@@ -772,7 +772,7 @@ $(document).on('click','.file-download', function(e){
 	e.preventDefault;
 	$(this).parent('tr').addClass('highlighted_row')
 	downlod_btn = $(this)
-	var parent_path = `${location.protocol}//${location.hostname}/recordings`
+	var parent_path = `${location.protocol}//${row_data['ip_address']}/recordings`
 	var row = $(this).parents('tr')
 	var row_data = custom_pagination_table.row(row).data()
 	var date = new Date(row_data['ring_time']);
@@ -947,7 +947,7 @@ $(document).on('click', '.save-qc', function(){
 	var row = $(this).parents('tr')
 	var row_data = custom_pagination_table.row(row).data()
 	var date = new Date(row_data['ring_time']);
-	var url = `${location.protocol}//${location.hostname}/recordings/${("0" + date.getDate()).slice(-2)}-${("0" + (date.getMonth() + 1)).slice(-2)}-${date.getFullYear()}-${("0" + date.getHours()).slice(-2)}-${("0" + date.getMinutes()).slice(-2)}_${row_data['customer_cid']}_${row_data['session_uuid']}.mp3`
+	var url = `${location.protocol}//${row_data['ip_address']}/recordings/${("0" + date.getDate()).slice(-2)}-${("0" + (date.getMonth() + 1)).slice(-2)}-${date.getFullYear()}-${("0" + date.getHours()).slice(-2)}-${("0" + date.getMinutes()).slice(-2)}_${row_data['customer_cid']}_${row_data['session_uuid']}.mp3`
 	recording_id = row_data["id"]
 	call_recording_session_uuid = row_data["session_uuid"]
 	$.ajax({

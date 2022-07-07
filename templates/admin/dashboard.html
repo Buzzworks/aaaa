@@ -552,6 +552,7 @@
 	sip_identity = `sip:${extension}@${host}`
 	websocket_proxy_url = `wss://${host}:{{ user.uservariable.domain.wss_port }}`;
 	outbound_proxy_url = `udp://${host}:{{ user.uservariable.domain.sip_udp_port }}`;
+	sip_host = `${host}`
 	{% endif %}
 
 </script>
@@ -574,8 +575,14 @@
 <!-- </script> -->
 
 {% if request.user.call_type == 'webrtc' %}
-<script src="{% static 'webrtc/sip.js' %}"></script>
-<script src="{% static 'webrtc/sip_session.js' %}"></script>
+<!-- <script src="{% static 'webrtc/sip.js' %}"></script>
+<script src="{% static 'webrtc/sip_session.js' %}"></script> -->
+<script src="{% static 'webrtc/jssip.min.js' %}"></script>
+<script src="{% static 'webrtc/jssip_session.js' %}"></script>
+<script>
+	var jssip = true;
+	var sipml5 = false; 
+</script>
 {% endif %}
 
 <script type="text/javascript">
@@ -611,8 +618,14 @@ $(document).ready(function(){
 		// socketevents()
 	})
 	$(window).on('beforeunload', function(){
-		if(ocallSession != ''){
-			ocallSession.hangup()
+		if(sipml5){
+			if(ocallSession != ''){
+				ocallSession.hangup()
+			}
+		} else if(jssip){
+			if(session) {
+				hangupCall()
+			}
 		}
 		console.log("Bye now!");
 	});
@@ -620,7 +633,7 @@ $(document).ready(function(){
 		if ($(this).prop("checked") == true){
 			if (socket.connected){
 				if(call_type == "webrtc"){
-					if(ocallSession == ''){
+					if(ocallSession == '' || session == ""){
 						sip_login = true
 						sipInitialize();
 					}
@@ -658,6 +671,13 @@ $(document).ready(function(){
 						sipStack.stop()
 					}
 					SIPml["b_initialized"] = false
+				}else if (session){
+					sip_login = false
+					if(sipStack){
+						sipStack.stop();
+					}else{
+						hangupCall()
+					}
 				}
 				console.log("Bye now!");
 				session_details = {}

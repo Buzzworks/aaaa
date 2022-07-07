@@ -74,8 +74,7 @@ def get_login_campaign():
 	""" 
 	get the login campaings  from redis
 	"""
-	AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") )
-	total_agents_df = pd.DataFrame.from_dict(AGENTS,orient='index')
+	total_agents_df = get_all_keys_data_df()
 	campaign_pd = total_agents_df[(total_agents_df['campaign']!="")]    
 	agent_logged_in_campaign=campaign_pd['campaign'].tolist()
 	return agent_logged_in_campaign
@@ -84,8 +83,7 @@ def get_login_agent():
 	""" 
 	get the login agents from redis
 	"""
-	AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") )
-	total_agents_df = pd.DataFrame.from_dict(AGENTS,orient='index')
+	total_agents_df = get_all_keys_data_df()
 	campaign_pd = total_agents_df[(total_agents_df['username']!="")]    
 	agent_logged_in=campaign_pd['username'].tolist()
 	return agent_logged_in
@@ -385,8 +383,41 @@ class DeleteEntryApiView(APIView):
 				'action_name':"5",'event_type':'INACTIVE'})
 		return Response({"msg": "Selected entries deleted"})
 
+def user_in_hirarchy_level(user_id):
+	return list(User.objects.filter(id__in=user_hierarchy_func(user_id)).values("id", "username"))
 
-def csvDownload(fields, model, file_type, exclude=[],
+def user_hierarchy_func(user_id,users_list=""):
+	"""this function takes the username and returns usernames based on reporting_to hierarchy"""
+	users_id=User.objects.filter(id=user_id).values_list('id',flat=True)
+	lst_1=lst_2=lst_3=[]
+	if users_list:
+		users_1=User.objects.filter(reporting_to__id__in=users_list)
+	else:
+		users_1=User.objects.filter(reporting_to__id__in=[str(i) for i in users_id]).values_list('id',flat=True)
+	if users_1:
+		lst_1=list(users_1.values_list('id',flat=True))
+	if lst_1:
+		users_2=User.objects.filter(reporting_to__id__in=lst_1)
+		if users_2:
+			lst_2=list(users_2.values_list('id',flat=True))
+	if lst_2:
+		users_3=User.objects.filter(reporting_to__id__in=lst_2)
+		if users_3:
+			lst_3=list(users_3.values_list('id',flat=True))
+	if users_id[0]=='admin':#ad admin username is python superuser need to download all
+		username=list(User.objects.exclude(username='admin').values_list("username",flat=True))
+	if users_list:
+		users_list = [int(i) for i in users_list]+lst_1+lst_2+lst_3
+	else:
+		users_list = lst_1+lst_2+lst_3
+	users_list=list(set(users_list))#using set because reporting_to given of python superuser admin, it's not possible but given intentionally(shell, users bulk, db).
+	return [str(i) for i in users_list]
+
+
+from callcenter.models import UserVariable
+from flexydial.constants import CALL_TYPE
+
+def csvDownload(fields, model, file_type, user="", exclude=[],
 				description="Export filtered data as CSV file"):
 
 	"""
@@ -396,9 +427,30 @@ def csvDownload(fields, model, file_type, exclude=[],
 	response['Content-Disposition'] = 'attachment; filename=%s.%s' % \
 			(model, file_type)
 
+	calltype_dict=dict(CALL_TYPE)
 	if file_type=="csv":
 		writer = csv.writer(response)
 		writer.writerow(list(fields))
+		if model=='User':
+			# users = UserVariable.objects.filter(user__created_by=user)
+			if user.is_superuser:
+				ref_users = list(User.objects.all().exclude(is_superuser=True).values_list("id",flat=True))
+			else:
+				ref_users = user_hierarchy_func(user.id)
+			users=UserVariable.objects.filter(user__id__in=ref_users)
+			user_feilds = users.values_list('user__username','user__email','user__password','user__user_role__name', 'user__first_name', 'user__last_name', 'wfh_numeric', 'user__employee_id','user__reporting_to__username','domain__name','user__call_type','user__is_active','user__trunk__name','user__caller_id')
+
+
+			for user in user_feilds:
+				li_user=list(user)
+				user_group=list(User.objects.filter(username=li_user[0]).values_list('group__name',flat=True))
+				if None in user_group: user_group.remove(None)
+				str_sep=','
+				user_group=str_sep.join(user_group)
+				li_user.insert(3,user_group)
+				li_user[2]=''
+				li_user[11]=calltype_dict.get(li_user[11]) #changing call type at 11th index
+				writer.writerow(li_user)
 	else:
 		wb = xlwt.Workbook(encoding='utf-8')
 		ws = wb.add_sheet(model)
@@ -406,6 +458,29 @@ def csvDownload(fields, model, file_type, exclude=[],
 		columns = list(fields)
 		for col_num in range(len(columns)):
 			ws.write(row_num,col_num, columns[col_num])
+		if model=='User':
+			# users = UserVariable.objects.filter(user__created_by=user)
+			if user.is_superuser:
+				ref_users = list(User.objects.all().exclude(is_superuser=True).values_list("id",flat=True))
+			else:
+				ref_users = user_hierarchy_func(user.id)
+			users=UserVariable.objects.filter(user__id__in=ref_users)
+
+			user_feilds = users.values_list('user__username','user__email','user__password','user__user_role__name', 'user__first_name', 'user__last_name', 'wfh_numeric', 'user__employee_id','user__reporting_to__username','domain__name','user__call_type','user__is_active','user__trunk__name','user__caller_id')
+			for row in user_feilds:
+				li_user=list(row)
+				li_user[-3]=str(li_user[-3])
+				user_group=list(User.objects.filter(username=li_user[0]).values_list('group__name',flat=True))
+				if None in user_group: user_group.remove(None)
+				str_sep=','
+				user_group=str_sep.join(user_group)
+				li_user.insert(3,user_group)
+				li_user[2]=''
+				li_user[11]=calltype_dict.get(li_user[11]) #changing call type at 11th index
+				row_num += 1
+				for col_num in range(len(li_user)):
+					ws.write(row_num, col_num, li_user[col_num])
+
 		wb.save(response)
 	return response
 
@@ -490,7 +565,7 @@ class DownloadSampleApiView(APIView):
 			cols = HOLIDAYS_FIELDS
 			model =  "Holidays"
 		if cols:
-			return csvDownload(cols, model,file_type)
+			return csvDownload(cols, model,file_type,request.user)
 
 class DownloadSampleContactApiView(APIView):
 	'''
@@ -551,7 +626,7 @@ def get_active_campaign(request):
 	admin = False
 	if request.user.user_role and request.user.user_role.access_level == 'Admin':
 		admin = True
-	if request.user.is_superuser or admin:
+	if request.user.is_superuser:
 		active_camps = Campaign.objects.filter(status="Active")
 		camp = active_camps.values_list("name", flat=True)
 		active_camp = list(active_camps.values_list("id",flat=True))
@@ -746,3 +821,30 @@ class CustomPasswordResetForm(SetPasswordForm):
 		if commit:
 			user.save()
 		return user
+
+def get_agent_status(extension,full_key = False):
+	if full_key:
+		return pickle.loads(settings.R_SERVER.get(extension) or pickle.dumps({}))
+	return pickle.loads(settings.R_SERVER.get("flexydial_"+extension) or pickle.dumps({}))
+def set_agent_status(extension,agent_dict,delete=False):
+	if delete:
+		return settings.R_SERVER.delete("flexydial_"+extension)
+	updated_agent_dict = get_agent_status("flexydial_"+extension)
+	if extension not in updated_agent_dict and not delete:
+		updated_agent_dict[extension] = {}
+	updated_agent_dict[extension] = agent_dict
+	return settings.R_SERVER.set("flexydial_"+extension, pickle.dumps(updated_agent_dict))
+def get_all_keys_data_df(team_extensions=''):
+	keysdata = settings.R_SERVER.scan_iter("flexydial_*")
+	total_agents_df = pd.DataFrame()
+	if team_extensions:
+		team_extensions =[bytes("flexydial_"+s, encoding='utf-8')  for s in team_extensions]
+		for k in keysdata:
+			if k in team_extensions:
+				AGENTS = get_agent_status(k,True)
+				total_agents_df = pd.concat([total_agents_df,pd.DataFrame.from_dict(AGENTS,orient='index')], ignore_index = True)
+	else:
+		for k in keysdata:
+			AGENTS = get_agent_status(k,True)
+			total_agents_df = pd.concat([total_agents_df,pd.DataFrame.from_dict(AGENTS,orient='index')], ignore_index = True)
+	return total_agents_df

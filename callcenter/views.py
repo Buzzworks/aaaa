@@ -13,7 +13,7 @@ from django.views.decorators.cache import never_cache, cache_page
 from django.conf import settings
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
 from django.core.cache import cache
-from django.db.models import Q, F, Sum, TimeField, Value, Count, Prefetch, CharField,TextField
+from django.db.models import Q, F, Sum, TimeField, Value, Count,Max, Prefetch, CharField,TextField
 from django.db.models.functions import Cast, Coalesce, Concat
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
@@ -60,10 +60,10 @@ from flexydial.constants import (Status, REPORTS_LIST, TRUNK_TYPE, UserStatus, D
 
 from crm.models import (CrmField, TempContactInfo, Phonebook,
 						Contact,CrmField,ContactInfo, DownloadReports, LeadBucket, AlternateContact)
-from crm.serializers import (SetContactSerializer,AgentCrmFieldSerializer,TempContactInfoSerializer, ContactSerializer,CssContactSerializer, AssignedContactInfoSerializer, ContactListSerializer, LeadBucketSerializer, AlternateContactSerializer)
+from crm.serializers import (SetContactSerializer,UniqueSerializer,AgentCrmFieldSerializer,TempContactInfoSerializer, ContactSerializer,CssContactSerializer, AssignedContactInfoSerializer, ContactListSerializer, LeadBucketSerializer, AlternateContactSerializer)
 from crm.utility import crm_field_value_schema,get_user_crm_data, get_customizable_crm_fields,get_customizable_crm_fields_for_template
 from flexydial.views import (check_permission, get_paginated_object, data_for_pagination, get_active_campaign,
-		data_for_vue_pagination, sendSMS, csvDownloadTemplate, create_admin_log_entry, sendsmsparam)
+		data_for_vue_pagination, sendSMS, csvDownloadTemplate, create_admin_log_entry, sendsmsparam,user_hierarchy_func,user_in_hirarchy_level)
 from callcenter.signals import (fs_pre_del_user)
 from callcenter.schedulejobs import (leadrecycle_add,leadrecycle_del,schedulereports_download,sched,remove_scheduled_job)
 from .utility import (redirect_user, get_object, get_pre_campaign_edit_info,
@@ -75,7 +75,7 @@ from .utility import (redirect_user, get_object, get_pre_campaign_edit_info,
 		get_model_data, validate_uploaded_dnc,upload_dnc_nums,submit_feedback, customer_detials, convert_into_timedelta,
 		total_list_users,camp_list_users,user_hierarchy, user_hierarchy_object, update_contact_on_css, get_transform_key, update_contact_on_portifolio,
 		validate_third_party_token,get_temp_contact,get_contact_data, upload_template_sms,get_crm_fields_dict, channel_trunk_single_call, DownloadCssQuery,get_campaign_did, get_group_did,DownloadCssQuery,diff_time_in_seconds,
-		save_report_column_visibility, get_report_visible_column,save_email_log, get_used_did, get_used_did_by_pk,convert_into_timeformat, email_connection, check_non_admin_user, getDaemonsStatus,upload_holiday_dates,read_status,convert_timedelta_hrs)
+		save_report_column_visibility, get_report_visible_column,save_email_log, get_used_did, get_used_did_by_pk,convert_into_timeformat, email_connection, check_non_admin_user, getDaemonsStatus,upload_holiday_dates,read_status,convert_timedelta_hrs,get_agent_status,set_agent_status,get_all_keys_data_df,get_all_keys_data)
 
 from .decorators import (user_validation, group_validation,campaign_validation,
 		campaign_edit_validation, phone_validation, dispo_validation, relationtag_validation,
@@ -101,7 +101,7 @@ import base64
 import subprocess
 from gtts import gTTS
 import csv
-
+from flexydial.forms import CaptchaForm
 def save_csv(file_name, list):
 	"""
 	Saving the list values into the csv file
@@ -206,12 +206,9 @@ def common_functionality_to_store_data(data, user):
 	create_agentactivity(agent_data)
 	if data.get("event", "") != "Duplicate window" and not "Force Logout" in data.get("event", "") and not "Internet connection failure" in data.get("event",""):
 		AGENTS = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-				pickle.dumps(AGENTS))
-		set_agentReddis(AGENTS,user)
-		updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-		updated_agent_dict[user.extension]= AGENTS[user.extension]
-		settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+		AGENTS = get_agent_status(user.extension)
+		AGENTS = set_agentReddis(AGENTS,user)
+		set_agent_status(user.extension,AGENTS[user.extension])
 	status = {}
 	if agent_state in ['InCall','Feedback']:
 		status = submit_feedback(user,data)
@@ -233,12 +230,17 @@ class LoginAPIView(APIView):
 		ps_obj = PasswordManagement.objects.filter().first()
 		if ps_obj:
 			forgot_password =ps_obj.forgot_password
-		return Response({"forgot_password":forgot_password})
+		cap_form=CaptchaForm()
+		return Response({"forgot_password":forgot_password,"cap_form":cap_form})
 
 	def post(self, request):
 		## Data for login validation
+		cap_form=CaptchaForm(request.POST)
+		if not cap_form.is_valid():
+			cap_form=CaptchaForm()
+			error_dict = {"error": "captcha is imporoper",'forgot_password':'',"cap_form":cap_form}
+			return Response(error_dict)
 		serializer = LoginSerializer(data=request.data)
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps({}))
 		PASSWORD_ATTEMPTS = pickle.loads(settings.R_SERVER.get("password_attempt_status") or pickle.dumps({}))
 		forgot_password = False
 		password_obj = PasswordManagement.objects.filter().first()
@@ -250,23 +252,22 @@ class LoginAPIView(APIView):
 			user = authenticate(username=username, password=password)
 			if user is not None:
 				if user.is_active:
+					AGENTS = get_agent_status(user.extension)
 					session_extension = [agent.extension for agent in get_current_users()
 									if agent.extension == user.extension]
 					if session_extension:
-						return Response({"error": "You are already LogIn"})
+						return Response({"error": "You are already LogIn","cap_form":cap_form})
 					elif user.user_role == None and not user.is_superuser:
 						return Response({"error": "User Role is not defined to this user.Please Contact To your admin",'forgot_password':forgot_password})
 					else:
 						AGENTS[user.extension] = {}
 					login(request, user)
 					AGENTS = set_agentReddis(AGENTS,user)
-					AGENTS[user.extension]['name'] = user.first_name + ' ' + user.last_name
 					AGENTS[user.extension]['screen'] = 'AgentScreen'
 					AGENTS[user.extension]['login_time'] = datetime.now().strftime('%H:%M:%S')
+					AGENTS[user.extension]['login_date_time']=datetime.now()
 					AGENTS[user.extension]['call_count'] = CallDetail.objects.filter(user__username=user.username,created__date=date.today()).count()
-					updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-					updated_agent_dict[user.extension] = AGENTS[user.extension]
-					settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+					set_agent_status(user.extension,AGENTS[user.extension])
 					#set password attempt count to zero
 					PASSWORD_ATTEMPTS[username] = 0
 					settings.R_SERVER.set('password_attempt_status',pickle.dumps(PASSWORD_ATTEMPTS))
@@ -297,9 +298,7 @@ class LoginAPIView(APIView):
 					login_activity = False
 					if request.user.is_superuser or (request.user.user_role and request.user.user_role.access_level in ['Admin','Manager','Supervisor']):
 						AGENTS[user.extension]['screen'] = 'AdminScreen'
-						updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-						updated_agent_dict[user.extension].update(AGENTS[user.extension])
-						settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+						set_agent_status(user.extension,AGENTS[user.extension])
 						login_activity = True
 					if request.user.is_superuser:
 						login_activity = True
@@ -308,7 +307,7 @@ class LoginAPIView(APIView):
 						action_name='4',event_type='LOGIN')
 					return redirect_user(request,user)
 				else:
-					if username in PASSWORD_ATTEMPTS:
+					if username in PASSWORD_ATTEMPTS and password_obj:
 						if PASSWORD_ATTEMPTS[username] >= password_obj.max_password_attempt:
 							error_dict = {"error": "This account is Locked Please Try to User Forgot Password or Contact Administrator",'forgot_password':forgot_password}
 						else:
@@ -318,8 +317,7 @@ class LoginAPIView(APIView):
 					return Response(error_dict)
 			else:
 				user_obj = User.objects.filter(username=username)
-				if user_obj.exists():
-					if password_obj:
+				if user_obj.exists() and password_obj:
 						if username in PASSWORD_ATTEMPTS:
 							if PASSWORD_ATTEMPTS[username] >= password_obj.max_password_attempt:
 								error_dict = {"error": "This account is Locked Please Try to User Forgot Password or Contact Administrator",'forgot_password':forgot_password}
@@ -332,7 +330,7 @@ class LoginAPIView(APIView):
 						else:
 							PASSWORD_ATTEMPTS[username] = 1
 						settings.R_SERVER.set('password_attempt_status',pickle.dumps(PASSWORD_ATTEMPTS))
-		error_dict = {"error": "Username or Password is incorrect",'forgot_password':forgot_password}
+		error_dict = {"error": "Username or Password is incorrect",'forgot_password':forgot_password,'cap_form':cap_form}
 		return Response(error_dict)
 class LogoutAPIView(LoginRequiredMixin, APIView):
 	"""
@@ -342,11 +340,10 @@ class LogoutAPIView(LoginRequiredMixin, APIView):
 	def get(self,request,makeInactive=''):
 		logout_activity =  False
 		AGENTS = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps(AGENTS))
+		AGENTS = get_agent_status(request.user.extension)
 		if request.user.extension in AGENTS.keys():
 			del AGENTS[request.user.extension]
-			settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+			set_agent_status(request.user.extension,AGENTS,True)
 		r_campaigns = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps(CAMPAIGNS))
 		for campaign in r_campaigns:
 			unique_extensions = list(set(r_campaigns[campaign]))
@@ -421,17 +418,23 @@ class EmergencyLogoutApiView(LoginRequiredMixin, APIView):
 		active_sessions = Session.objects.filter(expire_date__gte=datetime.now())
 		for session in active_sessions:
 			if session.get_decoded().get('_auth_user_id') == str(userId):
-				last_request = datetime.fromtimestamp(session.get_decoded().get('last_request'))
 				now = datetime.now()
-				if role_name != "agent" or (now-last_request).seconds>=30:
+				try:
+					last_request = datetime.fromtimestamp(session.get_decoded().get('last_request'))
+					last_req_diff = (now-last_request).seconds
+				except Exception as e:
+					print(e)
+					last_req_diff = 30
+				if role_name != "agent" or last_req_diff>=30:
 					agent_activity_data['user'] = user
 					agent_activity_data["event"] = "Force logout by "+request.user.role_name+" "+request.user.username
 					agent_activity_data["event_time"] = datetime.now()
 					create_agentactivity(agent_activity_data)
 					session.delete()
-					AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-					del AGENTS[extension]
-					settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+					AGENTS = get_agent_status(extension)
+					if extension in AGENTS.keys():
+						del AGENTS[extension]
+						set_agent_status(extension,AGENTS,True)
 					return JsonResponse({"success":"Force logout is successfull"})
 				else:
 					return JsonResponse({"user_logged_in":"True"})
@@ -457,25 +460,30 @@ class EmergencyLogoutAllUserApiView(LoginRequiredMixin, APIView):
 					role_name = "admin"
 				else:
 					role_name = user.user_role.name
-				last_request = datetime.fromtimestamp(session.get_decoded().get('last_request'))
 				now = datetime.now()
-				if role_name == "agent" and (now-last_request).seconds>=30:
+				try:
+					last_request = datetime.fromtimestamp(session.get_decoded().get('last_request'))
+					last_req_diff = (now-last_request).seconds
+				except Exception as e:
+					print(e)
+					last_req_diff = 30
+				if role_name == "agent" and last_req_diff>=30:
 					agent_activity_data['user'] = user
 					agent_activity_data["event"] = "Force logout by "+request.user.role_name+" "+request.user.username
 					agent_activity_data["event_time"] = datetime.now()
 					create_agentactivity(agent_activity_data)
-					AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+					AGENTS = get_agent_status(user.extension)
 					if user.extension in AGENTS:
 						del AGENTS[user.extension]
-						settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+						set_agent_status(user.extension,AGENTS,True)
 					session.delete()
 				elif role_name != "agent":
 					create_admin_log_entry(request.user, "","7",'LOGOUT',user.username)
 					session.delete()
-					AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+					AGENTS = get_agent_status(user.extension)
 					if user.extension in AGENTS:
 						del AGENTS[user.extension]
-						settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+						set_agent_status(user.extension,AGENTS,True)
 				else:
 					user_list.append(user.extension)
 		return JsonResponse({"user_list": user_list})
@@ -491,26 +499,26 @@ class DashBoardApiView(LoginRequiredMixin, APIView):
 	template_name = "admin/dashboard.html"
 
 	def get(self, request, **kwargs):
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps({}))
+		AGENTS = {}
 		camp_name, active_camp, noti_count = get_active_campaign(request)
 		team_extensions = user_hierarchy(request,camp_name)
 		agent_count = UserVariable.objects.filter(extension__in=team_extensions).values_list('user_id',flat=True).count()
-		la_count = lo_count = dl_count = pg_count = pd_count = pv_count = ic_count = mu_count = 0
+		la_count = lo_count = dl_count = pg_count = pd_count = pv_count = ic_count = mu_count = brk_count = 0
+
 		ac_camp_count = lead_list_count = al_list_count = ll_data_count = 0
 		bridge_call = {}
 		# agent related counts and bridge call data
-		total_agents_df = pd.DataFrame.from_dict(AGENTS,orient='index')
-		c_agents_df = total_agents_df.index.isin(team_extensions)
-		agents_df = total_agents_df[c_agents_df]
-		brk_count = len(agents_df[agents_df['state'].str.lower() == 'onbreak'])
-		dl_count = len(agents_df[(agents_df['dialer_login_status'] == True) & (agents_df['state'].str.lower() != 'onbreak')])
-		la_count = len(agents_df[(agents_df['dialer_login_status'] == False) & (agents_df['state'].str.lower() != 'onbreak')])
-		on_call_agent = agents_df[(agents_df['state']=='InCall') & (agents_df['dial_number']) & (agents_df['call_timestamp']!='')]
-		pg_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='progressive'])
-		ic_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='inbound'])
-		pd_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='predictive'])
-		pv_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='preview'])
-		mu_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='manual'])
+		agents_df=get_all_keys_data_df(team_extensions)
+		if len(agents_df):
+			brk_count = len(agents_df[agents_df['state'].str.lower() == 'onbreak'])
+			dl_count = len(agents_df[(agents_df['dialer_login_status'] == True) & (agents_df['state'].str.lower() != 'onbreak')])
+			la_count = len(agents_df[(agents_df['dialer_login_status'] == False) & (agents_df['state'].str.lower() != 'onbreak')])
+			on_call_agent = agents_df[(agents_df['state']=='InCall') & (agents_df['dial_number']) & (agents_df['call_timestamp']!='')]
+			pg_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='progressive'])
+			ic_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='inbound'])
+			pd_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='predictive'])
+			pv_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='preview'])
+			mu_count = len(on_call_agent[on_call_agent['call_type'].str.lower() =='manual'])
 		lo_count = agent_count - la_count - dl_count - brk_count
 		live_agent_count = la_count + dl_count + brk_count
 		ac_camp_count = len(active_camp)
@@ -520,7 +528,7 @@ class DashBoardApiView(LoginRequiredMixin, APIView):
 		down_count = DownloadReports.objects.filter(status=False,view=False).count()
 		trunk_status = pickle.loads(settings.R_SERVER.get("trunk_status") or pickle.dumps({}))
 		trunks_data = list(DialTrunk.objects.filter(status='Active').values('id','name','channel_count',free_channels=F('channel_count')))
-		            
+					
 		for trunk in trunks_data:
 			trunk['consumed_channels'] = 0
 			if str(trunk['id']) in trunk_status:
@@ -542,6 +550,11 @@ class DashBoardApiView(LoginRequiredMixin, APIView):
 		context['request'] = request
 		return Response(context)
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 056ba5ca4e6f3b7af5522c08c15f9d8c759defae
 class EavesdropSessionApiView(LoginRequiredMixin, APIView):
 	"""
 	this view is for eavesdrop session for dashboard
@@ -592,18 +605,17 @@ class OnCallAgentData(LoginRequiredMixin, APIView):
 
 	def get(self, request):
 		bridge_call = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps({}))
+		agent_dict = {}
 		camp, active_camp, noti_count = get_active_campaign(request)
 		team_extensions = user_hierarchy(request,camp)
-		for agent, data in AGENTS.items():
+		agent_dict = get_all_keys_data(team_extensions)
+		for agent, data in agent_dict.items():
 			if agent in team_extensions and data['state']=='InCall' and data['dial_number']:
 				if data['call_timestamp']=='' or data['call_timestamp'] == None:
 					call_timestamp = int(str(round(time.time() * 1000))[:13])
+					AGENTS = get_agent_status(agent)
 					AGENTS[agent].update({'call_timestamp':call_timestamp})
-					updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-					updated_agent_dict[agent].update(AGENTS[agent])
-					settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+					set_agent_status(agent,AGENTS[agent])
 				if 'name' not in data:
 					data['name'] = ''
 				bridge_call[agent] = data
@@ -617,23 +629,35 @@ class LoginAgentLiveDataView(LoginRequiredMixin, APIView):
 
 	def get(self, request):
 		la_data = []
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps(AGENTS))
+		agent_dict = {}
 		camp, active_camp, noti_count = get_active_campaign(request)
 		team_extensions = user_hierarchy(request,camp)
-		for agent, data in AGENTS.items():
-			if agent in team_extensions:
-				if data["event_time"]:
-					tdelta = datetime.strptime(datetime.now().strftime('%H:%M:%S'), '%H:%M:%S') - datetime.strptime(data['event_time'], '%H:%M:%S')
-					data["event_time"] = ':'.join(str(tdelta).split(':')[:3])
-				if 'login_time' in data and data["login_time"]:
-					tdelta = datetime.strptime(datetime.now().strftime('%H:%M:%S'), '%H:%M:%S') - datetime.strptime(data['login_time'], '%H:%M:%S')
-					data["login_duration"] = ':'.join(str(tdelta).split(':')[:3])
-				if 'name' not in data:
-					data['name'] = ''
-				data['extension'] = agent
-				data['role_name'] = ''
-				la_data.append(data)
+		agent_dict = get_all_keys_data(team_extensions)
+		for agent, data in agent_dict.items():
+			if data["event_time"]:
+				tdelta = datetime.strptime(datetime.now().strftime('%H:%M:%S'), '%H:%M:%S') - datetime.strptime(data['event_time'], '%H:%M:%S')
+				data["event_time"] = ':'.join(str(tdelta).split(':')[:3])
+			if 'login_date_time' in data and data["login_date_time"]:
+				today_date_time=datetime.now()
+				redis_login_date_time=data['login_date_time']
+				tdelta=(today_date_time-redis_login_date_time)
+				tdelta = str(tdelta).split(".")[0]
+				data['login_duration']=str(tdelta)
+			elif 'login_time' in data and data["login_time"]:
+				tdelta = datetime.strptime(datetime.now().strftime('%H:%M:%S'), '%H:%M:%S') - datetime.strptime(data['login_time'], '%H:%M:%S')
+				data["login_duration"] = ':'.join(str(tdelta).split(':')[:3])
+			if 'name' not in data:
+				data['name'] = ''
+			if data['name'] == '':
+				usr_obj = User.objects.filter(username=data['username']).first()
+				if usr_obj:
+					data['name'] = usr_obj.first_name + "  " + usr_obj.last_name
+			if 'state' in data and  data['state']=='Idle':
+				if 'dial_number' in data and data['dial_number']:  
+					data['dial_number'] = ''
+			data['extension'] = agent
+			data['role_name'] = ''
+			la_data.append(data)
 		return JsonResponse({"la_data":la_data})
 
 class ActiveAgentLiveDataAPIView(LoginRequiredMixin, APIView):
@@ -660,8 +684,7 @@ class ActiveAgentLiveDataAPIView(LoginRequiredMixin, APIView):
 			contact_count = [{'username':'','assign_data_count':0,'dialed_data_count':0,'notdialed_data_count':0}]
 		df_contact = pd.DataFrame(list(contact_count))
 		data = pd.merge(df_user, df_contact, on='username', how='right').fillna(0).astype({"assign_data_count":'int', "dialed_data_count":'int',"notdialed_data_count":'int'})
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-		login_agents = pd.DataFrame.from_dict(AGENTS,orient='index')
+		login_agents = get_all_keys_data_df()
 		data = pd.merge(data, login_agents[['username','state','call_count','extension']], on='username', how='left').fillna({'state':'Logout','call_count':0, 'extension':''}).astype({'call_count':int})
 		active_agents_data = list(data.T.to_dict().values())
 		return JsonResponse({'active_agent_data':active_agents_data})
@@ -737,7 +760,11 @@ class UsersListApiView(LoginRequiredMixin, ListAPIView):
 		column_name = request.GET.get('column_name', '')
 		camp_name, active_camp, noti_count = get_active_campaign(request)
 		team_extensions = user_hierarchy(request,camp_name)
-		queryset = User.objects.filter(Q(properties__extension__in=team_extensions)|Q(created_by=request.user)|Q(id=request.user.id))
+		# queryset = User.objects.filter(Q(properties__extension__in=team_extensions)|Q(created_by=request.user)|Q(id=request.user.id))
+		if request.user.is_superuser:
+			queryset = User.objects.filter(Q(properties__extension__in=team_extensions)|Q(created_by=request.user)|Q(id=request.user.id))
+		else:
+			queryset = User.objects.filter(Q(id__in=user_hierarchy_func(request.user.id))|Q(created_by=request.user))
 		if search_by:
 			try:
 				if column_name=='status':
@@ -881,6 +908,11 @@ class UsersEditApiView(LoginRequiredMixin, APIView):
 		'''
 		user = get_object(pk, "callcenter", "User")
 		serializer = self.serializer(user, data=request.data)
+		extension=request.data['extension']
+		AGENTS = get_agent_status(extension)
+		if AGENTS.__contains__(extension):
+			AGENTS[extension]['name']=request.data['first_name']+" "+request.data['last_name']
+			set_agent_status(extension,AGENTS[extension])
 		user_variable_serializer = UserVariableSerializer(
 				user.properties, data=request.data)
 		if serializer.is_valid():
@@ -916,12 +948,39 @@ class ValidateUserUploadApiView(APIView):
 			if user_file.name.endswith('.csv'):
 				data = pd.read_csv(user_file, na_filter=False, dtype={"extension" : "str"})
 			else:
-				data = pd.read_excel(user_file, dtype={"extension" : "str"})
+				data = pd.read_excel(user_file,na_filter=False, dtype={"extension" : "str"})
 			user_columns = ['username', 'password','group', 'role']
 			column_names = data.columns.tolist()
 			valid = all(elem in column_names for elem in user_columns)
 			if valid:
-				data = validate_uploaded_users_file(data)
+				data_dict = validate_uploaded_users_file(data)
+				cwd = settings.BASE_DIR
+				data_improper = pd.DataFrame()
+				improper_file = ""
+				proper_file = ""
+				if 'correct_file' in data_dict:
+					proper_file = data_dict["correct_file"]
+					if proper_file.endswith('.csv'):
+						data_proper = pd.read_csv(cwd+proper_file, na_filter=False)
+					else:
+						data_proper = pd.read_excel(cwd+proper_file)
+					upload_users(data_proper, request.user)
+					create_admin_log_entry(request.user, "user","6",'UPLOADED')
+				if 'incorrect_file' in data_dict:
+					improper_file = data_dict["incorrect_file"]
+					if improper_file.endswith('.csv'):
+						data_improper = pd.read_csv(cwd+improper_file, na_filter=False)
+					else:
+						data_improper = pd.read_excel(cwd+improper_file)
+				if 	'incorrect_file' in data_dict:
+					response = HttpResponse(content_type='text/csv')
+					response['Content-Disposition'] = 'attachment; filename=summary_user.csv'
+					data_improper.to_csv(path_or_buf=response,sep=',',float_format='%.2f',index=False,decimal=".")
+					return response
+				if proper_file:
+					os.remove(cwd+proper_file)
+				if improper_file:
+					os.remove(cwd+improper_file)
 			else:
 				data = {}
 				data["column_err_msg"] = 'File must contains these ' + \
@@ -966,14 +1025,19 @@ class GroupListApiView(LoginRequiredMixin, APIView):
 		column_name = request.GET.get('column_name', '')
 		queryset = Group.objects.all()
 		if check_non_admin_user(request.user):
-			queryset = queryset.filter(Q(user_group=request.user)|Q(created_by=request.user)).distinct()
+			list_user = user_hierarchy_func(request.user.id)
+			list_user.append(str(request.user.id))
+			queryset = queryset.filter(Q(user_group=request.user)|Q(created_by__id__in=list_user)).distinct()
 		if search_by and column_name:
 			queryset = queryset.filter(**{column_name+"__istartswith": search_by.lower()})
 		queryset_list = list(queryset.values_list("id", flat=True))
 		queryset = get_paginated_object(queryset, page, paginate_by)
 		paginate_by_columns = (('name', 'Group Name'),
 				('status', 'status'))
-		user_querysets = User.objects.all().exclude(is_superuser=True).values_list("id","username")
+		if request.user.is_superuser:
+			user_querysets = User.objects.all().exclude(is_superuser=True).values_list("id","username")
+		else:
+			user_querysets = User.objects.filter(id__in=user_hierarchy_func(request.user.id)).values_list("id", "username")
 		camp_name, active_camp, noti_count = get_active_campaign(request)
 		context = {
 				'group_status':Status, 'id_list': queryset_list,'paginate_by':paginate_by,
@@ -1015,7 +1079,7 @@ class GroupModifyApiView(APIView):
 		serializer = self.serializer_class(group)
 		serializer.data['id'] = pk
 		return JsonResponse({'querysets': serializer.data, 'queryset':group.users,
-				'allusers':group.allusers})
+				'allusers':group.allusers(request)})
 
 	def put(self, request, pk, format=None):
 		user_remove_list = user_add_list = []
@@ -1795,7 +1859,6 @@ class CampaignEditApiView(LoginRequiredMixin, APIView):
 
 	def get(self, request, pk, format=None, **kwargs):
 		data = get_pre_campaign_edit_info(pk, request)
-		print(data['campaign'])
 		all_trunk = DialTrunk.objects.filter(status="Active")
 		data["trunk_list"] = list(all_trunk.annotate(text=F('name')).values("text","id","did_range"))
 		data["request"] = request
@@ -1806,7 +1869,7 @@ class CampaignEditApiView(LoginRequiredMixin, APIView):
 		data["transfer_options"] = TRANSFER_MODE
 		data['enable_wfh'] = pickle.loads(settings.R_SERVER.get('enable_wfh') or pickle.dumps(False))
 		data['enable_vb'] = pickle.loads(settings.R_SERVER.get('enable_vb') or pickle.dumps(False))
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+		AGENTS = get_all_keys_data()
 		if AGENTS:
 			all_agents = list(AGENTS.keys())
 			for extension in all_agents:
@@ -1901,7 +1964,9 @@ class CampaignListApiView(LoginRequiredMixin, APIView):
 		page_info = data_for_pagination(request)
 		campaign = Campaign.objects.all()
 		if check_non_admin_user(request.user):
-			campaign = campaign.filter(Q(users=request.user)|Q(group__in=request.user.group.all())|Q(created_by=request.user)).distinct()
+			list_user = user_hierarchy_func(request.user.id)
+			list_user.append(str(request.user.id))
+			campaign = campaign.filter(Q(users=request.user)|Q(group__in=request.user.group.all())|Q(created_by__id__in=list_user)).distinct()
 		if page_info["search_by"] and page_info["column_name"]:
 			if page_info["column_name"] == "switch":
 				campaign = campaign.filter(switch__name__istartswith=page_info["search_by"])
@@ -2356,7 +2421,7 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 		report_visible_cols = get_report_visible_column("1",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			camp = Campaign.objects.all().prefetch_related(
 					'users', 'group', 'disposition').distinct()
 			campaign_list = camp.values("id", "name")
@@ -2368,7 +2433,7 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 			dispo_keys = list(disposition.values_list('dispo_keys',flat=True))
 			dispo_keys = set([item for sublist in dispo_keys for item in sublist])
 		else:
-			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
+			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).prefetch_related(
 					'users', 'group', 'disposition').distinct()
 			campaign_list = camp.values("id", "name")
@@ -2407,7 +2472,11 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 		'session_uuid','init_time','ring_time','connect_time','hangup_time','wait_time','ring_duration','hold_time','callflow','callmode',
 		'bill_sec','ivr_duration','call_duration','feedback_time','call_length','hangup_source','internal_tc_number','external_tc_number','progressive_time','preview_time','predictive_wait_time','inbound_wait_time','blended_wait_time'],
 		'cdrfeedback':['primary_dispo','feedback','relationtag']}
-		context['users'] = list(user_list)
+		# context['users'] = list(user_list)
+		if request.user.is_superuser:
+			context['users'] = list(user_list)
+		else:
+			context['users'] = user_in_hirarchy_level(request.user.id)
 		context['disposition'] = disposition.values("id", "name")
 		context['dispo_keys'] = dispo_keys
 		context['all_fields'] = all_fields
@@ -2471,12 +2540,16 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 		else:
 			query_string = Q(user_id__in=all_users)|Q(user=None)
 		if selected_user and selected_campaign:
-			query_string = Q(campaign_name__in=list(selected_campaign), user_id__in=list(all_users))
+			# query_string = Q(campaign_name__in=list(selected_campaign), user_id__in=list(all_users))
+			user_list_in_hirarchy = user_hierarchy_func(request.user.id,list(all_users))
+			query_string = Q(campaign_name__in=list(selected_campaign), user_id__in=user_list_in_hirarchy)
 		elif selected_user:
-			query_string = Q(user_id__in=all_users)
+			# query_string = Q(user_id__in=all_users)
+			user_list_in_hirarchy = user_hierarchy_func(request.user.id,list(all_users))
+			query_string = Q(user_id__in=user_list_in_hirarchy)
 		elif selected_campaign:
 			query_string = Q(campaign_name__in=selected_campaign)
-			if not (request.user.is_superuser or admin):
+			if not (request.user.is_superuser):
 				get_camp_users = list(get_campaign_users(selected_campaign,
 				request.user).values_list("id",flat=True))
 				query_string=Q(campaign_name__in = selected_campaign,user__in=get_camp_users)|Q(campaign_name__in = selected_campaign,user=None)
@@ -2509,7 +2582,7 @@ class CallRecordingView(LoginRequiredMixin, generics.ListAPIView):
 		report_visible_cols = get_report_visible_column("2",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			can_qc_update = "true"
 			campaign_list = Campaign.objects.all().prefetch_related(
 					'users', 'group', 'disposition').distinct().values("id", "name")
@@ -2521,7 +2594,7 @@ class CallRecordingView(LoginRequiredMixin, generics.ListAPIView):
 			can_qc_update = "false"
 			if 'qc_feedback' in permissions and 'C' in permissions['qc_feedback'] :
 				can_qc_update = "true"
-			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
+			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).prefetch_related(
 					'users', 'group', 'disposition').distinct()
 			campaign_list = camp.values("id", "name")
@@ -2547,7 +2620,8 @@ class CallRecordingView(LoginRequiredMixin, generics.ListAPIView):
 		all_fields = {"diallereventlog":['campaign_name','user','full_name','phonebook','uniqueid','customer_cid',
 		'session_uuid','init_time','ring_time','connect_time','wait_time','ring_duration','hold_time',
 		'callflow','callmode','dialed_status','hangup_cause','hangup_cause_code','bill_sec','call_duration','hangup_time']}
-		context['users'] = list(user_list)
+		# context['users'] = list(user_list)
+		context['users'] = user_in_hirarchy_level(request.user.id)
 		context['can_qc_update']=can_qc_update
 		context['all_fields'] = all_fields
 		camp_name, active_camp, noti_count = get_active_campaign(request)
@@ -2575,7 +2649,8 @@ class CallRecordingView(LoginRequiredMixin, generics.ListAPIView):
 			filters['all_campaigns'] = all_campaigns
 			filters['all_users'] = all_users
 			filters['selected_campaign'] = selected_campaign
-			filters['selected_user'] = selected_user
+			# filters['selected_user'] = selected_user
+			filters['selected_user'] = user_hierarchy_func(request.user.id,selected_user)
 			filters['unique_id'] = unique_id
 			filters['selected_records'] = request.POST.get("selected_records",'').split(',')
 			DownloadReports.objects.create(report='Call Recordings',filters=filters, user=request.user.id, serializers=self.serializer_class, col_list=col_list, status=True)
@@ -2617,7 +2692,7 @@ class CallRecordingView(LoginRequiredMixin, generics.ListAPIView):
 			if customer_cid:
 				queryset = queryset.filter(customer_cid=customer_cid)
 			if selected_campaign:
-				if not (request.user.is_superuser or admin):
+				if not (request.user.is_superuser):
 					get_camp_users = list(get_campaign_users(selected_campaign,
 					request.user).values_list("id",flat=True))
 					queryset = queryset.filter(Q(campaign_name__in = selected_campaign),
@@ -2689,12 +2764,12 @@ class PendingCallbackCallView(LoginRequiredMixin, generics.ListAPIView):
 		report_visible_cols = get_report_visible_column("8",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			campaign_list = Campaign.objects.all().distinct().values("id", "name")
 			user_list = User.objects.all().exclude(
 					user_role__access_level="Admin").exclude(is_superuser=True).values("id", "username")
 		else:
-			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
+			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).distinct()
 			campaign_list = camp.values("id", "name")
 			c_user  = c_group = []
@@ -2717,7 +2792,8 @@ class PendingCallbackCallView(LoginRequiredMixin, generics.ListAPIView):
 		context["campaign_list"] =campaign_list
 		context['all_fields'] =  ('campaign', 'phonebook', 'user','full_name','numeric', 'status', 'callback_title',
 				'callback_type', 'schedule_date', 'disposition', 'comment')
-		context["user_list"] = user_list
+		# context["user_list"] = user_in_hirarchy_level(request.user.id)
+		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context['report_visible_cols'] = report_visible_cols
 		context = {**context, **kwargs['permissions']}
 		return Response(context)
@@ -2780,11 +2856,11 @@ class PendingAbandonedCallView(LoginRequiredMixin, generics.ListAPIView):
 		report_visible_cols = get_report_visible_column("9",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			campaign_list = Campaign.objects.all().distinct().values("id", "name")
 			user_list = User.objects.all().exclude(user_role__access_level="Admin").exclude(is_superuser=True).exclude(properties__extension=None).values("username",extension=F('properties__extension'))
 		else:
-			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
+			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).distinct()
 			campaign_list = camp.values("id", "name")
 			c_user  = c_group = []
@@ -2806,7 +2882,8 @@ class PendingAbandonedCallView(LoginRequiredMixin, generics.ListAPIView):
 			user_list = final_camp_users.values("username",extension=F('properties__extension'))
 		context["campaign_list"] =campaign_list
 		context['all_fields'] =  ('campaign', 'username','full_name','numeric', 'call_date', 'status',)
-		context["user_list"] = user_list
+		# context["user_list"] = user_in_hirarchy_level(request.user.id)
+		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context['report_visible_cols'] = report_visible_cols
 		context = {**context, **kwargs['permissions']}
 		return Response(context)
@@ -2870,9 +2947,10 @@ class CallRecordingFeedbackView(LoginRequiredMixin, generics.ListAPIView):
 		admin = False
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			user_list = list(User.objects.all().exclude(user_role__access_level='Agent').values("id", "username"))
-			context["user_list"] = user_list
+			# context["user_list"] = user_in_hirarchy_level(request.user.id)
+			context["user_list"] = user_in_hirarchy_level(request.user.id)
 			agent_list = User.objects.all().exclude(
 					user_role__access_level="Admin").exclude(is_superuser=True).values("id", "username")
 		else:
@@ -2987,12 +3065,12 @@ class AgentActivityReportView(LoginRequiredMixin, ListAPIView):
 		report_visible_cols = get_report_visible_column("5",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			campaign_list = Campaign.objects.all().distinct().values("id", "name")
 			user_list = User.objects.all().values("id", "username")
 			disposition = Disposition.objects.all().values("id", "name")
 		else:
-			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
+			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).distinct()
 			campaign_list = camp.values("id", "name")
 
@@ -3062,7 +3140,7 @@ class AgentActivityReportView(LoginRequiredMixin, ListAPIView):
 			paginator.is_datatable_request = False
 		if queryset:
 			if selected_campaign:
-				if not (request.user.is_superuser or admin):
+				if not (request.user.is_superuser):
 					get_camp_users = list(get_campaign_users(selected_campaign,
 							request.user).values_list("id",flat=True))
 					queryset = queryset.filter(Q(campaign_name__in = selected_campaign),
@@ -3095,12 +3173,12 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		report_visible_cols = get_report_visible_column("3",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			campaign_list = Campaign.objects.all().distinct().values("id", "name")
 			user_list = User.objects.all().exclude(
 					user_role__access_level="Admin").exclude(is_superuser=True).values("id", "username")
 		else:
-			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
+			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).distinct()
 			campaign_list = camp.values("id", "name")
 			c_user  = c_group = []
@@ -3126,7 +3204,8 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		context['all_fields'] =  ('username','full_name','supervisor_name','campaign','app_idle_time','dialer_idle_time','pause_progressive_time','progressive_time','preview_time',
 				'predictive_wait_time','inbound_wait_time','blended_wait_time','ring_duration','ring_duration_avg','hold_time','media_time','predictive_wait_time_avg','talk','talk_avg','bill_sec','bill_sec_avg','call_duration','feedback_time','feedback_time_avg','break_time','break_time_avg','app_login_time'
 				) + pause_breaks + ('dialer_login_time','total_login_time','first_login_time','last_logout_time','total_calls','total_unique_connected_calls')
-		context["user_list"] = list(user_list)
+		# context["user_list"] = list(user_list)
+		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context = {**context, **kwargs['permissions']}
 		return Response(context)
 
@@ -3156,7 +3235,8 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		all_users = request.POST.get("all_users",[])
 		all_users = all_users.split(',')
 		if selected_user:
-			queryset = User.objects.filter(id__in=selected_user)
+			# queryset = User.objects.filter(id__in=selected_user)
+			queryset = User.objects.filter(id__in=user_hierarchy_func(request.user.id,selected_user))
 		else:
 			queryset = User.objects.filter(id__in=all_users)
 		queryset = queryset.order_by("username")
@@ -3298,12 +3378,12 @@ class ManagementPerformanceReportView(LoginRequiredMixin,APIView):
 		report_visible_cols = get_report_visible_column("15",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			campaign_list = Campaign.objects.all().distinct().values("id", "name")
 			user_list = User.objects.all().exclude(user_role__access_level='Agent').values("id", "username")
 		else:
 			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
-					Q( group__in=request.user.group.all(), group__isnull=False)).distinct()
+				Q( group__in=request.user.group.all(), group__isnull=False)).distinct()
 			campaign_list = camp.values("id", "name")
 			c_user  = c_group = []
 			for campaign in camp:
@@ -3325,7 +3405,8 @@ class ManagementPerformanceReportView(LoginRequiredMixin,APIView):
 		context["report_visible_cols"] = report_visible_cols
 		context["campaign_list"] =campaign_list
 		context['all_fields'] =  ('username','full_name','first_login_time','last_logout_time','login_duration')
-		context["user_list"] = list(user_list)
+		# context["user_list"] = list(user_list)
+		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context = {**context, **kwargs['permissions']}
 		return Response(context)
 
@@ -3411,12 +3492,12 @@ class CampainwisePerformanceReportView(LoginRequiredMixin,APIView):
 		report_visible_cols = get_report_visible_column("7",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			campaign_list = Campaign.objects.all().distinct().values("id", "name")
 			user_list = User.objects.all().exclude(
 					user_role__access_level="Admin").exclude(is_superuser=True).values("id", "username")
 		else:
-			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
+			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).distinct()
 			campaign_list = camp.values("id", "name")
 			c_user  = c_group = []
@@ -3440,7 +3521,8 @@ class CampainwisePerformanceReportView(LoginRequiredMixin,APIView):
 		context['all_fields'] =  ('campaign','dialer_idle_time','pause_progressive_time','progressive_time','preview_time',
 				'predictive_wait_time','inbound_wait_time','blended_wait_time','ring_duration','hold_time','media_time','bill_sec','call_duration','feedback_time','break_time',
 				'dialer_login_time','total_login_time','total_calls')
-		context["user_list"] = user_list
+		# context["user_list"] = user_in_hirarchy_level(request.user.id)
+		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context['report_visible_cols'] = report_visible_cols
 		context = {**context, **kwargs['permissions']}
 		return Response(context)
@@ -3469,7 +3551,7 @@ class CampainwisePerformanceReportView(LoginRequiredMixin,APIView):
 
 		selected_campaign = request.POST.getlist("selected_campaign", "")
 
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			if selected_campaign:
 				campaign_list = Campaign.objects.filter(name__in=selected_campaign).distinct().values_list("name", flat=True)
 			else:
@@ -3573,12 +3655,12 @@ class AgentMISReportView(LoginRequiredMixin, generics.ListAPIView, pagination.Pa
 		report_visible_cols = get_report_visible_column("4",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			campaign_list = Campaign.objects.all().distinct().values("id", "name")
 			user_list = User.objects.all().exclude(
 					user_role__access_level="Admin").exclude(is_superuser=True).values("id", "username")
 		else:
-			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
+			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).distinct()
 			campaign_list = camp.values("id", "name")
 
@@ -3609,7 +3691,8 @@ class AgentMISReportView(LoginRequiredMixin, generics.ListAPIView, pagination.Pa
 		'NC','Invalid Number',"RedialCount", "AlternateDial", "PrimaryDial", "NF(No Feedback)"]
 		all_fields = tmp_list + list(all_fields)
 		context["all_fields"] = all_fields
-		context["user_list"] = user_list
+		# context["user_list"] = user_in_hirarchy_level(request.user.id)
+		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context['report_visible_cols'] = report_visible_cols
 		context = {**context, **kwargs['permissions']}
 		return Response(context)
@@ -3650,12 +3733,12 @@ class CampaignMISReportView(LoginRequiredMixin, generics.ListAPIView, pagination
 		report_visible_cols = get_report_visible_column("6",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			campaign_list = Campaign.objects.all().distinct().values("id", "name")
 			user_list = User.objects.all().exclude(
 					user_role__access_level="Admin").exclude(is_superuser=True).values("id", "username")
 		else:
-			camp = Campaign.objects.filter(Q(users=request.user, users__isnull=False)|
+			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).distinct()
 			campaign_list = camp.values("id", "name")
 
@@ -3682,7 +3765,7 @@ class CampaignMISReportView(LoginRequiredMixin, generics.ListAPIView, pagination
 		tmp_list = ["Campaign", "Total Dispo Count", "AutoFeedback", "AbandonedCall", "NC", "Invalid Number", "RedialCount", "AlternateDial", "PrimaryDial", "NF(No Feedback)"]
 		all_fields = tmp_list + list(set(all_fields))
 		context["all_fields"] = all_fields
-		context["user_list"] = user_list
+		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context['report_visible_cols'] = report_visible_cols
 		context = {**context, **kwargs['permissions']}
 		return Response(context)
@@ -3803,14 +3886,13 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 			activity_dict["break_type"] = ""
 			create_agentactivity(activity_dict)
 		AGENTS = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps(AGENTS))
 		extension =request.user.extension
 		call_type = request.user.call_type
 		caller_id = campaign.caller_id
 		sip_udp_port = campaign.switch.sip_udp_port
 		wss_port = campaign.switch.wss_port
 		rpc_port = campaign.switch.rpc_port
+		AGENTS = get_agent_status(extension)
 		disposition = DispositionSerializer(campaign.disposition.filter(status='Active'), many=True).data
 		on_call_dispositions = []
 		not_on_call_dispostion = []
@@ -3867,6 +3949,7 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 				AGENTS[extension]['extension']= request.user.extension
 				AGENTS[extension]['login_status'] = True
 				AGENTS[extension]['login_time'] = datetime.now().strftime('%H:%M:%S')
+				AGENTS[extension]['login_date_time']=datetime.now()
 				AGENTS[extension]['call_type'] = ''
 				AGENTS[extension]['dial_number'] = ''
 				AGENTS[extension]['call_timestamp'] = ''
@@ -3879,9 +3962,7 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 			AGENTS[extension]['event_time'] = datetime.now().strftime('%H:%M:%S')
 			AGENTS[extension]['dialerSession_switch'] = campaign.switch.ip_address
 			AGENTS[extension]['dialerSession_uuid'] = status['ori_uuid']
-			updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-			updated_agent_dict[extension] = AGENTS[extension]
-			settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+			set_agent_status(extension,AGENTS[extension])
 		template = []
 		email_gateway = {}
 		disabled_sms_tab = False
@@ -3932,8 +4013,7 @@ class ManualDial(LoginRequiredMixin, APIView):
 	login_url = '/'
 	def post(self, request):
 		AGENTS = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps(AGENTS))
+		AGENTS = get_agent_status(request.user.extension)
 		status = {}
 		dial_number = request.POST.get('dial_number', '')
 		contact_id = request.POST.get('contact_id', '')
@@ -4019,9 +4099,7 @@ class ManualDial(LoginRequiredMixin, APIView):
 			AGENTS[request.user.extension]['state'] = "InCall"
 			AGENTS[request.user.extension]['event_time'] = datetime.now().strftime('%H:%M:%S')
 			AGENTS[request.user.extension]['dial_number'] = dial_number
-			updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-			updated_agent_dict[request.user.extension].update(AGENTS[request.user.extension])
-			settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+			set_agent_status(request.user.extension,AGENTS[request.user.extension])
 		else:
 			if is_callback == 'true':
 				current_cb = CurrentCallBack.objects.filter(numeric = dial_number,campaign=campaign_name,
@@ -4075,16 +4153,9 @@ class HangupCall(LoginRequiredMixin, APIView):
 		hangup_status=hangup(request.POST.get('switch'),uuid=request.POST.get('uuid'),
 						hangup_type=hangup_type,extension=extension, campaign = campaign, agent_uuid_id=agent_uuid_id)
 		if request.POST.get('page_reload','false') == 'true':
-
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-					pickle.dumps(AGENTS))
+			AGENTS = get_agent_status(request.user.extension)
 			set_agentReddis(AGENTS,request.user)
-			updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-			updated_agent_dict[request.user.extension].update(AGENTS[request.user.extension])
-			settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
-
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps(AGENTS))
+			set_agent_status(request.user.extension,AGENTS[request.user.extension])
 
 		return Response(hangup_status)
 
@@ -4109,8 +4180,7 @@ class PreviewUpdateContactStatus(APIView):
 	"""
 	def post(self, request):
 		AGENTS = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps(AGENTS))
+		AGENTS = get_agent_status(request.user.extension)
 		contact_info = {}
 		contact_dialled = {}
 		campaign = request.POST.get("campaign_name", "")
@@ -4153,14 +4223,11 @@ class PreviewUpdateContactStatus(APIView):
 			if not contact_id:
 				AGENTS[request.user.extension]['state'] = "Idle"
 				AGENTS[request.user.extension]['event_time'] = datetime.now().strftime('%H:%M:%S')
-		updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-		updated_agent_dict[request.user.extension].update(AGENTS[request.user.extension])
-		settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
-		if dial_number and dial_number !="null" and update_status:
-			if contact_id:
-				temp_contact = TempContactInfo.objects.filter(numeric=dial_number, status='Locked', id=contact_id)
-				if temp_contact.exists():
-					temp_contact.update(status='NotDialed')
+		set_agent_status(request.user.extension,AGENTS[request.user.extension])
+		if dial_number and dial_number !="null" and update_status and contact_id:
+			temp_contact = TempContactInfo.objects.filter(numeric=dial_number, status='Locked', id=contact_id)
+			if temp_contact.exists():
+				temp_contact.update(status='NotDialed')
 		return JsonResponse({"contact_info": contact_info})
 
 class SkipCallContactStatus(APIView):
@@ -4173,11 +4240,10 @@ class SkipCallContactStatus(APIView):
 		dial_number= request.POST.get('dial_number','')
 		contact_id = request.POST.get('contact_id', '')
 		AGENTS = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps(AGENTS))
+		AGENTS = get_agent_status(request.user.extension)
 		AGENTS[request.user.extension]['state'] = "Idle"
 		AGENTS[request.user.extension]['event_time'] = datetime.now().strftime('%H:%M:%S')
-		settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+		set_agent_status(request.user.extension,AGENTS[request.user.extension])
 		#Trac Agent Activity
 		agent_activity_data = []
 		agent_activity_data = get_formatted_agent_activities(request.POST)
@@ -4242,8 +4308,7 @@ class DispoSubmit(LoginRequiredMixin, APIView):
 	login_url = '/'
 	def post(self, request):
 		AGENTS = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps(AGENTS))
+		AGENTS = get_agent_status(request.user.extension)
 		campaign_name = request.POST.get('campaign')
 		call_type = request.POST.get('call_type', '')
 		switch_ip = request.POST.get('switch_ip', '')
@@ -4288,9 +4353,7 @@ class DispoSubmit(LoginRequiredMixin, APIView):
 		AGENTS[request.user.extension]['call_count'] = CallDetail.objects.filter(user__username=request.user.username,created__date=date.today()).count()
 		AGENTS[request.user.extension]['dial_number'] = ''
 		AGENTS[request.user.extension]['campaign'] = campaign_name
-		updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-		updated_agent_dict[request.user.extension].update(AGENTS[request.user.extension])
-		settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+		set_agent_status(request.user.extension,AGENTS[request.user.extension])
 		print("Disp Submit", request.user, request.POST.get("primary_dispo",''), request.POST.get("feedback",{}))
 		return Response(status)
 
@@ -4325,20 +4388,20 @@ class AutoDialApiView(LoginRequiredMixin, APIView):
 			status = autodial_session(switch,extension=extension,uuid=uuid,
 					sip_error=request.POST.get('sip_error','false'))
 			if 'success' in status:
-				AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+				AGENTS = get_agent_status(request.user.extension)
 				AGENTS[request.user.extension]['call_type'] = 'predictive'
 				AGENTS[request.user.extension]['state'] = 'Predictive Wait'
 				AGENTS[request.user.extension]['event_time'] = datetime.now().strftime('%H:%M:%S')
-				settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+				set_agent_status(request.user.extension,AGENTS[request.user.extension])
 			return Response(status)
 		if autodial_status == 'false':
 			status = autodial_session_hangup(switch,extension=extension,uuid=uuid)
 			if 'success' in status:
-				AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+				AGENTS = get_agent_status(request.user.extension)
 				AGENTS[request.user.extension]['call_type'] = ''
 				AGENTS[request.user.extension]['state'] = 'Idle'
 				AGENTS[request.user.extension]['event_time'] = datetime.now().strftime('%H:%M:%S')
-				settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+				set_agent_status(request.user.extension,AGENTS[request.user.extension])
 			return Response(status)
 
 class InboundApiView(LoginRequiredMixin, APIView):
@@ -4372,18 +4435,18 @@ class InboundApiView(LoginRequiredMixin, APIView):
 			status = autodial_session(switch,extension=extension,uuid=uuid,
 					sip_error=request.POST.get('sip_error','false'))
 			if 'success' in status:
-				AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+				AGENTS = get_agent_status(request.user.extension)
 				AGENTS[request.user.extension]['call_type'] = 'Inbound'
 				AGENTS[request.user.extension]['state'] = 'Inbound Wait'
-				settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+				set_agent_status(request.user.extension,AGENTS[request.user.extension])
 			return Response(status)
 		if inbound_status == 'false':
 			status = autodial_session_hangup(switch,extension=extension,uuid=uuid)
 			if 'success' in status:
-				AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+				AGENTS = get_agent_status(request.user.extension)
 				AGENTS[request.user.extension]['call_type'] = ''
 				AGENTS[request.user.extension]['state'] = 'Idle'
-				settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+				set_agent_status(request.user.extension,AGENTS[request.user.extension])
 			return Response(status)
 
 class BlendedApiView(LoginRequiredMixin, APIView):
@@ -4417,18 +4480,18 @@ class BlendedApiView(LoginRequiredMixin, APIView):
 			status = autodial_session(switch,extension=extension,uuid=uuid,
 					sip_error=request.POST.get('sip_error','false'))
 			if 'success' in status:
-				AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+				AGENTS = get_agent_status(request.user.extension)
 				AGENTS[request.user.extension]['call_type'] = 'blended'
 				AGENTS[request.user.extension]['state'] = 'Blended Wait'
-				settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+				set_agent_status(request.user.extension,AGENTS[request.user.extension])
 			return Response(status)
 		if blended_status == 'false':
 			status = autodial_session_hangup(switch,extension=extension,uuid=uuid)
 			if 'success' in status:
-				AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+				AGENTS = get_agent_status(request.user.extension)
 				AGENTS[request.user.extension]['call_type'] = ''
 				AGENTS[request.user.extension]['state'] = 'Idle'
-				settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+				set_agent_status(request.user.extension,AGENTS[request.user.extension])
 			return Response(status)
 
 class NdncListAPIView(LoginRequiredMixin, APIView):
@@ -4663,12 +4726,12 @@ class AutodialCustomerDetail(APIView):
 		if not contact_id:
 			contact_id = 0
 		if dial_number and dial_number !="null":
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+			AGENTS = get_agent_status(request.user.extension)
 			AGENTS[request.user.extension]['state'] = 'InCall'
 			AGENTS[request.user.extension]['event_time'] = datetime.now().strftime('%H:%M:%S')
 			AGENTS[request.user.extension]['dial_number'] = dial_number
 			AGENTS[request.user.extension]['call_timestamp'] = request.POST.get("call_timestamp", "")[:13]
-			settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+			set_agent_status(request.user.extension,AGENTS[request.user.extension])
 			campaign_object = Campaign.objects.get(name=campaign)
 			contact = Contact.objects.filter(id=contact_id)
 			if contact.exists():
@@ -4733,11 +4796,11 @@ class InboundCustomerDetail(APIView):
 			create_agentactivity(agent_data)
 			delete_inbound_number(campaign, dial_number, user)
 			if dial_number and dial_number !="null":
-				AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+				AGENTS = get_agent_status(request.user.extension)
 				AGENTS[request.user.extension]['state'] = 'InCall'
 				AGENTS[request.user.extension]['dial_number'] = dial_number
 				AGENTS[request.user.extension]['call_timestamp'] = request.POST.get("call_timestamp", "")[:13]
-				settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+				set_agent_status(request.user.extension,AGENTS[request.user.extension])
 				campaign_object = Campaign.objects.get(name=campaign)
 				data=customer_detials(campaign,dial_number,campaign_object)
 				return JsonResponse(data)
@@ -4800,7 +4863,7 @@ def inbound_agents_availability(request):
 		c_max_wait_time = 25
 		no_agent_audio = False
 		try:
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+			AGENTS = get_all_keys_data()
 			caller_data=json.loads(request.body.decode('utf-8'))
 			skill_obj = SkilledRouting.objects.filter(skill_id__did__contains = caller_data["caller_id"],status='Active')
 			if skill_obj:
@@ -4855,7 +4918,7 @@ def inbound_agents_availability(request):
 						dial_method =campaign_obj.first().dial_method
 						campaign = campaign_obj.first().slug
 						r_campaigns = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps(CAMPAIGNS))
-						AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+						AGENTS = get_all_keys_data()
 						if dial_method['inbound']:
 							queue_call=True
 							callback = campaign_obj[0].queued_busy_callback
@@ -4900,14 +4963,13 @@ def inbound_agents_availability(request):
 												if AGENTS[active_user]['status'] == 'Ready' and AGENTS[active_user]['state'] not in ['InCall','Predictive Wait','Blended Wait']:
 													extensions.append(active_user)
 						else:
-							if stk_obj:
-								if campaign_obj[0].slug in r_campaigns:
-									unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))
-									if stk_obj.agent.extension in unique_extensions:
-										user=stk_obj.agent.extension
-										if AGENTS[user]['status'] == 'Ready' and AGENTS[user]['state'] in ['Inbound Wait','Blended Wait']:
-											extensions.append(user)
-											stickyagent = True
+							if stk_obj and campaign_obj[0].slug in r_campaigns:
+								unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))
+								if stk_obj.agent.extension in unique_extensions:
+									user=stk_obj.agent.extension
+									if AGENTS[user]['status'] == 'Ready' and AGENTS[user]['state'] in ['Inbound Wait','Blended Wait']:
+										extensions.append(user)
+										stickyagent = True
 			if campaign != '':
 				settings.R_SERVER.sadd(campaign, caller_data['dialed_uuid'])
 			else:
@@ -5016,75 +5078,114 @@ def rec_check_agent_availabilty(request):
 	c_max_wait_time = 25
 	no_agent_audio = False
 	try:
+		AGENTS = get_all_keys_data()
 		caller_data=json.loads(request.body.decode('utf-8'))
-		ingroup_campaign = InGroupCampaign.objects.filter(caller_id__did__contains=caller_data["caller_id"], status='Active',
-				ingroup_campaign__campaign__status='Active')
-		campaign_id = None
-		if ingroup_campaign.exists():
-			ingroup_campaign = ingroup_campaign.first()
-			campaign_id = get_ingroup_campaign(ingroup_campaign)
-			if campaign_id == None:
-				campaign_id = ingroup_campaign.ingroup_campaign.first().campaign_id
-		campaign_obj = Campaign.objects.filter(id=campaign_id).prefetch_related()
-		# campaign_obj = Campaign.objects.filter(all_caller_id__contains=[str(caller_data["caller_id"])],
-		#   dial_method__contains={"inbound":True}).order_by('?')
-		if campaign_obj:
-			dial_method =campaign_obj.first().dial_method
-			campaign = campaign_obj.first().slug
-			r_campaigns = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps(CAMPAIGNS))
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-			if dial_method['inbound']:
-				queue_call=True
-				callback = campaign_obj[0].queued_busy_callback
-				ibc_popup = dial_method['ibc_popup']
-				stk_obj = StickyAgent.objects.none()
-				if dial_method['sticky_agent_map']:
-					stk_obj = StickyAgent.objects.filter(campaign_name=campaign_obj[0].name,numeric=caller_data['destination_number'])
-				if stk_obj.exists():
-					stk_obj = stk_obj.latest('id')
-				if dial_method['ibc_popup']:
-					queue_call=False
-					if stk_obj and stk_obj.agent.extension in AGENTS:
-						extension = stk_obj.agent.extension
-						if AGENTS[extension]['status'] == 'Ready' and AGENTS[extension]['state'] not in ['InCall','Predictive Wait','Blended Wait']:
-							extensions.append(extension)
-					else:
-						camp_users=list(campaign_obj.values_list("users", flat=True).exclude(users__isnull=True))
-						camp_grp_users = list(campaign_obj.values_list("group__user_group", flat=True).exclude(group__isnull=True))
-						user_ids = list(set(camp_grp_users+camp_users))
-						users = list(UserVariable.objects.filter(user__id__in = user_ids,
-								user__is_active=True).values_list('extension',flat=True))
-						if users:
-							extensions = []
-							if campaign_obj[0].slug in r_campaigns:
-								unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))
-								for active_user in users:
-									if active_user in unique_extensions:
-										if AGENTS[active_user]['status'] == 'Ready' and AGENTS[active_user]['state'] not in ['InCall','Predictive Wait','Blended Wait'] and AGENTS[active_user]['campaign']==campaign:
-											extensions.append(active_user)
-				else:
-					camp_users=list(campaign_obj.values_list("users", flat=True).exclude(users__isnull=True))
-					camp_grp_users = list(campaign_obj.values_list("group__user_group", flat=True).exclude(group__isnull=True))
-					user_ids = list(set(camp_grp_users+camp_users))
-					users = list(UserVariable.objects.filter(user__id__in = user_ids,
-							user__is_active=True).values_list('extension',flat=True))
-					if users:
-						extensions = []
-						if campaign_obj[0].slug in r_campaigns:
-							unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))
-							for active_user in users:
-								if active_user in unique_extensions:
-									if AGENTS[active_user]['status'] == 'Ready' and AGENTS[active_user]['state'] not in ['InCall','Predictive Wait','Blended Wait']:
-										extensions.append(active_user)
+		skill_obj = SkilledRouting.objects.filter(skill_id__did__contains = caller_data["caller_id"],status='Active')
+		if skill_obj:
+			campaign_obj = skill_obj
+			ibc_popup = False
+			queue_call = True
+			skill_routed_status = True
+			skill = skill_obj[0].skills
+			skill_popup = skill_obj[0].skill_popup
+		else:
+			user_obj = User.objects.filter(caller_id = caller_data["caller_id"])
+			user_extension = None
+			if user_obj.exists():
+				user_extension = user_obj.first().extension
+			if user_extension and user_extension in AGENTS.keys():
+				campaign = AGENTS[user_extension]['campaign']
+				queue_call=False
+				if campaign:
+					campaign_obj = Campaign.objects.filter(name=campaign)
+					dial_method = campaign_obj.first().dial_method
+					if dial_method['inbound']:
+						trunk = None
+						if campaign_obj.first().is_trunk_group and campaign_obj.first().trunk_group:
+							trunks = campaign_obj.first().trunk_group.trunks.filter(trunk_id=user_obj.first().trunk_id)
+							if trunks.exists():
+								trunk = trunks.first().trunk
+						else:
+							if campaign_obj.first().trunk and campaign_obj.first().trunk_id == user_obj.first().trunk_id:
+								trunk = campaign_obj.first().trunk
+						if trunk and trunk.status == 'Active':
+							ibc_popup = dial_method['ibc_popup']
+							user = user_extension
+							if ibc_popup:
+								if AGENTS[user_extension]['status'] == 'Ready' and AGENTS[user_extension]['state'] not in ['InCall','Predictive Wait','Blended Wait','Inbound Wait']:
+									extensions.append(user_extension)
+							else:
+								if AGENTS[user_extension]['status'] == 'Ready' and AGENTS[user_extension]['state'] not in ['InCall','Predictive Wait']:
+									extensions.append(user_extension)
 			else:
-				if stk_obj:
-					if campaign_obj[0].slug in r_campaigns:
-						unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))
-						if stk_obj.agent.extension in unique_extensions:
-							user=stk_obj.agent.extension
-							if AGENTS[user]['status'] == 'Ready' and AGENTS[user]['state'] in ['Inbound Wait','Blended Wait']:
-								extensions.append(user)
-								stickyagent = True
+				ingroup_campaign = InGroupCampaign.objects.filter(caller_id__did__contains=caller_data["caller_id"], status='Active',
+					ingroup_campaign__campaign__status='Active')
+				campaign_id = None
+				if ingroup_campaign.exists():
+					ingroup_campaign = ingroup_campaign.first()
+					campaign_id = get_ingroup_campaign(ingroup_campaign)
+					if campaign_id == None:
+						campaign_id = ingroup_campaign.ingroup_campaign.first().campaign_id
+				campaign_obj = Campaign.objects.filter(id=campaign_id).prefetch_related()
+				# campaign_obj = Campaign.objects.filter(all_caller_id__contains=[str(caller_data["caller_id"])],
+				#   dial_method__contains={"inbound":True}).order_by('?')
+				if campaign_obj:
+					dial_method =campaign_obj.first().dial_method
+					campaign = campaign_obj.first().slug
+					r_campaigns = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps(CAMPAIGNS))
+					AGENTS = get_all_keys_data()
+					if dial_method['inbound']:
+						queue_call=True
+						callback = campaign_obj[0].queued_busy_callback
+						ibc_popup = dial_method['ibc_popup']
+						stk_obj = StickyAgent.objects.none()
+						if dial_method['sticky_agent_map']:
+							stk_obj = StickyAgent.objects.filter(campaign_name=campaign_obj[0].name,numeric=caller_data['destination_number'])
+						if stk_obj.exists():
+							stk_obj = stk_obj.latest('id')
+						if dial_method['ibc_popup']:
+							queue_call=False
+							if stk_obj and stk_obj.agent.extension in AGENTS:
+								extension = stk_obj.agent.extension 
+								if AGENTS[extension]['status'] == 'Ready' and AGENTS[extension]['state'] not in ['InCall','Predictive Wait','Blended Wait']:
+									extensions.append(extension)
+							else:
+								camp_users=list(campaign_obj.values_list("users", flat=True).exclude(users__isnull=True))
+								camp_grp_users = list(campaign_obj.values_list("group__user_group", flat=True).exclude(group__isnull=True))
+								user_ids = list(set(camp_grp_users+camp_users))
+								users = list(UserVariable.objects.filter(user__id__in = user_ids,
+									user__is_active=True).values_list('extension',flat=True))
+								if users:
+									extensions = []
+									if campaign_obj[0].slug in r_campaigns:
+										unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))
+										for active_user in users:
+											if active_user in unique_extensions:
+												if AGENTS[active_user]['status'] == 'Ready' and AGENTS[active_user]['state'] not in ['InCall','Predictive Wait','Blended Wait'] and AGENTS[active_user]['campaign']==campaign:
+													extensions.append(active_user)
+						else:
+							camp_users=list(campaign_obj.values_list("users", flat=True).exclude(users__isnull=True))
+							camp_grp_users = list(campaign_obj.values_list("group__user_group", flat=True).exclude(group__isnull=True))
+							user_ids = list(set(camp_grp_users+camp_users))
+							users = list(UserVariable.objects.filter(user__id__in = user_ids,
+								user__is_active=True).values_list('extension',flat=True))
+							if users:
+								extensions = []
+								if campaign_obj[0].slug in r_campaigns:
+									unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))
+									for active_user in users:
+										if active_user in unique_extensions:
+											if AGENTS[active_user]['status'] == 'Ready' and AGENTS[active_user]['state'] not in ['InCall','Predictive Wait','Blended Wait']:
+												extensions.append(active_user)
+					else:
+						if stk_obj:
+							if campaign_obj[0].slug in r_campaigns:
+								unique_extensions = list(set(r_campaigns[campaign_obj[0].slug]))                                    
+								if stk_obj.agent.extension in unique_extensions:
+									user=stk_obj.agent.extension
+									if AGENTS[user]['status'] == 'Ready' and AGENTS[user]['state'] in ['Inbound Wait','Blended Wait']:
+										extensions.append(user)
+										stickyagent = True
 		status = check_ibc_cust_status(caller_data['server'],dialed_uuid=caller_data['dialed_uuid'],campaign_obj=campaign_obj)
 		timestamp = int(caller_data['intiate_time'])/1000000
 		diff_in_seconds = diff_time_in_seconds(timestamp)
@@ -5101,10 +5202,10 @@ def rec_check_agent_availabilty(request):
 				status['cust_status']='uuid_not_exist'
 		else:
 			status['cust_status']='timeout'
-			extensions=[]
+			extensions=[]           
 		return JsonResponse({'extension':extensions,'cust_status':status.get('cust_status',False),
-						'no_agent_audio':status.get('no_agent_audio',False),'c_max_wait_time':status.get('c_max_wait_time',25),
-						'audio_moh_sound':status.get('audio_moh_sound',None)})
+				'no_agent_audio':status.get('no_agent_audio',False),'c_max_wait_time':status.get('c_max_wait_time',25),
+				'audio_moh_sound':status.get('audio_moh_sound',None)})
 	except Exception as e:
 		print("check_agent_availabilty",e)
 		return JsonResponse({'extension':extensions,'cust_status':status['cust_status'],'no_agent_audio':no_agent_audio,'c_max_wait_time':c_max_wait_time,'audio_moh_sound':audio_moh_sound})
@@ -5248,7 +5349,7 @@ class GetAvailableAgentsAPIView(APIView):
 	def post(self, request):
 		campaign = request.POST.get("campaign")
 		agent_extension = []
-		all_agents = pickle.loads(settings.R_SERVER.get("agent_status"))
+		all_agents = get_all_keys_data()
 		for extension in all_agents:
 			if extension != request.user.extension:
 				rule = [all_agents[extension]["state"] == "Idle",
@@ -5279,9 +5380,9 @@ class WebrtcSessionSetVar(APIView):
 				,dialed_uuid=request.POST.get("Unique-ID"),extension=request.user.extension,call_type='webrtc')
 		if request.POST.get('update_autodial_session',False):
 			autodial_session(request.POST.get("variable_sip_from_host"), extension=request.user.extension,uuid=request.POST.get("Unique-ID"), sip_error='false')
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+		AGENTS = get_agent_status(request.user.extension)
 		AGENTS[request.user.extension]['dialerSession_uuid'] = request.POST.get("Unique-ID")
-		settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+		set_agent_status(request.user.extension,AGENTS[request.user.extension])
 		return JsonResponse({"success":"successfully"})
 
 class InternalTransferCallHangup(APIView):
@@ -5299,8 +5400,7 @@ class TransferCustomerDetail(APIView):
 	def post(self, request):
 		contact_info = []
 		AGENTS = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-						pickle.dumps(AGENTS))
+		AGENTS = get_agent_status(request.user.extension)
 		contact_info = []
 		campaign = request.POST.get("campaign_name", "")
 		user = request.POST.get("extension", "")
@@ -5316,10 +5416,7 @@ class TransferCustomerDetail(APIView):
 			AGENTS[request.user.extension]['call_timestamp'] = AGENTS[transfer_agent]['call_timestamp']
 			AGENTS[request.user.extension]['call_type'] = 'transfer'
 			AGENTS[transfer_agent]['call_timestamp'] = ""
-			updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-			updated_agent_dict[request.user.extension].update(AGENTS[request.user.extension])
-			updated_agent_dict[transfer_agent].update(AGENTS[transfer_agent])
-			settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+			set_agent_status(request.user.extension,AGENTS[request.user.extension])
 			contact_info_obj = Contact.objects.filter(numeric=dial_number, id=contact_id)
 			if contact_info_obj:
 				contact_info = ContactSerializer(contact_info_obj[0]).data
@@ -5352,10 +5449,10 @@ class CustomerInfoAPIView(APIView):
 			sip_extension = request.user.extension
 		if call_timestamp==None or call_timestamp=='':
 			call_timestamp = int(str(round(time.time() * 1000))[:13])
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+		AGENTS = get_agent_status(sip_extension)
 		if sip_extension in AGENTS:
 			AGENTS[sip_extension].update({'call_timestamp':call_timestamp})
-			settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+			set_agent_status(sip_extension,AGENTS[sip_extension])
 
 		campaign_name = request.GET.get('campaign_name', '')
 		campaign_object = Campaign.objects.get(name=campaign_name)
@@ -5667,7 +5764,7 @@ class NotificationAPIView(LoginRequiredMixin, APIView):
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
 			agent = False
-		if request.user.is_superuser or admin:
+		if request.user.is_superuser:
 			campaigns = list(Campaign.objects.all().values_list("name", flat=True))
 			notifications = Notification.objects.filter(viewed=False)
 			agent = False
@@ -5890,8 +5987,9 @@ class AgentLiveDataAPIView(APIView):
 					user=user.extension), campaign=campaign, schedule_time__lte=datetime.now())
 					.exclude(numeric__in=snoozed_cb).exclude(status='Locked')
 					.values_list('numeric',flat=True))
+			print('log::portifolio::campaign::',campaign,"-requestuser::",user)
 			campaign_obj = Campaign.objects.filter(name=campaign).first()
-			if campaign_obj.portifolio:
+			if campaign_obj and campaign_obj.portifolio:
 				contact_count = Contact.objects.filter(user=user.username, campaign=campaign, phonebook__status='Active').aggregate(dialled_assingned_calls=Count('status',filter=~Q(status__in=['Queued','NotDialed','Locked'])),notdialed_assigned_calls=Count('status', filter=Q(status__in=['Queued','NotDialed','Locked'])))
 			lead_count = LeadBucket.objects.filter(Q(verified_to=user.username, contact__campaign=campaign),Q(contact__phonebook__status='Active')|Q(contact__phonebook=None)).aggregate(campaign_leads_count=Count('id',filter=Q(reverify_lead=False)),campaign_requeue_leads_count=Count('id',filter=Q(reverify_lead=True)))
 		context = {"total_callbacks":total_callbacks,'notifications':notifications,
@@ -6035,6 +6133,31 @@ class GetTotalCallsPerMonth(LoginRequiredMixin,APIView):
 				'start_index':paginate_obj.start_index(), 'end_index':paginate_obj.end_index(),
 				'total_data':agent_callpermonth[::-1]})
 
+import datetime as dt
+class UniqueCallsPerMonth(LoginRequiredMixin, APIView):
+	login_url= '/'
+	def post(self,request):
+		agent_uniquecallpermonth=[]
+		user= request.user
+		page = int(request.POST.get('page' ,1))
+		paginate_by = int(request.POST.get('paginate_by', 10))
+		source = request.POST.get('disposition','')
+		column_name = request.POST.get('column_name',None)
+		search_by = request.POST.get('search_by',None)
+		filter_dict={}
+		# filter_dict = {'user':user}
+		if column_name and search_by:
+			filter_dict[column_name] = search_by
+		if source:
+			filter_dict['customer_raw_data__pl__source'] = source
+		queryset=Contact.objects.values("numeric","campaign","customer_raw_data","id").filter(last_dialed_date__lte=dt.datetime.today(), last_dialed_date__gt=dt.datetime.today()-dt.timedelta(days=30)).filter(**filter_dict,last_connected_user=user.extension).order_by('-created_date')
+		paginate_obj = get_paginated_object(queryset, page, paginate_by)
+		agent_uniquecallpermonth = UniqueSerializer(paginate_obj,many=True).data
+		return Response({'total_records': paginate_obj.paginator.count,'total_pages': paginate_obj.paginator.num_pages,
+			'page': paginate_obj.number,'has_next': paginate_obj.has_next(),'has_prev': paginate_obj.has_previous(),
+			'start_index':paginate_obj.start_index(), 'end_index':paginate_obj.end_index(),
+			'total_data':agent_uniquecallpermonth[::-1]})
+
 class GetAgentDispoCount(LoginRequiredMixin, APIView):
 	"""
 	this class will get dispostion list with count of user in total calls per month or day
@@ -6042,11 +6165,15 @@ class GetAgentDispoCount(LoginRequiredMixin, APIView):
 	login_url= '/'
 	def get(self,request):
 		fetch_type = request.GET.get('fetch_type','')
+		dispo_data=''
+		source_data=''
 		if fetch_type == 'CallsPerMonth':
 			dispo_data = CdrFeedbck.objects.filter(calldetail__user=request.user, calldetail__created__month=datetime.now().month).values('primary_dispo').order_by('primary_dispo').annotate(count = Count('primary_dispo'))
-		else:
+		elif fetch_type == 'CallsPerDay':
 			dispo_data = CdrFeedbck.objects.filter(calldetail__user=request.user, calldetail__created__date=date.today()).values('primary_dispo').order_by('primary_dispo').annotate(count = Count('primary_dispo'))
-		return Response({'dispo_data':dispo_data})
+		else:
+			source_data= SourceList.objects.values("sourcename")
+		return Response({'dispo_data':dispo_data,'source_data':source_data})
 
 class GetAgentAssignedCall(LoginRequiredMixin, APIView):
 	"""
@@ -6439,13 +6566,12 @@ class ChangeAgentState(APIView):
 	def post(self,request):
 		AGENTS = {}
 		extension = request.user.extension
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-		if AGENTS:
-			if ''+str(extension)+'' in AGENTS:
-				AGENTS[''+str(extension)+'']['status'] = request.POST.get('status')
-				AGENTS[''+str(extension)+'']['state'] = request.POST.get('state')
-				AGENTS[''+str(extension)+'']['event_time'] = datetime.now().strftime('%H:%M:%S')
-		settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+		AGENTS = get_agent_status(extension)
+		if AGENTS and ''+str(extension)+'' in AGENTS:
+			AGENTS[''+str(extension)+'']['status'] = request.POST.get('status')
+			AGENTS[''+str(extension)+'']['state'] = request.POST.get('state')
+			AGENTS[''+str(extension)+'']['event_time'] = datetime.now().strftime('%H:%M:%S')
+		set_agent_status(extension,AGENTS)
 		return Response({"status":"Agent Status Updatedp"})
 
 class ResetAgentAvailabilityStatus(APIView):
@@ -7541,9 +7667,9 @@ class SwitchingScreens(LoginRequiredMixin,APIView):
 				'return_to_agent':False,'return_to_admin':False
 		}
 		if form_id  == 'admin_to_agent_switchscreen':
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps({}))
+			AGENTS = get_agent_status(extension)
 			AGENTS[extension]['screen'] = 'AgentScreen'
-			settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+			set_agent_status(extension,AGENTS[extension])
 			redirect_dict['return_to_agent'] =True
 			time = datetime.strptime("0:0:0", '%H:%M:%S').time()
 			login_time = datetime.now()
@@ -7567,9 +7693,9 @@ class SwitchingScreens(LoginRequiredMixin,APIView):
 			activity_dict["campaign_name"] = ''
 			create_agentactivity(activity_dict)
 			AdminLogEntry.objects.create(created_by=request.user, change_message=request.user.username+" switched to Admin screen ",action_name='2',event_type='SWITCH TO ADMIN')
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps({}))
+			AGENTS = get_agent_status(extension)
 			AGENTS[extension]['screen'] = 'AdminScreen'
-			settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+			set_agent_status(extension,AGENTS[extension])
 		return JsonResponse(redirect_dict)
 
 @method_decorator(check_read_permission, name='get')

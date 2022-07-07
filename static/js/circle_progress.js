@@ -1,14 +1,4 @@
-/**
- * jquery-circle-progress - jQuery Plugin to draw animated circular progress bars:
- * {@link http://kottenator.github.io/jquery-circle-progress/}
- *
- * @author Rostyslav Bryzgunov <kottenator@gmail.com>
- * @version 1.2.2
- * @licence MIT
- * @preserve
- */
-// UMD factory - https://github.com/umdjs/umd/blob/d31bb6ee7098715e019f52bdfe27b3e4bfd2b97e/templates/jqueryPlugin.js
-// Uses AMD, CommonJS or browser globals to create a jQuery plugin.
+
 (function(factory) {
   if (typeof define === 'function' && define.amd) {
     // AMD - register as an anonymous module

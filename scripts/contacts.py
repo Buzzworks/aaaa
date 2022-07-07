@@ -1,6 +1,9 @@
 from crm.models import TempContactInfo, LeadListPriority
 from datetime import datetime, timedelta
 from django.db.models import Q
+from django.db import transaction
+from django.db import connections
+
 def num_update(numbers):
 	for number in numbers:
 		number.status = 'Dialed'
@@ -20,14 +23,21 @@ def autodial_num_fetch(campaign, count, check_user):
 	"""Return list of numbers
 	Takes campaign and total count of numbers to fetch from DB to dial call.
 	"""
-	before_one_minute = datetime.now() - timedelta(minutes=1)
-	TempContactInfo.objects.filter(campaign=campaign, modified_date__lte=before_one_minute, status='Dialed-Queued').update(status='NotDialed')
-	if check_user:
-		contacts = TempContactInfo.objects.filter(Q(campaign=campaign, status='NotDialed'), Q(user=None)|Q(user='')).order_by('created_date','priority')[0:count]
-	else:
-		contacts = TempContactInfo.objects.filter(Q(campaign=campaign, status='NotDialed')).order_by('created_date','priority')[0:count]
-	delete_lead_priority(campaign, contacts)
-	return contacts
+	try:
+		before_one_minute = datetime.now() - timedelta(minutes=1)
+		TempContactInfo.objects.filter(campaign=campaign, modified_date__lte=before_one_minute, status='Dialed-Queued').update(status='NotDialed')
+		if check_user:
+			contacts = TempContactInfo.objects.filter(Q(campaign=campaign, status='NotDialed'), Q(user=None)|Q(user='')).order_by('created_date','priority')[0:count]
+		else:
+			contacts = TempContactInfo.objects.filter(Q(campaign=campaign, status='NotDialed')).order_by('created_date','priority')[0:count]
+		delete_lead_priority(campaign, contacts)
+		return contacts
+	except Exception as e:
+		print("Expection at Autodial_num_fetch")
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 
 def autodial_num_update(campaign, numbers, description=""):
 	"""

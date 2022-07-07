@@ -50,6 +50,8 @@ INSTALLED_APPS = [
     'django_apscheduler',
     'django.contrib.humanize',
     'django.contrib.postgres',
+    'storages',
+    'captcha'
     # 'debug_toolbar',
     "rest_framework.authtoken",
 ]
@@ -62,6 +64,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'flexydial.session_middleware.SessionIdleMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # 'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
@@ -91,19 +94,19 @@ WSGI_APPLICATION = 'flexydial.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': os.environ.get('FLEXYDIAL_DB_NAME'),
-        'USER': os.environ.get('FLEXYDIAL_DB_USER'),
-        'PASSWORD': os.environ.get('FLEXYDIAL_DB_PASS'),
-        'HOST': os.environ.get('FLEXYDIAL_DB_HOST'),
-        'PORT': os.environ.get('FLEXYDIAL_DB_PORT'),
+        'NAME': os.environ.get('FLEXYDIAL_DB_NAME','flexydial'),
+        'USER': os.environ.get('FLEXYDIAL_DB_USER','flexydial'),
+        'PASSWORD': os.environ.get('FLEXYDIAL_DB_PASS','flexydial'),
+        'HOST': os.environ.get('FLEXYDIAL_DB_HOST','127.0.0.1'),
+        'PORT': os.environ.get('FLEXYDIAL_DB_PORT',5432),
     },
     'crm': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': os.environ.get('CRM_DB_NAME'),
-        'USER': os.environ.get('CRM_DB_USER'),
-        'PASSWORD': os.environ.get('CRM_DB_PASS'),
-        'HOST': os.environ.get('CRM_DB_HOST'),
-        'PORT': os.environ.get('CRM_DB_PORT'),
+        'NAME': os.environ.get('CRM_DB_NAME','crm'),
+        'USER': os.environ.get('CRM_DB_USER','flexydial'),
+        'PASSWORD': os.environ.get('CRM_DB_PASS','flexydial'),
+        'HOST': os.environ.get('CRM_DB_HOST','127.0.0.1'),
+        'PORT': os.environ.get('CRM_DB_PORT',5432),
     },
 }
 DATABASE_ROUTERS = ['crm.router.DbRouter','callcenter.router.DbRouter']
@@ -190,8 +193,9 @@ NODEJS_SOCKET_PORT = 3232
 WEB_LIVE_STATUS_CHANNEL = 'flexydial-dashboard'
 
 AUTH_USER_MODEL         = 'callcenter.User'
-MEDIA_ROOT              = os.path.join('/var/lib/flexydial/', 'media')
-MEDIA_URL               = '/media/'
+# MEDIA_ROOT              = os.path.join('/var/lib/flexydial/', 'media')
+MEDIA_ROOT              = 'media'
+# MEDIA_URL               = '/media/'
 RECORDING_ROOT          = '/var/spool/freeswitch/default'
 RECORDING_URL           = '/recordings/'
 RPC_HOST                = 'localhost'
@@ -241,15 +245,29 @@ PASSWORD_RESET_TIMEOUT_DAYS = 1
 
 WEB_SOCKET_HOST = os.environ.get('WEB_SOCKET_HOST',"")
 FREESWITCH_IP_ADDRESS = os.environ.get('FREESWITCH_HOST')
-S3_PHONEBOOK_BUCKET_NAME = os.environ.get('S3_PHONEBOOK_BUCKET_NAME',"")
-S3_ACCESS_KEY = os.environ.get('S3_ACCESS_KEY',"")
-S3_SECRET_KEY = os.environ.get('S3_SECRET_KEY',"")
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME',"")
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+AWS_S3_OBJECT_PARAMETERS = os.environ.get('AWS_S3_OBJECT_PARAMETERS',{'CacheControl': 'max-age=86400'})
+AWS_DEFAULT_ACL = os.environ.get("AWS_DEFAULT_ACL","")
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID',"")
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY',"")
+
+GS_BUCKET_NAME = os.environ.get("GS_BUCKET_NAME","")
+
+if AWS_STORAGE_BUCKET_NAME:
+    DEFAULT_FILE_STORAGE = 'flexydial.storages.MediaStore'
+elif GS_BUCKET_NAME:
+    MEDIA_URL = 'https://storage.googleapis.com/{}/'.format(GS_BUCKET_NAME)
+    DEFAULT_FILE_STORAGE='flexydial.storages.GoogleCloudMediaFileStorage'
 API_CAMPAIGN_FIELD = os.environ.get('API_CAMPAIGN_FIELD',"campaign")
 API_NUMERIC_FIELD = os.environ.get('API_NUMERIC_FIELD',"numeric")
 REPLACE_API_KEY = os.environ.get('REPLACE_API_KEY',"")
 REPLACE_API_VALUE = os.environ.get('REPLACE_API_VALUE',"")
 XML_INSERT_KEY = os.environ.get("XML_INSERT_KEY","")
 XML_UPDATE_KEY = os.environ.get("XML_UPDATE_KEY","")
+API_DEST_CAMP = os.environ.get('API_DEST_CAMP','')
+S3_GCLOUD_BUCKET_NAME = os.environ.get("S3_GCLOUD_BUCKET_NAME","")
+DATA_UPLOAD_MAX_NUMBER_FIELDS = os.environ.get('DATA_UPLOAD_MAX_NUMBER_FIELDS',1500)
 
 SOURCE = 'FLEXY'
 LOCATION = 'Mumbai'
@@ -268,3 +286,8 @@ STATICFILES_FINDERS = (
 )
 
 SERVICES_LIST= []
+
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SECURE = True

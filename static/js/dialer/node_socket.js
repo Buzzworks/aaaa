@@ -5,6 +5,8 @@ var dap_details_data = ""
 var third_party_api_disp = false
 var third_party_api_sub_dispo = false
 var admin_socket = '';
+var agent_hangup_status = false
+
 // var nodejs_port = '3233';
 // admin_socket = io('https://'+server_ip + ':' + nodejs_port, {
 //     'reconnection': true,
@@ -51,9 +53,7 @@ function prepare_data_to_store() {
 	sessionStorage.setItem("predictive_time", "0:0:0");
 	sessionStorage.setItem("break_time", "0:0:0");
 	if (call_type == 'webrtc') {
-		if (sipStack) {
-			sipStack.stop()
-		}
+		sipSessionHangup();
 		SIPml["b_initialized"] = false
 	} else {
 		agent_activity_data['call_protocol'] = call_type
@@ -214,8 +214,14 @@ function socketevents (){
 								data: agent_activity_data,
 								success: function(data){ }
 							})
+							if(call_type == "2"){
+								$('#btnLogMeOut').click();
+							}
 						}
 						else {
+							if(call_type == "2"){
+								agent_hangup_status = true
+							}
 							if (Object.keys(dummy_session_details) ==0){
 								dummy_session_details = {...session_details[extension]}
 							}
@@ -249,6 +255,11 @@ function socketevents (){
 						$('#eavesdrop_session').prop('checked',false)
 					}
 				}
+			}
+		})
+		socket.on('wfh_answer_app',function(data){
+			if(extension == data){
+				$('.preloader').fadeOut('slow');
 			}
 		})
 		socket.on("OUTBOUND_CHANNEL_ANSWER", function(data){
@@ -347,7 +358,7 @@ function socketevents (){
 		})
 		socket.on("AUTODIAL_CHANNEL_BRIDGE", function(autodial_data){
 			var sip_extension = autodial_data["sip_extension"]
-			if (sip_extension == extension) {
+			if (sip_extension == extension || session_details[extension]['Unique-ID'] == autodial_data['variable_cc_agent_uuid']) {
 				agent_hangup = false
 				close_agent_sidebar()
 				$("#wait_timer").countimer('stop')
@@ -437,7 +448,7 @@ function socketevents (){
 		})
 
 		socket.on("AUTODIAL_CHANNEL_HANGUP", function(data){
-			if (extension == data["sip_extension"] && agent_hangup == false){
+			if ((extension == data["sip_extension"] ||  session_details[extension]['Unique-ID'] == data['variable_cc_agent_uuid']) && agent_hangup == false){
 				close_agent_sidebar()
 				hangup_time = new Date($.now());
 				var previous_number = sessionStorage.getItem('previous_number','')

@@ -57,8 +57,9 @@ urlpatterns = [
     path("password-reset-complete/", auth_views.PasswordResetCompleteView.as_view(), name="password_reset_complete"),
     path("api/generate-token/", authviews.obtain_auth_token),
 
+    path('captcha/', include('captcha.urls')),
 
-]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+] #+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 #if settings.DEBUG:
 #    urlpatterns.append(path('__debug__/', include(debug_toolbar.urls)))

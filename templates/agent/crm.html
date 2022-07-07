@@ -1101,6 +1101,147 @@
 			</div>
 		</div>
 	</div>
+	<div id="contents-agent-totaluniquecallsper-month" class="card">
+		<div class="card-body p-0 p-sm-3">
+			<h6 class="card-title mobile-tab-header mb-0 mb-sm-3">
+				<a id="crm-home" class="p-2 mr-2 d-sm-none"><i class="fas fa-arrow-left"></i></a>
+				Total Unique Calls Per Month
+				<a class="d-sm-none float-right" data-toggle="modal" data-target="#cpm_filter_modal"><i class="fas fa-filter"></i></a>
+			</h6>
+			<div class="modal mb-filter-modal" id="cpm_filter_modal" tabindex="-1" role="dialog" aria-labelledby="cpm_filter_modal" aria-hidden="true">
+				<div class="modal-dialog modal-lg mb-4 mb-sm-0" role="document">
+					<div class="modal-content border-0">
+						<div class="modal-header p-3 border-0 d-sm-none">
+							<h5 class="modal-title" id="">Filter Your Search</h5>
+							<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+								<span aria-hidden="true">&times;</span>
+							</button>
+						</div>
+						<div class="modal-body p-3 p-sm-0">
+							<div class="row">
+								<div class="col-sm-1">
+									<div class="form-group mb-2">
+										<label>Show</label>
+										<select class="custom-select custom-select-sm form-control form-control-sm" name="paginate_by" id="paginate_by_per_month_unique">
+											<option value="10">10</option>
+											<option value="25">25</option>
+											<option value="50">50</option>
+											<option value="100">100</option>
+										</select>
+										
+									</div>
+								</div>
+								<div class="col-sm-3">
+									<div class="form-group mb-2">
+										<label>Search By:</label>
+										<div class="form-inline mt-1">
+											<div class="form-check mr-sm-3">
+												<label class="form-check-label">
+													<input type="radio" class="form-check-input" name="cpmu_column_name" value="numeric" checked>
+													Phone Number
+												<i class="input-helper"></i></label>
+											</div>
+											<div class="form-check mr-sm-3">
+												<label class="form-check-label">
+													<input type="radio" class="form-check-input" name="cpmu_column_name" value="uniqueid">
+													Unique Id
+												<i class="input-helper"></i></label>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="col-sm-2">
+									<div class="form-group mb-2">
+										<label>Search:</label>
+										<input type="text" class="form-control form-control-sm" id="cpmu_search_by" placeholder="search" name="search_by">
+									</div>
+								</div>
+								<div class="col-sm-1 d-none d-sm-block">
+									<button type="button" class="btn btn-inverse-dark p-1 filter_contact mt-4" id="cpmu_filter_contact_unique">
+										<i class="fas fa-filter"></i>
+									</button>
+								</div>
+								<div class="col-sm-3">
+									<div class="text-center float-sm-right mt-3">
+										<div class="dropdown fetch_dispo_count" id="fetch_dispo_count_monthly_unique">
+											<button class="btn btn-inverse btn-sm btn-icon-text dropdown-toggle dispo_count_btn" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+												<i class="fas fa-comment-alt btn-icon-prepend"></i>
+												<span>All Sources</span>
+											</button>
+											<div class="dropdown-menu dropdown-menu-right" id="dispo_count_monthly_unique" aria-labelledby="dropdownMenuSizeButton3" x-placement="bottom-start">
+												<div class="dropdown-title">Filter by Source</div>
+												<div class="dropdown-content"></div>
+												<div class="dropdown-loading"><i class="fa fa-spinner fa-spin"></i></div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="modal-footer border-0 d-sm-none">
+							<button type="button" class="btn btn-outline-info" data-dismiss="modal">Cancel</button>
+							<button type="button" class="btn btn-primary mb-btn-primary filter_contact" id="cpmu_filter_contact_unique">APPLY</button>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="table-responsive">
+				<table id="agent-monthly-uniquecalls" class="table display table-striped nowrap" style="width:100%">
+					<thead>
+						<tr>
+							<th data-data="numeric"  class="text-capitalize phone_number_field">Numeric</th>
+							<th data-data="campaign" class="text-capitalize">Campaign</th>
+							<th data-data="c_name"  class="text-capitalize">Customer Full Name</th>
+							<th data-data="cdr_feedback.primary_dispo" class="text-capitalize">Primary Dispo</th>
+							<th data-data="cdr_feedback.secondary_dispo" class="text-capitalize">Secondary Dispo</th>
+							<th data-data="customer_cid_count" class="text-capitalize">Count</th>
+							<th data-data='pl.phonenumber'>Phone Number</th>
+							<th data-data='pl.actionid'>Actionid</th>
+							<th data-data='pl.name'>Name</th>
+							<th data-data='pl.source'>Source</th>
+							<th data-data='pl.flag'>Flag</th>
+							<th data-data='pl.last_comp_stage'>Last Comp Stage</th>
+							<th data-data='pl.application_number'>Application Number</th>
+							<th data-data='pl.reg_date_time'>Reg Date Time</th>
+							<th data-data='pl.campaign1'>Campaign1</th>
+							<th data-data='pl.filler1'>Filler1</th>
+							<th data-data='pl.filler2'>Filler2</th>
+
+
+
+						</tr>
+					</thead>
+				</table>
+			</div>
+			<div id="callpermonthunique_vue" class="row pt-1">
+				<div class="col-md-5">
+					<div class="custome_pagination_info">
+						Showing ${start_index} to ${end_index} of ${total_records} entries
+					</div>
+				</div>
+				<div class="col-md-7">
+					<ul class="pagination separated d-flex justify-content-end ">
+						<li :class="[has_prev ? 'page-item':'page-item disabled']">
+							<a class="page-link" @click="changePage(page-1)">Previous</a>
+						</li>
+						<li v-if="page-4 > 1" class="page-item"><a class="page-link" @click="changePage(page-5)">&hellip;</a></li>
+						<template v-for="n in total_pages">
+							<li v-if="n==page" class="page-item active">
+								<a class="page-link">${n}</a>
+							</li>
+							<li v-else-if="n > page-3 && n < page+3">
+								<a class="page-link" @click="changePage(n)">${n}</a>
+							</li>
+						</template>
+						<li v-if="total_pages > (page+4)" class="page-item"><a class="page-link" @click="changePage(page+5)">&hellip;</a></li>
+						<li :class="[has_next ? 'page-item':'page-item disabled']">
+							<a class="page-link" @click="changePage(page+1)">Next</a>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</div>
 	<div id="contents-agent-assigned-calls" class="card d-none">
 		<div class="card-body p-0 p-sm-3">
 			<h6 class="card-title mobile-tab-header mb-0 mb-sm-3">
@@ -1743,8 +1884,10 @@
 	var non_agent_user 		= {% if non_agent_user or request.user.is_superuser  %} true {% else %} false {% endif %}
 </script>
 {% if user.call_type == 'webrtc' %}
-<script src="{% static 'webrtc/sip.js' %}"></script>
-<script src="{% static 'webrtc/sip_session.js' %}"></script>
+<!--<script src="{% static 'webrtc/sip.js' %}"></script>
+<script src="{% static 'webrtc/sip_session.js' %}"></script>-->
+<script src="{% static 'webrtc/jssip.min.js' %}"></script>
+<script src="{% static 'webrtc/jssip_session.js' %}"></script>
 {% endif %}
 <script src="{% static 'js/audioplayer.js'%}"></script>
 <script src="{% static 'js/agent_datatable.js'%}"></script>
@@ -1830,7 +1973,7 @@
 		getAgentLivedata();
 		getBroadCastMessages();
 		showbreaksonagentsdashboard()
-		var notify = setInterval(getAgentLivedata, 5000);
+		var notify = setInterval(getAgentLivedata, 10000);
 
 		$('#agent-monthly-calls').on( 'length.dt', function ( e, settings, len ) {
 			$('#page_length').val(len)

@@ -198,6 +198,7 @@ urlpatterns = [
 	path('api/make-abandonedcall-call/', views.MakeAbandonedCall.as_view(), name="make-abandonedcall-call"),
 	path('api/get-totalcallsperday/', views.GetTotalCallsPerDay.as_view(), name="get-totalcallsperday"),
 	path('api/get-totalcallsper-month/', views.GetTotalCallsPerMonth.as_view(), name="get-totalcallsper-month"),
+	path('api/get-totaluniquecallsper-month/', views.UniqueCallsPerMonth.as_view(), name="get-totaluniquecallsper-month"),
 	path('api/get-leadbucket-data/', views.GetLeadBucket.as_view(),name="get-leadbucket-data"),
 	path('api/get-piechartlivedata/', views.PieChartLiveData.as_view(),name='piechart-live-data'),
 	path('api/get-multilinechartdata/', views.GetMultilineChartLiveData.as_view(), name='get-linelivedata'),

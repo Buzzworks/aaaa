@@ -12,7 +12,7 @@ from callcenter.models import (Campaign,CallDetail,AgentActivity,User,
 	Notification,PhonebookBucketCampaign, DiallerEventLog,AdminLogEntry, Switch,LeadRecycle,BroadcastMessages,StickyAgent,)
 from crm.models import Contact,TempContactInfo,Phonebook,DownloadReports, PhoneBookUpload,MasterContact,ScheduleMasterContact
 from django.db.models import Q, Count, F
-from callcenter.utility import (get_current_users, download_call_detail_report, download_agent_perforance_report, campaignwise_performance_report,
+from callcenter.utility import (get_agent_status, get_all_keys_data, get_current_users, download_call_detail_report, download_agent_perforance_report, campaignwise_performance_report,
 	download_agent_mis, download_agent_activity_report, download_campaignmis_report, download_callbackcall_report,
 	download_abandonedcall_report,set_download_progress_redis, download_call_recordings, download_contactinfo_report, download_phonebookinfo_report,
 	download_billing_report, camp_list_users, DownloadCssQuery, download_call_recording_feedback_report,download_management_performance_report,download_alternate_contact_report, freeswicth_server,download_pendingcontacts_report,PasswordChangeAndLockedReminder)
@@ -55,14 +55,15 @@ def create_tempcontact_data(contacts, status, keep_user_none=False):
 					contact.modified_date = datetime.now()
 			TempContactInfo.objects.bulk_create(data_list)
 			Contact.objects.bulk_update(contacts,['status','modified_date'])
-			transaction.commit()
-			connections["default"].close()
-			connections["crm"].close()
 	except Exception as e:
 		print("Exception occures from create_tempcontact_data",e)
 		exc_type, exc_obj, exc_tb = sys.exc_info()
 		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
 		print(exc_type, fname, exc_tb.tb_lineno)
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 
 def create_tempcontact_data_with_pandas(contacts, status, keep_user_none=False):
 	""" Creating the Temp contact info with portfolio"""
@@ -82,11 +83,13 @@ def create_tempcontact_data_with_pandas(contacts, status, keep_user_none=False):
 						contact_id=contact.contact_id,priority=contact.priority,uniqueid=contact.uniqueid, previous_status=contact.status))
 		TempContactInfo.objects.bulk_create(data_list)
 		Contact.objects.filter(id__in=contacts['contact_id'].tolist()).update(status=status,modified_date=datetime.now())
-		transaction.commit()
-		connections["default"].close()
-		connections["crm"].close()
+
 	except Exception as e:
 		print("Exception occures from create_tempcontact_data",e)
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 
 def fetch_callback_contact(campaign,fetch_count):
 	""" fetching the callback contacts and displaying to the user"""
@@ -142,7 +145,10 @@ def fetch_callback_contact(campaign,fetch_count):
 		return fetch_count
 	except Exception as e:
 		print("Exception occures from fetch_callback_contact",e)
-
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 def generate_report():
 	""" Downloading the reports """
 
@@ -345,12 +351,13 @@ def phonebook_data_bucket():
 					PHONEBOOK_STATUS = pickle.loads(settings.R_SERVER.get("phonebook") or pickle.dumps(PHONEBOOK_STATUS))
 					if not set(phonebook_ids) & set(PHONEBOOK_STATUS.keys()):
 						settings.R_SERVER.hset("pb_campaign_status",campaign['id'], True)
-		transaction.commit()
-		connections["default"].close()
-		connections["crm"].close()
 	except Exception as e:
 		settings.R_SERVER.hset("pb_campaign_status",campaign['id'], True)
 		print("Exception occures from phonebook_data_bucket",e)
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 
 def create_logout_entry(extension):
 	""" Creating the logout entry of the user"""
@@ -358,7 +365,7 @@ def create_logout_entry(extension):
 		user = User.objects.filter(properties__extension=extension)
 		if user.exists():
 			user = user.first()
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps({}))
+			AGENTS = get_agent_status(extension)
 			if AGENTS:
 				if AGENTS[extension]['screen'] == 'AgentScreen':
 					actvity_dict = {}
@@ -395,31 +402,31 @@ def create_logout_entry(extension):
 									action_name='4',event_type='LOGOUT', login_duration=login_duration_time)
 	except Exception as e:
 		print("create_logout_entry :", e)
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 
 def session_expire_check():
 	""" checking the session expry for an agents"""
 	try:
 		session_extension = [agent.extension for agent in get_current_users()]
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-					pickle.dumps(AGENTS))
+		AGENTS = get_all_keys_data()
 		r_campaigns = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps(CAMPAIGNS))
-		Agents = [i for i,k in AGENTS.items() if 'wfh' not in k or k['wfh'] == False]
-		for reddis_ext in Agents:
+		agents = [i for i,k in AGENTS.items() if 'wfh' not in k or k['wfh'] == False]
+		for reddis_ext in agents:
 			if reddis_ext not in session_extension:
 				try:
 					fs_administration_hangup(AGENTS[reddis_ext]['dialerSession_switch'],uuids=AGENTS[reddis_ext]['dialerSession_uuid'])
-				except:
+				except Exception as e:
 					pass
 				create_logout_entry(reddis_ext)
 				if AGENTS[reddis_ext]['campaign']:
 					campaign=Campaign.objects.get(name=AGENTS[reddis_ext]['campaign'])
 					pbc_obj = PhonebookBucketCampaign.objects.filter(id=campaign.id)
-					if pbc_obj.exists():
-						if pbc_obj.first().agent_login_count > 0:
-							pbc_obj.update(agent_login_count=F('agent_login_count')-1)
-				updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
-				del updated_agent_dict[reddis_ext]
-				settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+					if pbc_obj.exists() and pbc_obj.first().agent_login_count > 0:
+						pbc_obj.update(agent_login_count=F('agent_login_count')-1)
+				set_agent_status(reddis_ext,AGENTS[reddis_ext],True)
 				for r_campaign in r_campaigns:
 					unique_extensions = list(set(r_campaigns[r_campaign]))
 					if reddis_ext in unique_extensions:
@@ -429,11 +436,12 @@ def session_expire_check():
 		locked_tmp_data = TempContactInfo.objects.filter(Q(status='Locked')&Q(modified_date__lte = datetime.now() - timedelta(hours=2)))
 		if locked_tmp_data:
 			locked_tmp_data.update(status="NotDialed")
-		transaction.commit()
-		connections['crm'].close()
-		connections['default'].close()
 	except Exception as e:
 		print("Exception occures from session_expire_check",e)
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 
 def create_calldetial_from_diallereventlog(d_obj, uniqueid=None):
 	""" will create missing call details from the dialler eventlog"""
@@ -455,6 +463,10 @@ def create_calldetial_from_diallereventlog(d_obj, uniqueid=None):
 				cdr_feedback.save()
 	except Exception as e:
 		print('Exception from create_calldetial_from_diallereventlog', e)
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 
 def update_queued_contact():
 	""" updating the queued contacts"""
@@ -493,6 +505,10 @@ def update_queued_contact():
 				contact.save()
 	except Exception as e:
 		print("update_queued_contact :", e)
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 
 def create_calldetial_missing_contact():
 	""" creating the missing calldetails from diallervent log"""
@@ -512,7 +528,9 @@ def create_calldetial_missing_contact():
 			create_calldetial_from_diallereventlog(d_obj,uniqueid)
 	except Exception as e:
 		print('Exception in create_calldetial_missing_contact', e)
-
+	finally:
+		transaction.commit()
+		connections["crm"].close()
 
 def phonebook_upload():
 	"""
@@ -555,28 +573,30 @@ def kill_unused_fs_channel():
 	""" killing unused channels in the freewitch"""
 	try:
 		kill_uuid = []
-		server_ip = Switch.objects.filter(status="Active").first().ip_address
-		SERVER = freeswicth_server(server_ip)
-		channels = SERVER.freeswitch.api("show","channels")
-		channel_df = pd.DataFrame([x.split(',') for x in channels.split('\n')[:-3]])
-		if not channel_df.empty:
-			channel_df.columns = channel_df.iloc[0]
-			channel_df = channel_df[1:]
-			channel_df = channel_df.loc[channel_df.state.isin(['CS_EXCHANGE_MEDIA','CS_EXECUTE']) & (channel_df.cid_num.str.len() <5)]['uuid']
-
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps({}))
-		if not channel_df.empty and AGENTS.values():
-			agent_redis_df = pd.DataFrame.from_dict(AGENTS.values())
-			agent_redis_df = agent_redis_df[agent_redis_df.dialerSession_uuid.astype(bool)] #To remove blank uuids from redis
-			uuid_in_redis = agent_redis_df.dialerSession_uuid.values
-
-			kill_uuid = channel_df[~channel_df.isin(uuid_in_redis)].values
-		elif not channel_df.empty:
-			kill_uuid = channel_df.values
-		for uuid in kill_uuid:
-			SERVER.freeswitch.api("uuid_kill",uuid)
+		server_ip_list = Switch.objects.filter(status="Active")
+		for server_ip in server_ip_list:
+			SERVER = freeswicth_server(server_ip.ip_address)
+			channels = SERVER.freeswitch.api("show","channels")
+			channel_df = pd.DataFrame([x.split(',') for x in channels.split('\n')[:-3]])
+			if not channel_df.empty:
+				channel_df.columns = channel_df.iloc[0]
+				channel_df = channel_df[1:]
+				channel_df = channel_df.loc[channel_df.state.isin(['CS_EXCHANGE_MEDIA','CS_EXECUTE']) & (channel_df.cid_num.str.len() <5)]['uuid']
+			AGENTS = get_all_keys_data()
+			if not channel_df.empty and AGENTS.values():
+				agent_redis_df = pd.DataFrame.from_dict(AGENTS.values())
+				agent_redis_df = agent_redis_df[agent_redis_df.dialerSession_uuid.astype(bool)] #To remove blank uuids from redis
+				uuid_in_redis = agent_redis_df.dialerSession_uuid.values
+				kill_uuid = channel_df[~channel_df.isin(uuid_in_redis)].values
+			elif not channel_df.empty:
+				kill_uuid = channel_df.values
+			for uuid in kill_uuid:
+				SERVER.freeswitch.api("uuid_kill",uuid)
 	except Exception as e:
 		print('Exception from kill_unused_fs_channel', e)
+	finally:
+		transaction.commit()
+		connections["default"].close()
 
 def set_pb_campaign_status():
 	""" setting true all the pb campaigns in redis"""
@@ -587,6 +607,9 @@ def set_pb_campaign_status():
 		print('all campaign set to true in redis for progressive')
 	except Exception as e:
 		print('exception set_pb_campaign_status',e)
+	finally:
+		transaction.commit()
+		connections["default"].close()
 
 def callback_queue():
 	"""

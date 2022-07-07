@@ -21,7 +21,8 @@ from dialer.dialersession import enable_wfh_user,wfh_progressive_call,get_callty
 from crm.models import (Contact,)
 from django.db.models import Q, F
 from django.apps import apps
-from callcenter.utility import format_time
+from callcenter.utility import format_time, PasswordChangeAndLockedReminder, get_agent_status, set_agent_status
+import inspect
 import pickle
 
 wfh_agents={}
@@ -79,11 +80,11 @@ def custom_dump(campaign, user, dispo_code, uuid, name, e_type, created):
 							username = ''
 					else:
 						username = ''
-					AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps({}))
+					AGENTS = get_agent_status(username)
 					if username in AGENTS and AGENTS[username]['wfh']:
 						AGENTS[username]['call_type'] = call_type
 						AGENTS[username]['state'] = state
-						settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+						set_agent_status(username,AGENTS[username])
 					if dispo_code in campaign_obj.wfh_dispo:
 						primary_disposition = campaign_obj.wfh_dispo[dispo_code]
 				if primary_disposition=='CallBack':
@@ -113,6 +114,7 @@ def custom_dump(campaign, user, dispo_code, uuid, name, e_type, created):
 		print(exc_type, fname, exc_tb.tb_lineno)
 	finally:
 		transaction.commit()
+		connections["crm"].close()
 		connections["default"].close()
 
 def event_dump(kwargs):
@@ -183,8 +185,7 @@ def event_dump(kwargs):
 					notification_obj.save()				
 		if wfh:
 			wfh_agents = {}
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-			pickle.dumps({}))
+			AGENTS = get_agent_status(username)
 			if username in AGENTS and AGENTS[username]['wfh'] or kwargs.get('wfh_call'):
 				models=['CallDetail','DiallerEventLog']
 			wfh_agents = pickle.loads(settings.R_SERVER.get("wfh_agents") or pickle.dumps(wfh_agents))
@@ -232,6 +233,10 @@ def event_dump(kwargs):
 			cdr_save(model,kwargs,campaign_obj,user_obj,primary_dispo, campaign_name)
 	except Exception as e:
 		print("erro from event_dump : %s"%(e))
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
 
 def cdr_save(model,kwargs,campaign_obj,user_obj,primary_dispo, campaign_name):
 	""" saving the reports into the database thats has been dumped"""
@@ -298,4 +303,5 @@ def cdr_save(model,kwargs,campaign_obj,user_obj,primary_dispo, campaign_name):
 		print("erro from cdr_save : %s"%(e))
 	finally:
 		transaction.commit()
-		connections["default"].close()	
+		connections["crm"].close()
+		connections["default"].close()

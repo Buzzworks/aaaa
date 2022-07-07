@@ -11,7 +11,7 @@ function sipInitialize()
 
 	console.info("WINDOW ONLOAD");
 }
-var sipStack;
+var sipStack=true;
 var callSession;
 function createSipStack()
 {

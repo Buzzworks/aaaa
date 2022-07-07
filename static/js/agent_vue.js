@@ -1388,7 +1388,7 @@ var agent_info_vue = new Vue({
                 sessionStorage.setItem("break_time",'0:0:0');
             }
             if(agent_activity_data['event']==="Start Break" &&  call_type==='webrtc' && sip_login===true && vm.selected_status!=='Ready' && vm.selected_status!=='NotReady'){
-                sipStack.stop();
+                sipSessionHangup()
             }
 
             agent_activity_data['uuid'] = uuid;
@@ -1460,7 +1460,7 @@ var agent_info_vue = new Vue({
                             $('#break_timer').countimer('stop');
                             $('#idle_timer').countimer('start');
                             if(call_type==="webrtc" && sip_login===true){
-                                sipStack.start();
+                                SipSessionCreate();
                             }
                             if (vm.camp_name){
                                 vm.selectBreak()
@@ -1503,7 +1503,7 @@ var agent_info_vue = new Vue({
                             $('#break_timer').countimer('stop');
                             $('#idle_timer').countimer('start');
                             if(call_type==="webrtc" && sip_login===true){
-                                sipStack.start();
+                                SipSessionCreate();
                             }
                             if (vm.camp_name){
                                 vm.selectBreak()
@@ -1527,6 +1527,9 @@ var agent_info_vue = new Vue({
                 $('#break_timer').countimer('stop');    
                 $('#idle_timer').countimer('start');
                 $(".agent-break-status").addClass("d-none")
+                if(call_type=='2'){
+                    $("#btnLogMeOut").trigger('click')
+                }
             }
 
         }

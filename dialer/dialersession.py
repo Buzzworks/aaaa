@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.db.models import Q, F
 from callcenter.models import UserVariable,Campaign,Switch,AudioFile,DNC,CampaignVariable,PhonebookBucketCampaign, DialTrunk, CallDetail, CdrFeedbck,Holidays
-from callcenter.utility import customer_detials, create_agentactivity,get_temp_contact, channel_trunk_single_call, trunk_with_agent_call_id
+from callcenter.utility import customer_detials, create_agentactivity,get_temp_contact, channel_trunk_single_call, trunk_with_agent_call_id,get_agent_status,set_agent_status
 from crm.models import TempContactInfo, Contact, ContactInfo, Phonebook, AlternateContact
 from crm.serializers import ContactSerializer
 import xmlrpc.client
@@ -63,8 +63,13 @@ def twinkle_session(*args,**kwargs):
 					hold_music = campvar_inst.audio_file.path
 			if user and user.wfh_numeric:
 				camp_obj = Campaign.objects.get(name=kwargs['campaign_name'])
-				dial_string = Template(camp_obj.trunk.dial_string).safe_substitute(destination_number=user.wfh_numeric)				
-				status = kwargs['SERVER'].freeswitch.api("originate","{usertype='agent',wfh_app='true',origination_uuid=%s,origination_caller_id_number=%s,cc_agent=%s,hold_music=%s,campaign=%s,cc_export_vars=wfh_app,cc_agent,campaign}%s 11119916" %(ori_uuid,kwargs['extension'],kwargs['extension'],hold_music,kwargs['campaign_name'],dial_string))
+				trunk_id , dial_string, caller_id, country_code = channel_trunk_single_call(camp_obj)
+				if country_code:
+					cn_numeric = country_code+str(user.wfh_numeric)
+				else:
+					cn_numeric = str(user.wfh_numeric)
+				dial_string = Template(camp_obj.trunk.dial_string).safe_substitute(destination_number=cn_numeric)	
+				status = kwargs['SERVER'].freeswitch.api("originate","{usertype='agent',wfh_app='true',origination_uuid=%s,origination_caller_id_number=%s,cc_agent=%s,hold_music=%s,campaign=%s,cc_export_vars=wfh_app,cc_agent,campaign}%s 11119916" %(ori_uuid,caller_id,kwargs['extension'],hold_music,kwargs['campaign_name'],dial_string))
 				if '-ERR' in status:
 					return {"error":"user mobile number is not rechable.."}
 			else:
@@ -248,12 +253,12 @@ def inbound_call(*args,**kwargs):
 				bridge_status = kwargs['SERVER'].freeswitch.api("uuid_bridge","%s %s" %(kwargs['dialed_uuid'],kwargs['unique_uuid']))
 				if '+OK' in bridge_status:
 					settings.R_SERVER.sadd(kwargs['campaign'], kwargs['dialed_uuid'])
-					AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+					AGENTS = get_agent_status(kwargs['extension']) 
 					AGENTS[kwargs['extension']]['state'] = 'InCall'
 					AGENTS[kwargs['extension']]['event_time'] = datetime.now().strftime('%H:%M:%S')
 					AGENTS[kwargs['extension']]['call_type'] = 'inbound'
 					AGENTS[kwargs['extension']]['dial_number'] = kwargs['inbound_number']
-					settings.R_SERVER.set("agent_status", pickle.dumps(AGENTS))
+					set_agent_status(kwargs['extension'],AGENTS[kwargs['extension']])
 					campaign_object = Campaign.objects.get(name=kwargs['campaign'])
 					data=customer_detials(kwargs['campaign'],kwargs['inbound_number'],campaign_object)
 					data["success"] = "answered successfully"
@@ -352,8 +357,7 @@ def hangup(*args,**kwargs):
 		hangup_status=kwargs['SERVER'].freeswitch.api("uuid_kill",kwargs['uuid'])
 		settings.R_SERVER.srem(kwargs['campaign'], kwargs['uuid'])
 		AGENTS = {}
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-				pickle.dumps(AGENTS))
+		AGENTS = get_agent_status(kwargs['extension'])
 		campaign_id = Campaign.objects.get(name=kwargs['campaign'])
 		pbc_obj = PhonebookBucketCampaign.objects.filter(id=campaign_id.id)
 		if '+OK' in hangup_status:
@@ -373,9 +377,7 @@ def hangup(*args,**kwargs):
 				AGENTS[kwargs['extension']]['state'] = ''
 				AGENTS[kwargs['extension']]['event_time'] = ''
 				AGENTS[kwargs['extension']]['dialerSession_uuid'] = ''
-				updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status"))
-				updated_agent_dict[kwargs['extension']] = AGENTS[kwargs['extension']]
-				settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+				set_agent_status(kwargs['extension'],AGENTS[kwargs['extension']])
 				if pbc_obj.first().agent_login_count > 0:
 					pbc_obj.update(agent_login_count=F('agent_login_count')-1)
 			return {"success":"successfully"}
@@ -737,13 +739,13 @@ def enable_wfh_user(*args,**kwargs):
 					settings.R_SERVER.set("trunk_status", pickle.dumps(chennals))
 		AGENTS = {}
 		event_time = datetime.now().strftime('%H:%M:%S')
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or
-			pickle.dumps(AGENTS))
+		AGENTS = get_agent_status(kwargs['extension'])
 		user = UserVariable.objects.get(extension=kwargs['extension'])
 		AGENTS[kwargs['extension']] = {}
 		AGENTS[kwargs['extension']]['username'] = user.user.username
 		AGENTS[kwargs['extension']]['login_status'] = True
 		AGENTS[kwargs['extension']]['login_time'] = datetime.now().strftime('%H:%M:%S')
+		AGENTS[kwargs['extension']]['login_date_time']=datetime.now()
 		AGENTS[kwargs['extension']]['campaign'] = kwargs['campaign']
 		AGENTS[kwargs['extension']]['dialer_login_status'] = True
 		AGENTS[kwargs['extension']]['dialer_login_time'] = event_time
@@ -756,9 +758,7 @@ def enable_wfh_user(*args,**kwargs):
 		AGENTS[kwargs['extension']]['dialerSession_switch'] = args[0]
 		AGENTS[kwargs['extension']]['dialerSession_uuid'] = kwargs['session_uuid']
 		AGENTS[kwargs['extension']]['wfh'] = True
-		updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status"))
-		updated_agent_dict[kwargs['extension']] = AGENTS[kwargs['extension']]
-		settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+		set_agent_status(kwargs['extension'],AGENTS[kwargs['extension']])
 		campaigns = user.campaign			
 		for campaign in campaigns:
 			if campaign.name == kwargs['campaign']:

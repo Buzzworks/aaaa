@@ -4,7 +4,7 @@ from django.urls import reverse
 
 from rest_framework.response import Response
 from django.conf import settings
-from .utility import get_object
+from .utility import get_object,get_all_keys_data
 from .models import (User, UserVariable, Group, Campaign,
 	Disposition, PauseBreak, CampaignSchedule, Script, AudioFile, RelationTag,
 	UserRole, Switch, DialTrunk, CampaignVariable, CSS,SkilledRouting,ThirdPartyApi,
@@ -149,7 +149,7 @@ def campaign_edit_validation(function):
 
 		if campaign_name!=object_data.name:
 			AGENTS = {}
-			AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+			AGENTS = get_all_keys_data()
 			if AGENTS:
 				all_agents = list(AGENTS.keys())
 				for extension in all_agents:

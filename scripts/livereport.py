@@ -5,7 +5,7 @@ from flexydial.settings import R_SERVER as r_server, WEB_LIVE_STATUS_CHANNEL as 
 from dialer.dialersession import autodial_session_hangup,play_fake_ring_agent
 import os
 from callcenter.models import UserVariable,CallDetail,Campaign
-from callcenter.utility import create_agentactivity
+from callcenter.utility import create_agentactivity, get_agent_status, get_all_keys_data, set_agent_status
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
 
@@ -15,9 +15,8 @@ class liveAgent:
 		Updating the redis agent data for live call reports in both application 
 		and work from home features 
 	"""
-	def __init__(self):
-		self.AGENTS = pickle.loads(r_server.get("agent_status") or
-				pickle.dumps(AGENTS))
+	# def __init__(self):
+	# 	AGENTS = get_all_keys_data()
 
 	def fake_ring_main(self, **kwargs):
 		context={'campaign_name':kwargs.get('variable_campaign_name',None),'agent_unique_id':kwargs.get('variable_agent-Unique-ID',None),'play_status':kwargs.get('play_status','stop'),'Unique-ID':kwargs.get('Unique-ID',None)}
@@ -45,47 +44,51 @@ class liveAgent:
 					kwargs['play_status'] = 'stop'
 					self.fake_ring_main(**kwargs)
 				agent = kwargs.get('variable_cc_agent', kwargs.get('Caller-Caller-ID-Number'))
-				if agent in self.AGENTS:
+				AGENTS = get_agent_status(agent)
+				if agent in AGENTS:
 					print(kwargs.get('Event-Date-Timestamp', None)[:13],'-----',kwargs.get('variable_cc_agent'),'----', kwargs.get('Caller-Caller-ID-Number'))
-					self.AGENTS[agent].update({'call_timestamp':kwargs.get('Event-Date-Timestamp', None)[:13]})
-					r_server.set("agent_status", pickle.dumps(self. AGENTS))
+					AGENTS[agent].update({'call_timestamp':kwargs.get('Event-Date-Timestamp', None)[:13]})
+					set_agent_status(agent,AGENTS[agent])
 		elif (signal == 'CHANNEL_HANGUP'):
 				try:
 					if kwargs.get('variable_fake_ring',None) == 'true':
 						kwargs['play_status'] = 'stop'
 						self.fake_ring_main(**kwargs)
 					agent = kwargs.get('variable_cc_agent', kwargs.get('Caller-Caller-ID-Number'))
-					if agent in self.AGENTS:
-						self.AGENTS[agent].update({'call_timestamp':''})
-						self.AGENTS[agent].update({'state':'Feedback'})
-						self.AGENTS[agent].update({'event_time':datetime.now().strftime('%H:%M:%S')})
-						self.AGENTS[agent].update({'call_type':''})
-						r_server.set("agent_status", pickle.dumps(self.AGENTS))
+					AGENTS = get_agent_status(agent)
+					if agent in AGENTS:
+						AGENTS[agent].update({'call_timestamp':''})
+						AGENTS[agent].update({'state':'Feedback'})
+						AGENTS[agent].update({'event_time':datetime.now().strftime('%H:%M:%S')})
+						AGENTS[agent].update({'call_type':''})
+						set_agent_status(agent,AGENTS[agent])
 				except Exception as e:
 					print("error from liveAgent,CHANNEL_HANGUP",e)
 					pass
 		elif (signal == 'CHANNEL_HANGUP_COMPLETE'):
 			try:
 				agent = kwargs.get('variable_cc_agent', kwargs.get('Caller-Caller-ID-Number'))
-				if agent in self.AGENTS:
-					self.AGENTS[agent].update({'call_timestamp':''})
-					r_server.set("agent_status", pickle.dumps(self.AGENTS))
+				AGENTS = get_agent_status(agent)
+				if agent in AGENTS:
+					AGENTS[agent].update({'call_timestamp':''})
+					set_agent_status(agent,AGENTS[agent])
 			except Exception as e:
 				print("error from liveAgent,CHANNEL_HANGUP_COMPLETE",e)
 				pass
 		elif (signal == 'SHUTDOWN'):
 			try:
-				r_server.delete("agent_status")
+				print("Shutdownevent triggered")
 			except (ValueError, KeyError):
 				pass
 	def wfh_agentStatusUpdate(self, signal, **kwargs):
 		try:
 			if signal == 'CHANNEL_HANGUP' or signal == 'CHANNEL_HANGUP_COMPLETE':
 				agent = kwargs.get('variable_cc_agent', kwargs.get('Caller-Caller-ID-Number'))
-				if agent in self.AGENTS:
+				AGENTS = get_agent_status(agent)
+				if agent in AGENTS:
 					user_id = None
 					activity_dict = {}
-					login_time = datetime.combine(datetime.now(), datetime.strptime(self.AGENTS[agent]['dialer_login_time'],'%H:%M:%S').time())
+					login_time = datetime.combine(datetime.now(), datetime.strptime(AGENTS[agent]['dialer_login_time'],'%H:%M:%S').time())
 
 					user = UserVariable.objects.filter(extension=agent)
 					if user.exists():
@@ -96,14 +99,13 @@ class liveAgent:
 					activity_dict["user_id"] = user_id
 					activity_dict["event"] = "WFH AGENT LOGOUT"
 					activity_dict["event_time"] = datetime.now()
-					activity_dict["campaign_name"] = self.AGENTS[agent]['campaign']
+					activity_dict["campaign_name"] = AGENTS[agent]['campaign']
 					activity_dict["break_type"] = None
 					activity_dict["tos"] = str(tos)
 					activity_dict["idle_time"] = str(idle_time)
 					activity_dict["spoke_time"] = str(call_duration['call_duration'])
 					create_agentactivity(activity_dict)
-					del self.AGENTS[agent]
-					r_server.set("agent_status", pickle.dumps(self.AGENTS))
+					set_agent_status(agent,AGENTS[agent],True)
 					autodial_session_hangup(kwargs.get('variable_sip_req_host'),extension=agent)
 					session_uuid = kwargs.get('Unique-ID')
 					os.system('echo %s|sudo -S %s' % ('flexydial', 'rm -r '+MEDIA_ROOT+'/'+session_uuid+'.mp3'))

@@ -23,6 +23,7 @@ from scripts.pagination import DatatablesPageNumberPagination
 from scripts.renderers import DatatablesRenderer
 from crm.s3_fileoperations import *
 
+from io import BytesIO
 import pandas as pd
 import numpy as np
 import json
@@ -45,13 +46,13 @@ from .utility import (save_contact, validate_uploaded_phonebook, truncate_file,
 	get_customize_customer_data, get_user_crm_data, upload_crm, validate_uploaded_crm,download_contactinfo_csv,
 	download_crmfields_csv, crm_field_value_schema,get_customizable_crm_fields_with_datatype,crm_field_datatype_validation)
 from callcenter.utility import (get_object, create_agentactivity, get_formatted_agent_activities,
-	get_model_data,set_agentReddis,get_report_visible_column, get_campaign_users, check_non_admin_user)
+	get_model_data,set_agentReddis,get_report_visible_column, get_campaign_users, check_non_admin_user,get_agent_status,set_agent_status,get_all_keys_data)
 from callcenter.decorators import (check_read_permission,
 		check_create_permission, check_update_permission,
 		)
 from .decorators import (crm_field_validation,phonebook_validation)
 
-from flexydial.views import (csvDownload, data_for_pagination,data_for_vue_pagination, get_paginated_object, get_active_campaign, create_admin_log_entry)
+from flexydial.views import (csvDownload, data_for_pagination,data_for_vue_pagination, get_paginated_object, get_active_campaign, create_admin_log_entry,user_hierarchy_func)
 from crm.models import Phonebook
 from datetime import datetime
 import dateutil.parser
@@ -166,7 +167,7 @@ class CrmCreatePhonebookApiView(LoginRequiredMixin, APIView):
 		if phonebook_serializer.is_valid():
 			if phone_inst.exists():
 				ex_camp = phone_inst.first().campaign
-				if not request.POST.get("campaign", "") == phone_inst.first().campaign:
+				if  request.POST.get("campaign", "") != phone_inst.first().campaign:
 					update_camp = True
 					camp_name = Campaign.objects.get(id=request.POST.get("campaign", "")).name
 				if update_camp or not str(request.POST.get("order_by", "")) == str(phone_inst.first().order_by) or not str(request.POST.get("priority", "")) == str(phone_inst.first().priority):
@@ -433,7 +434,7 @@ class CrmEditPhonebookApiView(LoginRequiredMixin,APIView):
 			'phonebook': phonebook, 'order_by':ORDER_BY,'search_type':SEARCH_TYPE
 			}
 		curr_campaign_name = Campaign.objects.filter(id=phonebook.campaign).values_list('name',flat=True).first()
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status") or pickle.dumps(AGENTS))
+		AGENTS = get_all_keys_data()
 		if AGENTS:
 			all_agents = list(AGENTS.keys())
 			for extension in all_agents:
@@ -785,7 +786,8 @@ class ContactInfoApiView(LoginRequiredMixin, APIView):
 
 	def get(self, request, **kwargs):
 		add_crm_field = True
-		campaign_list = Campaign.objects.values("name", "id")
+		# campaign_list = Campaign.objects.values("name", "id")
+		campaign_list = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)))).distinct().values("name", "id")
 		phonebook = list(Phonebook.objects.values(
 		"id", "name", "campaign", "status"))
 		disposition = list(Disposition.objects.values("id","name"))
@@ -850,7 +852,9 @@ class ContactInfoApiView(LoginRequiredMixin, APIView):
 			if filter_by_phonebook:
 				contacts = contacts.filter(phonebook__id__in=filter_by_phonebook)
 			if filter_by_user:
-				contacts = contacts.filter(user__in=filter_by_user)
+				# contacts = contacts.filter(user__in=filter_by_user)
+				user_in_hirarchy=user_hierarchy_func(request.user,filter_by_user)
+				contacts = contacts.filter(user__in=user_in_hirarchy)
 			if numeric:
 				contacts = contacts.filter(numeric=numeric)
 			if disposition:
@@ -1041,7 +1045,9 @@ class SaveAgentBreakApiView(LoginRequiredMixin, APIView):
 			login_time = dateutil.parser.parse(login_time)
 			activity_dict["event_time"] =login_time
 
-		AGENTS = pickle.loads(settings.R_SERVER.get("agent_status"))
+		AGENTS = get_agent_status(request.user.extension)
+		if request.user.extension not in AGENTS:
+			AGENTS[request.user.extension]={}
 		if request.POST.get("break_name", ""):
 			AGENTS[request.user.extension]['status'] = request.POST.get("break_name")
 			if request.POST["break_name"] not in ["Ready","NotReady"]:
@@ -1057,24 +1063,16 @@ class SaveAgentBreakApiView(LoginRequiredMixin, APIView):
 				set_agentReddis(AGENTS,request.user)
 		status = {'ori_uuid':'','status':True}
 		if 'event' in request.POST:
-			if request.POST.get('event')=='Start Break':
-				if 'uuid' in request.POST:
-					if request.POST.get('uuid'):
-						on_break(request.POST.get('sip_ip'),uuid=request.POST.get('uuid'))
+			if request.POST.get('event')=='Start Break' and 'uuid' in request.POST and request.POST.get('uuid'):
+				on_break(request.POST.get('sip_ip'),uuid=request.POST.get('uuid'))
 
-			if request.POST.get('event')=='End Break':
-				if 'extension' in request.POST:
-					if request.POST.get('extension'):
-						status = start_sip_session(request.POST.get('sip_ip'), extension=request.POST.get('extension',''), call_type=request.POST.get('call_type',''),
-							campaign_name=request.POST.get("campaign_name", ""))
-						if 'ori_uuid' not in status or status['ori_uuid']=='':
-							status['ori_uuid'] = ''
-							status['status'] = False
-		updated_agent_dict = pickle.loads(settings.R_SERVER.get("agent_status"))
-		if request.user.extension not in updated_agent_dict:
-			updated_agent_dict[request.user.extension] = {}
-		updated_agent_dict[request.user.extension].update(AGENTS[request.user.extension])
-		settings.R_SERVER.set("agent_status", pickle.dumps(updated_agent_dict))
+			if request.POST.get('event')=='End Break' and 'extension' in request.POST and request.POST.get('extension'):
+					status = start_sip_session(request.POST.get('sip_ip'), extension=request.POST.get('extension',''), call_type=request.POST.get('call_type',''),
+						campaign_name=request.POST.get("campaign_name", ""))
+					if 'ori_uuid' not in status or status['ori_uuid']=='':
+						status['ori_uuid'] = ''
+						status['status'] = False
+		set_agent_status(request.user.extension,AGENTS[request.user.extension])
 
 		if request.POST.get("break_time", "") :
 			activity_dict["break_type"] = request.POST.get("break_type")
@@ -1388,10 +1386,10 @@ class ContactUploadDataApiView(APIView):
 			action = "update"
 			data = data.get(settings.XML_UPDATE_KEY,data)
 
-		if settings.REPLACE_API_KEY != "" and settings.REPLACE_API_VALUE != "":
-			data =  {k.replace(settings.REPLACE_API_KEY,settings.REPLACE_API_VALUE).lower(): v for k, v in data.items()}
-		campaign = data.get(settings.API_CAMPAIGN_FIELD,"")
-		numeric = data.get(settings.API_NUMERIC_FIELD,"")		
+		if settings.REPLACE_API_KEY and settings.REPLACE_API_VALUE:
+			data =  {k.replace(settings.REPLACE_API_KEY,settings.REPLACE_API_VALUE,1).lower(): v for k, v in data.items()}
+		campaign = settings.API_DEST_CAMP if settings.API_DEST_CAMP != "" else data.get(settings.API_CAMPAIGN_FIELD)
+		numeric = data.get(settings.API_NUMERIC_FIELD)
 		if campaign and numeric:
 			campaign = Campaign.objects.filter(name=campaign)
 			if campaign.exists():
@@ -1503,22 +1501,22 @@ class ContactUploadDataApiView(APIView):
 		else:
 			return JsonResponse({"msg":"Missing Mandatory Field Campaign and Numeric","status":"failed","a":request.data})
 
-class RecordingPlayAPIView(APIView):
-	def get(self,request,file_name):
-		s3fileDownloadToServer(file_name,"recordings/"+file_name,"/tmp/")
-		with open("/tmp/"+file_name, 'rb') as fh:
-			response = HttpResponse(fh.read(), content_type='audio/mpeg')
-			response['Content-Disposition'] = 'attachment; filename=/tmp/%s' % file_name
-			response['Accept-Ranges'] = 'bytes'
-			response['X-Sendfile'] = file_name
-			response['Content-Length'] = os.path.getsize("/tmp/"+file_name)
-		return response
-	def post(self,request,file_name):
-		if settings.S3_PHONEBOOK_BUCKET_NAME:
-			url = s3singedUrl(file_name)
-			return JsonResponse({"msg":url},status=200)
-		else:
-			return JsonResponse({"msg",""},status=500)
+# class RecordingPlayAPIView(APIView):
+# 	def get(self,request,file_name):
+# 		s3fileDownloadToServer(file_name,"recordings/"+file_name,"/tmp/")
+# 		with open("/tmp/"+file_name, 'rb') as fh:
+# 			response = HttpResponse(fh.read(), content_type='audio/mpeg')
+# 			response['Content-Disposition'] = 'attachment; filename=/tmp/%s' % file_name
+# 			response['Accept-Ranges'] = 'bytes'
+# 			response['X-Sendfile'] = file_name
+# 			response['Content-Length'] = os.path.getsize("/tmp/"+file_name)
+# 		return response
+# 	def post(self,request,file_name):
+# 		if settings.S3_PHONEBOOK_BUCKET_NAME:
+# 			url = s3singedUrl(file_name)
+# 			return JsonResponse({"msg":url},status=200)
+# 		else:
+# 			return JsonResponse({"msg",""},status=500)
 
 class ApiBulkUpload(APIView):
 	permission_classes = (IsAuthenticated, )
@@ -1563,3 +1561,20 @@ class ApiBulkUploadStatus(APIView):
 
 		except Exception as e:
 			return Response({"msg":"internal errors","error":str(e)})
+class DownloadReportApiView(APIView):
+	def get(self,request,pk,downloaded_file_name):
+		file_name = DownloadReports.objects.filter(id=pk).order_by('-id').first()
+		if file_name.downloaded_file.name.endswith('.csv'):
+			reader = pd.read_csv(file_name.downloaded_file, low_memory=False, chunksize=10000, index_col=[0], encoding = "unicode_escape", escapechar='\\', na_filter=False)
+			data = pd.concat(reader)
+			response = HttpResponse(content_type='text/csv')
+			response['Content-Disposition'] = 'attachment; filename='+downloaded_file_name
+			data.to_csv(path_or_buf=response,sep=',',float_format='%.2f',index=False,decimal=".")	
+		else:
+			with BytesIO() as b:
+				data = pd.read_excel(file_name.downloaded_file)
+				with pd.ExcelWriter(b) as writer:
+					data.to_excel(writer, sheet_name="Data", index=False)
+				response = HttpResponse(b.getvalue(),content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+				response['Content-Disposition'] = 'attachment; filename='+downloaded_file_name
+		return response

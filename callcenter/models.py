@@ -54,7 +54,6 @@ class Switch(models.Model):
 
 signals.post_save.connect(fs_switch_action, sender=Switch)
 
-
 class DialTrunk(models.Model):
 	""" This table is used to store the Dialtrunk infromation of the freeswitch """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
@@ -127,10 +126,14 @@ class Group(models.Model):
 	@property
 	def users(self):
 		return list(User.objects.filter(group=self).exclude(is_superuser=True).values("username","id"))
-
-	@property
-	def allusers(self):
-		return list(User.objects.all().exclude(group=self).exclude(is_superuser=True).values("username", "id"))
+		return 
+	# @property
+	def allusers(self,request):
+		from flexydial.views import user_hierarchy_func
+		if request.user.is_superuser:
+			return list(User.objects.all().exclude(group=self).exclude(is_superuser=True).values("username", "id"))
+		else:
+			return list(User.objects.filter(id__in=user_hierarchy_func(request.user.id)).exclude(group=self).exclude(is_superuser=True).values("username", "id"))
 
 	@property
 	def users_name(self):
@@ -835,11 +838,11 @@ class CallDetail(models.Model):
 	site = models.ForeignKey(Site, default=settings.SITE_ID,
 			on_delete=models.SET_NULL,null=True,related_name='CallDetail')
 	campaign = models.ForeignKey(Campaign,on_delete=models.SET_NULL,null=True,db_index=True)
-	campaign_name = models.CharField(default='', max_length=50,null=True)
+	campaign_name = models.CharField(default='', max_length=50,null=True,db_index=True)
 	user = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,db_index=True)
 	phonebook = models.CharField(default='',max_length=50,  null=True)
 	contact_id = models.BigIntegerField(blank=True, null=True, db_index=True)
-	customer_cid = models.CharField(default='', max_length=50,null=True)
+	customer_cid = models.CharField(default='', max_length=50,null=True,db_index=True)
 	callflow = models.CharField(default='', max_length=50, null=True)
 	callmode = models.CharField(default='', max_length=50, null=True)
 	destination_extension = models.CharField(default='', max_length=50, null=True)
@@ -1449,3 +1452,5 @@ class ThirdPartyApiDisposition(models.Model):
 
 	def __str__(self):
 		return self.unique_id
+class SourceList(models.Model):
+	sourcename = models.CharField(max_length=150,blank=True,null=True)

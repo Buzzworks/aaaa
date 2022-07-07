@@ -3,7 +3,7 @@ from django.conf import settings
 CRM_FIELDS = ['section_name','section_priority','field','field_type',
 'field_size','options','editable','field_priority','field_status', 'unique_field']
 
-USER_FIELDS = ['username','email','password','group','role', 'first_name', 'last_name', 'wfh_numeric', 'employee_id']
+USER_FIELDS = ['username','email','password','group','role', 'first_name', 'last_name', 'wfh_numeric', 'employee_id','reporting_to','domain','call_protocol','status','dial_trunk','caller_id']
 
 HOLIDAYS_FIELDS = ['name','holiday_date','description','status']
 

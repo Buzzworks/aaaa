@@ -10,7 +10,17 @@ var dateNow = new Date("October 13, 2014 02:00:00");
 is_refresh_lead_list = false
 var current_selectd={trc:false,tap:false,tapd:false,period:''};
 
-
+$(".form-control").attr('autocomplete', 'off');
+$('.form-control').bind('input', function() {
+    var c = this.selectionStart,
+       r = /[^a-z./@#_%$*:;()+-0123456789 ]/gi,
+       v = $(this).val();
+    if(r.test(v)) {
+      $(this).val(v.replace(r, ''));
+      c--;
+    }
+    this.setSelectionRange(c, c);
+});
 function format_datetime_forlistingpages(datetime) {
     if (datetime) {
         return moment(datetime).format("YYYY-MM-DD");
@@ -18,6 +28,7 @@ function format_datetime_forlistingpages(datetime) {
         return ''
     }
 }
+
 
 function selective_datatable(table) {
     var id = '#' + table.attr('id');
@@ -68,7 +79,8 @@ function selective_datatable(table) {
                         return data
                     } else {
                         if (row["downloaded_file_name"] != '') {
-                            return '<div class="text-right"><a class="btn btn-link text-info ml-2 file-download p-0" href="'+row['downloaded_file_path']+'" download id="file-' + row['id'] + '" id="'+row['id']+'"><i class="fa fa-download sch-download"></i></a></div>'
+                            return '<div class="text-right"><a target="_blank" class="btn btn-link text-info ml-2 file-download p-0" href="/api/download/'+row['id']+'/'+row['downloaded_file_name']+'/" download id="file-' + row['id'] + '" id="'+row['id']+'"><i class="fa fa-download sch-download"></i></a></div>'
+                            // return '<div class="text-right"><a class="btn btn-link text-info ml-2 file-download p-0" href="'+row['downloaded_file_path']+'" download id="file-' + row['id'] + '" id="'+row['id']+'"><i class="fa fa-download sch-download"></i></a></div>'
                         }
                     }
                     return ''
@@ -84,7 +96,8 @@ function selective_datatable(table) {
                         return data
                     } else {
                         if (row["improper_file_name"] != '') {
-                            return '<a href="/media/upload/' + row["improper_file_name"] + '" download id="file-' + row['id'] + '">' + row['improper_file_name'] + '</a>'
+                            // return '<a href="/media/upload/' + row["improper_file_name"] + '" download id="file-' + row['id'] + '">' + row['improper_file_name'] + '</a>'
+                            return '<a href="' + row["improper_file_name"] + '" download id="file-' + row['id'] + '">' + row['improper_file_name'] + '</a>'
                         }
                     }
                     return ''
@@ -1252,13 +1265,7 @@ dialtrunk_update_form.children("div").steps({
         var did_range =start+","+end
         valid_dids= true
         did_list =[]
-        for(did=start; did<end; did++){
-            did_list.push(did)
-            if(did_list.length>100){
-                valid_dids = false
-                break
-          }
-        }
+        valid_dids= check_valid_dids(start,end)
         $("#update_hidden_did_range").val(did_range)
         if (dialtrunk_update_form.isValid() == true && parseInt(start) <= parseInt(end) && valid_dids == true) {
             console.log(dialtrunk_update_form.serialize())
@@ -1292,6 +1299,10 @@ dialtrunk_update_form.children("div").steps({
     }
 });
 
+function check_valid_dids(start,end){
+    return (parseInt(end)-parseInt(start)<=2000)?true:false
+}
+
 var dialtrunk_validation_form = $("#trunk-form");
 dialtrunk_validation_form.children("div").steps({
     headerTag: "h3",
@@ -1302,15 +1313,8 @@ dialtrunk_validation_form.children("div").steps({
         var start=$("#start_did").val()
         var end=$("#end_did").val()
         var did_range =start+","+end
-        valid_dids= true
-        did_list =[]
-        for(did=start; did<end; did++){
-            did_list.push(did)
-          if(did_list.length>100){
-                valid_dids = false
-                break
-          }
-        }
+        valid_dids= check_valid_dids(start,end)
+
         $("#hidden_did_range").val(did_range)
         if (dialtrunk_validation_form.isValid() == true && parseInt(start) <= parseInt(end) && valid_dids == true) {
             $.ajax({
@@ -1817,7 +1821,14 @@ uploadOptions = {
     success: function(data) {
         $('.preloader').fadeOut('fast');
         $('.phonebook-valid-loader,.user-valid-loader').fadeOut('fast');
-        if ("column_err_msg" in data) {
+        if (typeof data == "string"){
+            var blob=new Blob([data]);
+            var link=document.createElement('a');
+            link.href=window.URL.createObjectURL(blob);
+            link.download="user_upload_stats.csv";
+            link.click();
+            uploadFailAlert()
+        }else if ("column_err_msg" in data) {
             $(data["column_id"]).text(data["column_err_msg"]).removeClass("d-none")
             if ($("#uploadedad-file-error").length == 0) {
                 error_id = "#phonebook-err-msg"
@@ -1833,20 +1844,21 @@ uploadOptions = {
                 $("#empty-data").addClass("d-none")
             }, 3000);
         } else {
-            $(".cancel-uploaded-file").removeClass("d-none")
-            $(".validate-uploaded-file").addClass("d-none")
-            if ("correct_file" in data) {
-                $("#proper-data").attr("href", data["correct_file"]).removeClass("d-none")
-                $(".confirm-user-upload").removeClass("d-none")
-                $("#proper-data span.msg").text("Proper Data: " + data["correct_count"])
-                $(".proper_data_div").removeClass("d-none")
-            }
-            if ("incorrect_file" in data) {
-                $(".improper_data_div").removeClass("d-none")
-                $("#improper-data").attr("href", data["incorrect_file"]).removeClass("d-none")
-                $("#improper-data span.msg").text("Improper Data: " + data["incorrect_count"])
-                $('#empty-data').addClass('d-none')
-            }
+            showSwal('success-message', 'User Bulk Uploaded Sucessfully')
+            // $(".cancel-uploaded-file").removeClass("d-none")
+            // $(".validate-uploaded-file").addClass("d-none")
+            // if ("correct_file" in data) {
+            //     $("#proper-data").attr("href", data["correct_file"]).removeClass("d-none")
+            //     $(".confirm-user-upload").removeClass("d-none")
+            //     $("#proper-data span.msg").text("Proper Data: " + data["correct_count"])
+            //     $(".proper_data_div").removeClass("d-none")
+            // }
+            // if ("incorrect_file" in data) {
+            //     $(".improper_data_div").removeClass("d-none")
+            //     $("#improper-data").attr("href", data["incorrect_file"]).removeClass("d-none")
+            //     $("#improper-data span.msg").text("Improper Data: " + data["incorrect_count"])
+            //     $('#empty-data').addClass('d-none')
+            // }
         }
     },
     error: function(data) {

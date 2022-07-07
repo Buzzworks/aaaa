@@ -1,5 +1,6 @@
 var redis = require('redis');
 var redisClient = redis.createClient({host : process.env.REDIS_URL, port : process.env.REDIS_PORT});
+'use strict';
 module.exports = {
 	transfercall_route: function(data,callback) {
 		redisClient.exists('transfer_agents',function(err,reply) {

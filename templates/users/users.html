@@ -143,9 +143,9 @@
 							</div>
 							<div class="row pull-right">
 								<div class="upload-css">
-									<button type="button" class="btn btn-dark btn-fw d-none validate-uploaded-file" id="validate-uploaded-file">Validate File</button>
-									<button type="button" class="btn btn-success btn-fw d-none confirm-user-upload" id="confirm-upload-file">Continue</button>
-									<button type="button" class="btn btn-light btn-fw d-none cancel-uploaded-file" id="cancel-uploaded-file">Cancel</button>
+									<button type="button" class="btn btn-dark btn-fw d-none validate-uploaded-file" id="validate-uploaded-file">Upload File</button>
+									<!--<button type="button" class="btn btn-success btn-fw d-none confirm-user-upload" id="confirm-upload-file">Continue</button> 
+									 <button type="button" class="btn btn-light btn-fw d-none cancel-uploaded-file" id="cancel-uploaded-file">Cancel</button> -->
 
 								</div>
 							</div>
@@ -293,14 +293,14 @@
 		edit_url = "{% url 'edit-users' 123 %}"
 		get_pagination_data(1, true)
 		//node event emit for emergency logout
-		var nodejs_port = '3232';
-		var server_ip = '{{server_ip}}'
-		socket = io(server_ip  + ':' + nodejs_port, {
+		//var nodejs_port = '3232';
+		/*var server_ip = '{{server_ip}}'
+		socket = io(server_ip, {
 			'reconnection': true,
 			'reconnectionDelay': 1000,
 			'reconnectionDelayMax': 5000,
 			'reconnectionAttempts': 5
-		});
+		});*/
 		socket.on("emergency_logout_status_admin",function(data){
 			if(data["username"] == user_name){ 
 				showSwal('success-message', 'Force logout for '+data["extension"]+' operation is successful')

@@ -16,6 +16,7 @@ var socket_server = https.createServer(options);
 var io = require('socket.io')(socket_server);
 socket_server.listen(3233,'0.0.0.0')
 
+
 var redis = require('redis');
 leadlist_details_data = redis.createClient({host: process.env.REDIS_URL,port: process.env.REDIS_PORT});
 leadlist_details_data.subscribe('lead-details');
@@ -24,16 +25,18 @@ api_disp_extension_data.subscribe('api_disp_extension');
 api_disp_extension_data.on('message',function(channel, message){
 	io.emit("hangup_client",message)
 });
+
+'use strict';
 io.on('connection', function(socket) {
 	socket.on('new',function(data){
-		console.log(data)
+		util.log(data)
  	});
 	leadlist_details_data.on('message',function(channel, message){
 			socket.send(message);
 		});
  	socket.on('transfer',function(data){
  		if (data['transfer_type'] == 'external'){
- 			console.log('external',data)
+ 			util.log('external',data)
  		}else{
 			transfer_call.transfercall_route(data,function(err,data){
 				io.emit("transfer_agents",data)
@@ -77,6 +80,9 @@ io.on('connection', function(socket) {
 	socket.on('check_progressive_preview_data',function(data){
 		io.emit("do_progressive_preview_newlead",data)
 	});
+	socket.on("error",function(err){
+		util.log("error in socket",err)
+	})
 });
 
 server = esl.createCallServer();
@@ -90,13 +96,20 @@ server.on('CONNECT', function (req) {
 			}
 		}else{
 			server_ip = req.body['variable_sip_from_host']
-			if (('variable_sip_from_host' in req.body)==false){
-				server_ip = req.body['FreeSWITCH-IPv4']
+			// if (('variable_sip_from_host' in req.body)==false){
+			server_ip = req.body['FreeSWITCH-IPv4']
+			// }
+			if('variable_wfh_app' in req.body & req.body['variable_wfh_app'] == 'true'){
+				io.emit('sip_session_details',{'Unique-ID':req.body['Unique-ID'], 
+					'Caller-Caller-ID-Number':req.body['variable_cc_agent'],
+					'variable_sip_from_host': server_ip
+				});
+			}else{
+				io.emit('sip_session_details',{'Unique-ID':req.body['Unique-ID'], 
+					'Caller-Caller-ID-Number':req.body['Channel-Orig-Caller-ID-Number'],
+					'variable_sip_from_host': server_ip
+				});
 			}
-			io.emit('sip_session_details',{'Unique-ID':req.body['Unique-ID'],
-				'Caller-Caller-ID-Number':req.body['Channel-Orig-Caller-ID-Number'],
-				'variable_sip_from_host': server_ip
-			});
 			req.execute("transfer","00019916 XML default")
 		}
 		req.on('DTMF', function (req) {
@@ -135,13 +148,18 @@ server.on('CONNECT', function (req) {
 	            	}
 	            }
            	}
+			
 			return util.log('DTMF',dtmf,"a-leg : ",req.body['Unique-ID']," b-leg : ",req.body['Other-Leg-Unique-ID']);
 		})
+		
 		req.on('CHANNEL_ANSWER',function (req){
 			if ('variable_wfh' in req.body & req.body['variable_wfh'] == 'true'){
 				if (req.body['variable_usertype'] == 'wfh-agent-req-dial'){
 					req.execute("transfer","12345 XML default2")
 				}
+			}
+			if('variable_wfh_app' in req.body & req.body['variable_wfh_app'] == 'true'){
+				io.emit("wfh_answer_app",req.body['variable_cc_agent'])
 			}
 		})
 		req.on('CHANNEL_HANGUP', function (req) {
@@ -149,14 +167,24 @@ server.on('CONNECT', function (req) {
 				io.emit("sip_hangup_client",req.body['variable_cc_agent'])
 			}
 			return util.log('CHANNEL_HANGUP',req.body['variable_cc_agent']);
-	 });
+	 	});
+		 req.on('uncaughtException', function (req) {
+			return util.log('Epipe Error');
+		});
+		req.on("error", function(err){
+			util.log(err.stack)
+			return util.log(err.stack)
+		})
 
 });
+server.on("error", function(err){
+	util.log(err.stack)
+})
 server.listen(8084, '0.0.0.0');
 
 outbound_server = esl.createCallServer();
 outbound_server.on('CONNECT', function (req) {
-    //console.log(req.body)
+    //util.log(req.body)
 	var campaign_name = req.body['variable_campaign_name']
 	var usertype =req.body['variable_usertype']
 	req.execute('set', 'campaign_name=${campaign_name}');
@@ -167,25 +195,28 @@ outbound_server.on('CONNECT', function (req) {
 	var destination_number = req.body['Channel-Caller-ID-Number'].slice(-10)
 	var cc_agent = req.body['variable_cc_agent']
 	var dialed_uuid = req.body['Unique-ID']
-	if (!('wfh_call' in req.body)){
-		req.execute("conference",req.body['variable_agent-Unique-ID']+"@sla")
-	}
-	req.execute('set', `cc_customer=${destination_number}`)
-	req.execute('set', 'RECORD_TITLE=Recording ${dialed_number} ${caller_id_number} ${strftime(%Y-%m-%d %H:%M)');
-	req.execute('set', 'RECORD_COPYRIGHT=(c) Buzzworks, Inc.');
-	req.execute('set', 'RECORD_SOFTWARE=FreeSWITCH');
-	req.execute('set', 'RECORD_ARTIST=Buzzworks');
-	req.execute('set', 'RECORD_COMMENT=Buzz that works');
-	req.execute('set', 'RECORD_DATE=${strftime(%Y-%m-%d %H:%M)}');
-	req.execute('set', 'RECORD_STEREO=true');
-	req.execute("record_session",`/var/spool/freeswitch/default/${date_time}_${destination_number}_${dialed_uuid}.mp3`)
-	console.log("outbound connected");
+	setTimeout(()=>{
+		if (!('wfh_call' in req.body)){
+			req.execute("conference",req.body['variable_agent-Unique-ID']+"@sla")
+		}
+		req.execute('set', `cc_customer=${destination_number}`)
+		req.execute('set', 'RECORD_TITLE=Recording ${dialed_number} ${caller_id_number} ${strftime(%Y-%m-%d %H:%M)');
+		req.execute('set', 'RECORD_COPYRIGHT=(c) Buzzworks, Inc.');
+		req.execute('set', 'RECORD_SOFTWARE=FreeSWITCH');
+		req.execute('set', 'RECORD_ARTIST=Buzzworks');
+		req.execute('set', 'RECORD_COMMENT=Buzz that works');
+		req.execute('set', 'RECORD_DATE=${strftime(%Y-%m-%d %H:%M)}');
+		req.execute('set', 'RECORD_STEREO=true');
+		req.execute("record_session",`/var/spool/freeswitch/default/${date_time}_${destination_number}_${dialed_uuid}.mp3`)
+	},3000)
+	util.log("outbound connected");
 	req.on('CHANNEL_ANSWER', function (req) {
-		console.log(req.body['Event-Date-Timestamp'])
+		util.log(req.body['Event-Date-Timestamp'])
 		// req.execute("bridge","user/"+cc_agent)
 		if('variable_fake_ring' in req.body && req.body['variable_fake_ring'] == 'true'){
+			util.log(req.body)
 			var date_time = '${strftime(%d-%m-%Y-%H-%M)}'
-			var destination_number = req.body['variable_cc_customer'].slice(-10)
+			var destination_number = (typeof req.body['variable_cc_customer'] != 'undefined')?req.body['variable_cc_customer'].slice(-10):req.body['variable_dialed_number'].slice(-10)
 			var dialed_uuid = req.body['Unique-ID']
 			req.execute("conference",req.body['variable_agent-Unique-ID']+"@sla")
 			req.execute('set', 'RECORD_TITLE=Recording ${dialed_number} ${caller_id_number} ${strftime(%Y-%m-%d %H:%M)');
@@ -232,13 +263,23 @@ outbound_server.on('CONNECT', function (req) {
 	req.on('CHANNEL_HANGUP_COMPLETE', function (req) {
 		return util.log('OUTBOUND_CHANNEL_HANGUP_COMPLETE');
 	})
+	req.on("error", function(err){
+		util.log(err.stack)
+		return util.log(err.stack)
+	})
+	req.on('uncaughtException', function (req) {
+		return util.log('Epipe Error');
+	});
 });
+outbound_server.on("error", function(err){
+	util.log(err.stack)
+})
 outbound_server.listen(8085, '0.0.0.0');
 inbound_server = esl.createCallServer();
 inbound_server.on('CONNECT', function (req) {
 		var channel_data = req.body;
 		destination_number = req.body['Caller-Caller-ID-Number'].slice(-10)
-		caller_id = req.body['Caller-Destination-Number']
+		caller_id = req.body['variable_caller_id']
 		dialed_uuid = req.body['Unique-ID']
 		server = req.body['FreeSWITCH-IPv4']
 		date_time = '${strftime(%d-%m-%Y-%H-%M)}'
@@ -431,7 +472,7 @@ inbound_server.on('CONNECT', function (req) {
 								io.emit("OUTBOUND_CHANNEL_HANGUP",{"sip_extension":req.body['Other-Leg-Orig-Caller-ID-Number']})
 								return util.log('INBOUND_TRANSFERED_CHANNEL_HANGUP',req.body['Other-Leg-Orig-Caller-ID-Number']);
 			 }else{
-	 		// console.log({"sip_extension":req.body['variable_cc_agent'],"ibc_popup":req.body['variable_ibc_popup'],"queue_call":req.body['variable_queue_call']})
+	 		// util.log({"sip_extension":req.body['variable_cc_agent'],"ibc_popup":req.body['variable_ibc_popup'],"queue_call":req.body['variable_queue_call']})
 						io.emit("INBOUND_CHANNEL_HANGUP",{"sip_extension":req.body['variable_cc_agent'],"ibc_popup":req.body['variable_ibc_popup'],"queue_call":req.body['variable_queue_call']})
 			}
 			return util.log('INBOUND_CHANNEL_HANGUP');
@@ -440,7 +481,17 @@ inbound_server.on('CONNECT', function (req) {
 		req.on('CHANNEL_HANGUP_COMPLETE', function (req) {
 			 return util.log('INBOUND_CHANNEL_HANGUP_COMPLETE');
 		})
-	});
+		req.on('uncaughtException', function (req) {
+			return util.log('Epipe Error');
+		});
+		req.on("error", function(err){
+			util.log(err.stack)
+			return util.log(err.stack)
+		})
+});
+inbound_server.on("error", function(err){
+		util.log(err.stack)
+})
 inbound_server.listen(8087, '0.0.0.0');
 
 autodial_server = esl.createCallServer();
@@ -464,15 +515,15 @@ autodial_server.on('CONNECT', function (req) {
 					req.execute('set','disposition=Connected')
 					io.emit("AUTODIAL_CHANNEL_BRIDGE",{"sip_extension":req.body['Other-Leg-Orig-Caller-ID-Number'],
 											"customer_number":req.body['variable_cc_customer'],"dialed_uuid":req.body['Unique-ID'],
-											"call_timestamp":req.body['Event-Date-Timestamp'],"contact_id":contact_id})
-							console.log('Bridging');
+												"call_timestamp":req.body['Event-Date-Timestamp'],"contact_id":contact_id,"variable_cc_agent_uuid":req.body['variable_cc_agent_uuid']})
+							util.log('Bridging');
 				});
 				req.on('CALL_UPDATE', function (req) {
-						console.log('call updated');
+						util.log('call updated');
 				});
 
 				// req.on('DTMF', function (req) {
-				// 	console.log(req.body)
+				// 	util.log(req.body)
 				// 	return util.log('Autodial_DTMF');
 				// })
 
@@ -496,8 +547,9 @@ autodial_server.on('CONNECT', function (req) {
 							io.emit("OUTBOUND_CHANNEL_HANGUP",{"sip_extension":req.body['Other-Leg-Orig-Caller-ID-Number']})
 							return util.log('AUTODIAL_TRANSFERED_CHANNEL_HANGUP',req.body['Other-Leg-Orig-Caller-ID-Number']);
 						}else{
-						io.emit("AUTODIAL_CHANNEL_HANGUP",{"sip_extension":req.body['variable_cc_agent']})
-						return util.log('CHANNEL_HANGUP');
+							util.log('sip_extension :: '+req.body['variable_cc_agent']+" variable_cc_agent_uuid :: "+req.body['variable_cc_agent_uuid'])
+							io.emit("AUTODIAL_CHANNEL_HANGUP",{"sip_extension":req.body['variable_cc_agent'],"variable_cc_agent_uuid":req.body['variable_cc_agent_uuid']})
+							return util.log('CHANNEL_HANGUP');
 						}
 				});
 
@@ -517,8 +569,10 @@ autodial_server.on('CONNECT', function (req) {
 						return util.log('Epipe Error');
 				});
 		});
+autodial_server.on("error", function(err){
+	util.log(err.stack)
+})
 autodial_server.listen(8086, '0.0.0.0');
-
 
 }).call(this);
 
