@@ -121,7 +121,8 @@ def curl_addsip(request,domain):
 	domain = Switch.objects.filter(name=domain)
 	if domain:
 		ip_address = domain[0].ip_address
-		agent_profile = UserVariable.objects.filter(user__is_active=True).values('domain__ip_address',
+		user_ids = total_list_users(ip_address)
+		agent_profile = UserVariable.objects.filter(user__is_active=True,user__in=user_ids).values('domain__ip_address',
 				'user__username','user__caller_id','extension','user__id','device_pass','user__call_type').order_by('domain__ip_address','user__username','extension').prefetch_related()
 	else:
 		agent_profile={}
