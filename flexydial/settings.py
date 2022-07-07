@@ -29,6 +29,8 @@ SECRET_KEY = '*^gyxflla@kwhnj6$o)n=ihi2-ntcy-)t7phnc^%p!9_a&al&!'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', default=False)
+
+DEVELOPMENT = os.environ.get("DEVELOPMENT",False)
 LOGIN_URL = '/'
 ALLOWED_HOSTS = ['*']
 
@@ -237,9 +239,9 @@ INTERNAL_IPS = [IP_ADDRESS, "127.0.0.1"]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_IDLE_TIMEOUT = 180*100
-SESSION_COOKIE_AGE = 180
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_IDLE_TIMEOUT = 240*60  # 4 hours
+SESSION_COOKIE_AGE = 540*60    # 9 hours
 # resetting the password url valid days
 PASSWORD_RESET_TIMEOUT_DAYS = 1
 
@@ -259,6 +261,8 @@ if AWS_STORAGE_BUCKET_NAME:
 elif GS_BUCKET_NAME:
     MEDIA_URL = 'https://storage.googleapis.com/{}/'.format(GS_BUCKET_NAME)
     DEFAULT_FILE_STORAGE='flexydial.storages.GoogleCloudMediaFileStorage'
+    # STATICFILES_STORAGE = 'flexydial.storages.staticGCloudMedia'
+
 API_CAMPAIGN_FIELD = os.environ.get('API_CAMPAIGN_FIELD',"campaign")
 API_NUMERIC_FIELD = os.environ.get('API_NUMERIC_FIELD',"numeric")
 REPLACE_API_KEY = os.environ.get('REPLACE_API_KEY',"")
@@ -291,3 +295,4 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SECURE = True
+REDIS_KEY_EXPIRE_IN_SEC = os.environ.get('REDIS_KEY_EXPIRE_IN_SEC',32400)

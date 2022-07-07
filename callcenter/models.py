@@ -226,7 +226,7 @@ class User(AbstractUser):
 
 def getAdmin():
 	team_extensions = list(User.objects.filter(Q(is_superuser=True)|Q(user_role__access_level='Admin')).values_list("id", flat=True))
-	print(team_extensions)
+	# print(team_extensions)
 	admin_list = list(UserVariable.objects.filter(
 			user__in=team_extensions).values_list("extension", flat=True))
 	return admin_list

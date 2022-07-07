@@ -51,6 +51,7 @@ import random
 from django.core.mail import EmailMessage,EmailMultiAlternatives, get_connection
 import xlwt
 from xlwt import Workbook
+from importlib import import_module
 import xlrd
 from xlutils.copy import copy
 import subprocess
@@ -74,7 +75,6 @@ def check_non_admin_user(user):
 def get_temp_contact(user, campaign, portfolio=False):
 	""" Get temp contact data"""
 	temp_contact = None
-	print('log::get_temp_contact::campaign::',campaign,"-requestuser::",user)
 	if not portfolio:
 		if TempContactInfo.objects.filter(campaign=campaign, status='NotDialed').exists():
 			temp_contact = TempContactInfo.objects.filter(campaign=campaign, status='NotDialed').order_by('priority','modified_date').first()
@@ -154,13 +154,13 @@ def user_hierarchy(request,camp_name):
 	this is the function defined to get the user reporting hirerarchy
 	"""	
 	# users = User.objects.exclude(id=request.user.id)
-	if request.user.is_superuser:
+	admin=False
+	if request.user.is_superuser or (request.user.user_role and request.user.user_role.access_level == 'Admin'):
 		users = User.objects.exclude(id=request.user.id)
+		admin = True
 	else:
 		users = User.objects.filter(id__in=user_hierarchy_func(request.user.id))
-	admin=False
-	if request.user.user_role and request.user.user_role.access_level == 'Admin':
-		admin = True
+	# if request.user.user_role and request.user.user_role.access_level == 'Admin':
 	if request.user.is_superuser:
 		team_extensions = UserVariable.objects.filter(user__in=users).values_list("extension", flat=True)
 	elif admin:
@@ -187,7 +187,8 @@ def user_hierarchy_object(user,camp_name=[]):
 	this is the function defined user hierarcy object data
 	"""	
 	# users = User.objects.exclude(id=user.id).all()
-	if user.is_superuser:
+	if user.is_superuser and user.user_role and user.user_role.access_level == 'Admin':
+		admin = True
 		users = User.objects.exclude(id=user.id)
 	else:
 		users = User.objects.filter(id__in=user_hierarchy_func(user.id)).all()
@@ -246,6 +247,54 @@ def get_current_users():
 	# Query all logged in users based on id list
 	return User.objects.filter(id__in=user_id_list)
 
+def delete_session(session):
+	"""this method is used to get all user sessions form
+    django session
+    """
+	try:		
+		if settings.SESSION_ENGINE:
+			SessionStore = import_module(settings.SESSION_ENGINE).SessionStore
+			s = SessionStore(session_key=session.session_key)
+			s.delete()
+		else:
+			session.delete()
+	except Exception as e:
+		print("ERROR:: delete_session function ",e)
+
+def all_unexpired_sessions_for_user(user):
+       """this method is used to get all user sessions form
+       django session
+       """
+       user_sessions = []
+       all_sessions  = Session.objects.filter(expire_date__gte=timezone.now())
+       for session in all_sessions:
+               session_data = session.get_decoded()
+               if user.pk == int(session_data.get('_auth_user_id',0)):
+                       user_sessions.append(session.pk)
+       return Session.objects.filter(pk__in=user_sessions)
+
+def delete_all_unexpired_sessions_for_user(user, session_to_omit=None):
+	"""this method is used to delete user sessions from
+    django session
+    """
+	session_list = all_unexpired_sessions_for_user(user)
+	if session_to_omit is not None:
+		session_list.exclude(session_key=session_to_omit.session_key)
+	# session_list.delete()
+	agent_activity_data = {}
+	for session in session_list:
+		session_data = session.get_decoded()
+		last_req = ""
+		last_req = session_data.get('last_request','')
+		if last_req:
+			last_req = datetime.fromtimestamp(last_req)
+		print("AlreadyLoginLog::",user.username,"session_expiry:: ",session.expire_date," last_request :: ",last_req)
+		agent_activity_data['user'] = user
+		agent_activity_data["event"] = "Old Login Session clear"
+		agent_activity_data["event_time"] = datetime.now()
+		create_agentactivity(agent_activity_data)
+		delete_session(session)
+	return True
 
 def redirect_user(request, user):
 	"""
@@ -474,14 +523,12 @@ def get_pre_campaign_edit_info(pk, request):
 	data["campaign"] = object_data
 	data['dial_method'] = json.dumps(object_data.dial_method)
 	data["dial_ratio"] = DIAL_RATIO_CHOICES
-	department_id = Group.objects.values_list("id", flat=True,)
 	self_campaign = object_data.group.all().values_list("id", flat=True)
 	self_dispo = object_data.disposition.all().values_list("id", flat=True)
 	self_relationtag = object_data.relation_tag.all().values_list("id",flat=True)
 	groups = Group.objects.all()
 	data["is_non_admin"] = check_non_admin_user(request.user)
 	data['non_user'] = []
-	users = User.objects.all()
 	if request.user.is_superuser:
 		users=User.objects.all()
 	else:
@@ -3811,20 +3858,120 @@ def PasswordChangeAndLockedReminder():
 
 def get_agent_status(extension,full_key = False):
 	if full_key:
-		return pickle.loads(settings.R_SERVER.get(extension) or pickle.dumps({}))
+		keys_list = ['username', 'name', 'login_status', 'campaign', 'dialer_login_status', 'dialer_login_time', 'status', 'state', 'event_time', 'call_type', 'dial_number', 'call_timestamp', 'extension', 'dialerSession_uuid', 'screen', 'login_time', 'call_count']
+		agent_keys = []
+		agent_dict = pickle.loads(settings.R_SERVER.get(extension) or pickle.dumps({}))
+		extension1 = list(extension.split("_"))
+		if extension1 and len(extension1)==2 and extension1[1] in agent_dict:
+			agent_keys = agent_dict[extension1[1]].keys()
+		if len(extension1)==2 and not set(agent_keys).issuperset(set(keys_list)):
+			agent_dict[extension1[1]] = default_agent_status(extension1[1],agent_dict)
+		return agent_dict
 	return pickle.loads(settings.R_SERVER.get("flexydial_"+extension) or pickle.dumps({}))
 
 def set_agent_status(extension,agent_dict,delete=False):
+	stat_keys = ['onbreak','login_count','dialer_count','progressive','inbound','predictive','preview','manual']
 	if delete:
-		return settings.R_SERVER.delete("flexydial_"+extension)
-	updated_agent_dict = get_agent_status("flexydial_"+extension)
+		settings.R_SERVER.delete("flexydial_"+extension)
+		# print("RedisDelete ",extension)
+		for stat in stat_keys:
+			stat_dict = get_statKey(stat)
+			remove_redis_stat_val(stat_dict,stat,extension)
+		return True
+	updated_agent_dict = get_agent_status(extension)
+	# print("RedisAvailable ",extension,updated_agent_dict)
 	if extension not in updated_agent_dict:
 		updated_agent_dict[extension] = {}
+	# print("RedisNeedInsert ",agent_dict)
+	agent_dict = default_agent_status(extension,agent_dict)
 	if extension in agent_dict:
-		updated_agent_dict[extension] = agent_dict[extension]	
+		updated_agent_dict[extension].update(agent_dict[extension])
 	else:
-		updated_agent_dict[extension] = agent_dict
-	return settings.R_SERVER.set("flexydial_"+extension, pickle.dumps(updated_agent_dict))
+		updated_agent_dict[extension].update(agent_dict)
+	# print("RedisUpdatedDict ",updated_agent_dict)
+	status = settings.R_SERVER.set("flexydial_"+extension, pickle.dumps(updated_agent_dict),ex=settings.REDIS_KEY_EXPIRE_IN_SEC)
+	if status!=True:
+		print("Log::RedisError:: ",status,updated_agent_dict)
+	update_stats_data(updated_agent_dict,extension)
+	return status
+
+def update_stats_data(updated_agent_dict,extension):
+	if extension in updated_agent_dict:
+		break_stat = get_statKey('onbreak')
+		login_count = get_statKey('login_count')
+		dialer_count = get_statKey('dialer_count')
+		if updated_agent_dict[extension]['state'].lower() == 'onbreak':
+			update_redis_stat_key(break_stat,'onbreak',extension)
+			remove_redis_stat_val(login_count,'login_count',extension)
+			remove_redis_stat_val(dialer_count,'dialer_count',extension)
+		else:
+			remove_redis_stat_val(break_stat,'onbreak',extension)
+			if updated_agent_dict[extension]['dialer_login_status'] == True:
+				update_redis_stat_key(dialer_count,'dialer_count',extension)
+				remove_redis_stat_val(login_count,'login_count',extension)
+			else:
+				update_redis_stat_key(login_count,'login_count',extension)
+				remove_redis_stat_val(dialer_count,'dialer_count',extension)
+		# on_call_agent = get_statKey("on_call_agent")
+		dial_modes = ['progressive','inbound','predictive','preview','manual']
+		if updated_agent_dict[extension]['state'] == "InCall" and updated_agent_dict[extension]['dial_number'] and updated_agent_dict[extension]['call_timestamp']!="":
+		# 	update_redis_stat_key(on_call_agent,'on_call_agent',extension)
+		# else:
+		# 	remove_redis_stat_val(on_call_agent,"on_call_agent",extension)
+			for dial_mode in dial_modes:
+				dial_mode_dict = get_statKey(dial_mode)
+				if updated_agent_dict[extension]['call_type'].lower() == dial_mode:
+					update_redis_stat_key(dial_mode_dict,dial_mode,extension)
+				else:
+					remove_redis_stat_val(dial_mode_dict,dial_mode,extension)
+		else:
+			for dial_mode in dial_modes:
+				dial_mode_dict = get_statKey(dial_mode)
+				remove_redis_stat_val(dial_mode_dict,dial_mode,extension)
+def update_redis_stat_key(stat_dict, key,extension):
+	if extension not in stat_dict:
+		stat_dict.append(extension)
+		update_statKey(key,stat_dict)
+def remove_redis_stat_val(stat_dict,key,extension):
+	if extension in stat_dict:
+		stat_dict.remove(extension)
+		update_statKey(key,stat_dict)
+def get_statKey(key):
+	return pickle.loads(settings.R_SERVER.get(key) or pickle.dumps([]))
+def update_statKey(key,val):
+	return settings.R_SERVER.set(key, pickle.dumps(val),ex=settings.REDIS_KEY_EXPIRE_IN_SEC)
+
+def default_agent_status(extension,agent_dict):
+	if extension in agent_dict:
+		agent_dict = agent_dict[extension]
+	if 'username' not in agent_dict:
+		username = first_name = last_name = ""
+		user_var = UserVariable.objects.filter(extension=extension).first()
+		if user_var:
+			username = user_var.user.username
+			first_name = user_var.user.first_name
+			last_name = user_var.user.last_name
+		print('Log::default::username_is_missing::',extension,username)
+		agent_dict['username'] = username
+		agent_dict['name'] = first_name + ' ' + last_name
+
+	agent_dict['login_status'] = True if "login_status" not in agent_dict else agent_dict['login_status']
+	agent_dict['campaign'] = '' if "campaign" not in agent_dict else agent_dict['campaign']
+	agent_dict['dialer_login_status'] = False if "dialer_login_status" not in agent_dict else agent_dict['dialer_login_status']
+	agent_dict['dialer_login_time'] = '' if "dialer_login_time" not in agent_dict else agent_dict['dialer_login_time']
+	agent_dict['status'] = 'NotReady' if "status" not in agent_dict else agent_dict['status']
+	agent_dict['state'] = '' if "state" not in agent_dict else agent_dict['state']
+	agent_dict['event_time'] = '' if "event_time" not in agent_dict else agent_dict['event_time']
+	agent_dict['call_type'] = '' if "call_type" not in agent_dict else agent_dict['call_type']
+	agent_dict['dial_number'] = '' if "dial_number" not in agent_dict else agent_dict['dial_number']
+	agent_dict['call_timestamp'] = '' if "call_timestamp" not in agent_dict else agent_dict['call_timestamp']
+	agent_dict['extension'] = extension if "extension" not in agent_dict else agent_dict['extension']
+	agent_dict['dialerSession_uuid'] = '' if "dialerSession_uuid" not in agent_dict else agent_dict['dialerSession_uuid']
+	agent_dict['screen'] = 'AgentScreen' if "screen" not in agent_dict else agent_dict['screen']
+	agent_dict['call_count'] = 0 if "call_count" not in agent_dict else agent_dict['call_count']
+	agent_dict['login_time'] = '' if "login_time" not in agent_dict else agent_dict['login_time']
+
+	return agent_dict
 
 def get_all_keys_data_df(team_extensions=''):
 	keysdata = settings.R_SERVER.scan_iter("flexydial_*")
@@ -3833,11 +3980,11 @@ def get_all_keys_data_df(team_extensions=''):
 		team_extensions =[bytes("flexydial_"+s, encoding='utf-8')  for s in team_extensions]
 		for k in keysdata:
 			if k in team_extensions:
-				AGENTS = get_agent_status(k,True)
+				AGENTS = get_agent_status(k.decode('utf-8'),True)
 				total_agents_df = pd.concat([total_agents_df,pd.DataFrame.from_dict(AGENTS,orient='index')], ignore_index = True)
 	else:
 		for k in keysdata:
-			AGENTS = get_agent_status(k,True)
+			AGENTS = get_agent_status(k.decode('utf-8'),True)
 			total_agents_df = pd.concat([total_agents_df,pd.DataFrame.from_dict(AGENTS,orient='index')], ignore_index = True)
 	return total_agents_df
 
@@ -3848,10 +3995,10 @@ def get_all_keys_data(team_extensions=""):
 		team_extensions =[bytes("flexydial_"+s, encoding='utf-8')  for s in team_extensions]
 		for k in keysdata:
 			if k in team_extensions:
-				AGENTS = get_agent_status(k,True)
+				AGENTS = get_agent_status(k.decode('utf-8'),True)
 				agent_dict.update(AGENTS)	
 	else:
 		for k in keysdata:
-			AGENTS = get_agent_status(k,True)
+			AGENTS = get_agent_status(k.decode('utf-8'),True)
 			agent_dict.update(AGENTS)
 	return agent_dict

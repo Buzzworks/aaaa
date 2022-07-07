@@ -148,13 +148,9 @@ def campaign_edit_validation(function):
 		wfh_caller_id = request.POST.get("wfh_caller_id", "")
 
 		if campaign_name!=object_data.name:
-			AGENTS = {}
-			AGENTS = get_all_keys_data()
-			if AGENTS:
-				all_agents = list(AGENTS.keys())
-				for extension in all_agents:
-					if AGENTS[''+str(extension)+'']['campaign']==object_data.name:
-						return JsonResponse({"camp_name_error": "Oops you cannot change campaign name because agents is login with this campaign in dialer"},status=500)
+			campaign_pd = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps({}))
+			if campaign_pd and object_data.name in campaign_pd and len(campaign_pd[object_data.name])>0:
+				return JsonResponse({"camp_name_error": "Oops you cannot change campaign name because agents is login with this campaign in dialer"},status=500)
 
 		if Campaign.objects.filter(name__iexact=campaign_name).exclude(
 			id=object_data.id).exists():
@@ -531,7 +527,6 @@ def thirdparty_edit_validation(function):
 		data_obj = get_object(kwargs["pk"], "callcenter", "ThirdPartyApi")
 		name = request.POST.get('name',"")
 		campaign = request.POST.get('campaign',"")
-		print()
 		if name:
 			if ThirdPartyApi.objects.filter(name__iexact=name).exclude(id=data_obj.id).exists():
 				return JsonResponse({"name":"ThirdPartyApi with this name already exists"}, status=500)

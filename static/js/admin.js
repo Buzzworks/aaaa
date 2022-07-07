@@ -11,15 +11,17 @@ is_refresh_lead_list = false
 var current_selectd={trc:false,tap:false,tapd:false,period:''};
 
 $(".form-control").attr('autocomplete', 'off');
-$('.form-control').bind('input', function() {
+$('.form-control').on('input', function() {
     var c = this.selectionStart,
-       r = /[^a-z./@#_%$*:;()+-0123456789 ]/gi,
+       r = /[^a-z./@#_%$*:;()+-0123456789+ ]/gi,
        v = $(this).val();
     if(r.test(v)) {
       $(this).val(v.replace(r, ''));
       c--;
     }
-    this.setSelectionRange(c, c);
+    if(c){
+        this.setSelectionRange(c, c);
+    }
 });
 function format_datetime_forlistingpages(datetime) {
     if (datetime) {
@@ -721,8 +723,14 @@ $('#user_trunk').change(function(){
         if (start_end.match(/^0+/)) {
             is_leading_zero = true
         }
+        let is_leading_plus = false
+        if(start_end.startsWith("+")){
+            is_leading_plus = true
+        }
         for (i = start_end; i <= end_node; i++) {
+
             let did_value = (is_leading_zero) ? i.toString().padStart(start_end_length,"0") : i.toString()
+            did_value = (is_leading_plus) ? did_value.toString().padStart(start_end_length,"+") : did_value.toString()
             if(used_did_list){
                 if(used_did_list.indexOf(did_value.toString()) === -1){
                     $("#user_caller_id").append(`<option value='${did_value}'>${did_value}</option>`)

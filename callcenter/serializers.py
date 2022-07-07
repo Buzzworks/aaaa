@@ -43,7 +43,7 @@ class UserVariableCreateSerializer(serializers.ModelSerializer):
 	""" Serializer used for uservariable create """
 	class Meta:
 		model = UserVariable
-		fields = ('device_pass', 'level', 'position', 'domain',
+		fields = ('device_pass', 'level', 'position',
 			'type', 'contact', 'max_no_answer', 'wrap_up_time',
 			'reject_delay_time','busy_delay_time','extension', 'dial_status')
 	def validate(self,data):
