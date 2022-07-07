@@ -720,6 +720,7 @@ $('#scSubmit').click(function() {
 function sipSessionHangup(){
     if(sipStack){
         sipStack.stop();
+        SIPml["b_initialized"] = false
     }else if (session){
         hangupCall()
     }
@@ -785,7 +786,7 @@ $('#btnLogMeOut').click(function() {
                     $("#agent-breaks-div").addClass("d-none")
                     if (call_type == 'webrtc') {
                         sipSessionHangup()
-                        SIPml["b_initialized"] = false
+                        
                     }
                     session_details[extension] = {};
                     crm_field_vue.field_schema = []
