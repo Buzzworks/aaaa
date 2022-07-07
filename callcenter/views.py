@@ -550,11 +550,6 @@ class DashBoardApiView(LoginRequiredMixin, APIView):
 		context['request'] = request
 		return Response(context)
 
-<<<<<<< HEAD
-=======
-
-
->>>>>>> 056ba5ca4e6f3b7af5522c08c15f9d8c759defae
 class EavesdropSessionApiView(LoginRequiredMixin, APIView):
 	"""
 	this view is for eavesdrop session for dashboard
