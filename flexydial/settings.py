@@ -234,8 +234,8 @@ INTERNAL_IPS = [IP_ADDRESS, "127.0.0.1"]
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
-SESSION_IDLE_TIMEOUT = 60*60
-SESSION_COOKIE_AGE = 540*60
+SESSION_IDLE_TIMEOUT = 240*60  # 4 hours
+SESSION_COOKIE_AGE = 540*60    # 9 hours
 # resetting the password url valid days
 PASSWORD_RESET_TIMEOUT_DAYS = 1
 
