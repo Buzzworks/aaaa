@@ -53,7 +53,7 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'django.contrib.postgres',
     'storages',
-    'captcha'
+    'captcha',
     # 'debug_toolbar',
     "rest_framework.authtoken",
 ]
