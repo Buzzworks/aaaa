@@ -62,3 +62,4 @@ django-storages==1.12.3
 openpyxl==3.0.10
 et-xmlfile==1.1.0
 django-simple-captcha
+uwsgitop
