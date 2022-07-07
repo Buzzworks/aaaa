@@ -155,7 +155,7 @@ def user_hierarchy(request,camp_name):
 	"""	
 	# users = User.objects.exclude(id=request.user.id)
 	admin=False
-	if request.user.is_superuser and request.user.user_role and request.user.user_role.access_level == 'Admin':
+	if request.user.is_superuser or (request.user.user_role and request.user.user_role.access_level == 'Admin'):
 		users = User.objects.exclude(id=request.user.id)
 		admin = True
 	else:
