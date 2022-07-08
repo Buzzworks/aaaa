@@ -87,9 +87,9 @@ def get_login_agent():
 	""" 
 	get the login agents from redis
 	"""
-	total_agents_df = get_all_keys_data_df()
-	campaign_pd = total_agents_df[(total_agents_df['username']!="")]    
-	agent_logged_in=campaign_pd['username'].tolist()
+	agent_keys = get_all_agent_key()
+	agent_keys_str=str(agent_keys)
+	agent_logged_in=re.findall("\d+",agent_keys_str)
 	return agent_logged_in
 
 class CheckCanEditView(APIView):
@@ -135,11 +135,11 @@ class CheckCanEditView(APIView):
 				return JsonResponse({"selected_entries":switch_list})       
 			if model_name == "User":
 				agent_logged_in = get_login_agent()
-				user_list = list(User.objects.filter(id__in=selected_entries).exclude(username__in=agent_logged_in).values_list("id",flat=True))
+				user_list = list(User.objects.filter(id__in=selected_entries).exclude(properties__extension__in=agent_logged_in).values_list("id",flat=True))
 				return JsonResponse({"selected_entries":user_list}) 
 			if model_name == "Group":
 				agent_logged_in = get_login_agent()
-				group_list = list(User.objects.filter(username__in=agent_logged_in, group__isnull=False).values_list("group__id",flat=True))
+				group_list = list(User.objects.filter(properties__extension__in=agent_logged_in, group__isnull=False).values_list("group__id",flat=True))
 				group_ids = list(Group.objects.filter(id__in=selected_entries).exclude(id__in=group_list).values_list("id",flat=True))
 				return JsonResponse({"selected_entries":group_ids})
 			if model_name == "Phonebook":
@@ -944,7 +944,7 @@ def default_agent_status(extension,agent_dict):
 	return agent_dict
 
 def get_all_keys_data_df(team_extensions=''):
-	keysdata = settings.R_SERVER.scan_iter("flexydial_*")
+	keysdata = get_all_agent_key()
 	total_agents_df = pd.DataFrame()
 	if team_extensions:
 		team_extensions =[bytes("flexydial_"+s, encoding='utf-8')  for s in team_extensions]
@@ -959,7 +959,7 @@ def get_all_keys_data_df(team_extensions=''):
 	return total_agents_df
 
 def get_all_keys_data(team_extensions=""):
-	keysdata = settings.R_SERVER.scan_iter("flexydial_*")
+	keysdata = get_all_agent_key()
 	agent_dict = {}
 	if team_extensions:
 		team_extensions =[bytes("flexydial_"+s, encoding='utf-8')  for s in team_extensions]
@@ -972,3 +972,6 @@ def get_all_keys_data(team_extensions=""):
 			AGENTS = get_agent_status(k.decode('utf-8'),True)
 			agent_dict.update(AGENTS)
 	return agent_dict
+
+def get_all_agent_key():
+	return settings.R_SERVER.scan_iter("flexydial_*")

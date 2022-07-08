@@ -223,7 +223,7 @@ class GroupSerializer(serializers.ModelSerializer):
 
 	def get_is_edit(self, obj):
 		agent_logged_in = get_login_agent()
-		group_list = list(User.objects.filter(username__in=agent_logged_in).values_list("group__id",flat=True))
+		group_list = list(User.objects.filter(properties__extension__in=agent_logged_in).values_list("group__id",flat=True))
 		if obj.id in group_list:
 			return "false"
 		return "true"

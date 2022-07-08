@@ -530,7 +530,7 @@ def get_pre_campaign_edit_info(pk, request):
 	data["is_non_admin"] = check_non_admin_user(request.user)
 	data['non_user'] = []
 	if request.user.is_superuser:
-		users=User.objects.all()
+		users = User.objects.all().values('id',"username")
 	else:
 		users = User.objects.filter(id__in=user_hierarchy_func(request.user.id))
 	if data["is_non_admin"]:

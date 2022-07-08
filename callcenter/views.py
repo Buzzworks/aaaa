@@ -1871,15 +1871,6 @@ class CampaignEditApiView(LoginRequiredMixin, APIView):
 		data["transfer_options"] = TRANSFER_MODE
 		data['enable_wfh'] = pickle.loads(settings.R_SERVER.get('enable_wfh') or pickle.dumps(False))
 		data['enable_vb'] = pickle.loads(settings.R_SERVER.get('enable_vb') or pickle.dumps(False))
-		# AGENTS = get_all_keys_data()
-		# if AGENTS:
-		# 	all_agents = list(AGENTS.keys())
-		# 	for extension in all_agents:
-		# 		if str(extension) in AGENTS and 'campaign' in AGENTS[str(extension)] and AGENTS[str(extension)]['campaign']==data['campaign'].name:
-		# 			data['is_edit'] = False
-		# 			break
-		all_trunk = DialTrunk.objects.filter(status="Active")
-		data["trunk_list"] = list(all_trunk.annotate(text=F('name')).values("text","id","did_range"))
 		data = {**data, **kwargs['permissions']}
 		return Response(data)
 
