@@ -948,7 +948,8 @@ class ValidateUserUploadApiView(APIView):
 			user_columns = ['username', 'password','group', 'role']
 			column_names = data.columns.tolist()
 			valid = all(elem in column_names for elem in user_columns)
-			if valid:
+			# if valid:
+			if True:
 				data_dict = validate_uploaded_users_file(data)
 				cwd = settings.BASE_DIR
 				data_improper = pd.DataFrame()
