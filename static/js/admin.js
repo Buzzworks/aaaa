@@ -5046,7 +5046,13 @@ function get_phonebook_status(key){
                         $("#success-"+key_phonebook).html('<p class="text-success" id="success-' + key_phonebook + '">Completed</p>')
 
                     }else{
-                         $("#success-"+key_phonebook).html("<div class='progress progress-lg mt-2'><div class='progress-bar bg-success' role='progressbar' style=\"width:" + data1[''+key_phonebook+''] + "%\" aria-valuenow=" + data1[''+key_phonebook+''] + "% aria-valuemin=\"0\" aria-valuemax=\"100\" id='progress-" + key_phonebook + "'>" + data1[''+key_phonebook+''] + "%</div>");
+                        $("#success-"+key_phonebook).html("<div class='progress progress-lg mt-2'><div class='progress-bar bg-success' role='progressbar' style=\"width:" + data1[''+key_phonebook+''] + "%\" aria-valuenow=" + data1[''+key_phonebook+''] + "% aria-valuemin=\"0\" aria-valuemax=\"100\" id='progress-" + key_phonebook + "'>" + data1[''+key_phonebook+''] + "%</div>");
+                        $('.sch-download , .file-download').click(function(){
+                            $('.sch-download , .file-download').addClass('disabled')
+                        });
+                        $('.fa-undo-alt').click(function(){
+                            $('.fa-undo-alt').removeClass('disabled')
+                        });
                     }
                    
                 }
