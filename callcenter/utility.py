@@ -852,7 +852,8 @@ def upload_users(data, logged_in_user):
 		
 
 		user, created = User.objects.get_or_create(username=username)
-		user_role = row.get("role",user.user_role.name)
+		user_role = row.get("role")
+		# user_role = row.get("role",user.user_role.name)
 		if user_role:
 			role = UserRole.objects.get(name__iexact=user_role.strip())
 			user.user_role = role
