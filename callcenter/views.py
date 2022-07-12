@@ -945,11 +945,11 @@ class ValidateUserUploadApiView(APIView):
 				data = pd.read_csv(user_file, na_filter=False, dtype={"extension" : "str"})
 			else:
 				data = pd.read_excel(user_file,na_filter=False, dtype={"extension" : "str"})
-			user_columns = ['username', 'password','group', 'role']
+			#user_columns = ['username', 'password','group', 'role']
+			user_columns = ['username'] #now taking only usernames which will is mandatory
 			column_names = data.columns.tolist()
 			valid = all(elem in column_names for elem in user_columns)
-			# if valid:
-			if True:
+			if valid:
 				data_dict = validate_uploaded_users_file(data)
 				cwd = settings.BASE_DIR
 				data_improper = pd.DataFrame()
