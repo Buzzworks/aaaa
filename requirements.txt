@@ -64,3 +64,4 @@ et-xmlfile==1.1.0
 django-simple-captcha
 uwsgitop
 newrelic
+google-cloud-profiler

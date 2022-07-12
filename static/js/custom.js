@@ -703,7 +703,7 @@ $('#scSubmit').click(function() {
         },
         error: function(data) {
             $('.preloader').fadeOut('fast');
-            errorAlert('OOPS!!! Something Went Wrong', data['responseJSON']['error']);
+            errorAlert('OOPS!!! Something Went Wrong','');
             initial_dialler_state()
             $("#select_camp").prop('selectedIndex', 0);
             $('#scSubmit').prop('disabled', true);
