@@ -571,7 +571,7 @@ $("#create-user-btn").click(function() {
             },
             error: function (data) {
                 $('.preloader').fadeOut('fast');
-                if (data["responseJSON"]["errors"]["employee_id"]) {
+		if (data["responseJSON"]["errors"]&& 'employee_id' in data["responseJSON"]["errors"]) {
                     $("#employee_id-error").html(`<span class="help-block form-error">${data["responseJSON"]["errors"]["employee_id"]}</span>`).addClass('has-error')
                     $("#employee_id").removeClass("valid").addClass("error")
                 }
