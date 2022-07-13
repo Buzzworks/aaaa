@@ -12,9 +12,6 @@ exec > ~/freeswitch-install.log 2>&1
 ##load global Environment variable
 source /etc/environment
 
-docker login -u vedakatta -p ${DOCKER_TOKEN}
-
-docker pull vedakatta/flexydial-app
 
 OS_NAME=$(cat /etc/os-release | grep "^NAME=" | cut -c 6- | sed 1q | sed -e 's/^"//' -e 's/"$//' | awk '{print $1}')
 OS_VERSION=$(cat /etc/os-release | grep  "VERSION_ID=" |  cut -c 12- | sed -e 's/^"//' -e 's/"$//')
@@ -82,6 +79,10 @@ CRM_DB_PASS=flexydial
 CRM_DB_HOST=${DB_HOST}
 REDIS_HOST=${REDIS_HOST}
 EOT
+if [ "${ENV}" != "DEV" ]; then
+docker login -u vedakatta -p ${DOCKER_TOKEN}
+
+docker pull vedakatta/flexydial-app
 
 cat <<EOT > /etc/systemd/system/flexydial-cdrd-docker.service
 [Unit]
@@ -118,3 +119,40 @@ ExecStop=/usr/bin/docker stop flexydial-autodial
 [Install]
 WantedBy=multi-user.target
 EOT
+else
+cat <<EOT > /etc/systemd/system/flexydial-cdrd-docker.service
+[Unit]
+Description=FlexyDial CDR Container
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+Restart=always
+RestartSec=1
+#ExecStartPre=/usr/bin/docker pull vedakatta/flexydial-app
+ExecStart=/usr/bin/docker run --rm --env-file /etc/default/flexydial-app --name flexydial-cdr flexydial-app python manage.py cdrd
+ExecStop=/usr/bin/docker stop flexydial-cdr
+
+[Install]
+WantedBy=multi-user.target
+EOT
+
+cat <<EOT > /etc/systemd/system/flexydial-autodial-docker.service
+[Unit]
+Description=FlexyDial AutoDial Container
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+Restart=always
+RestartSec=1
+#ExecStartPre=/usr/bin/docker pull vedakatta/flexydial-app
+ExecStart=/usr/bin/docker run --rm -v /var/lib/flexydial/media:/var/lib/flexydial/media --env-file /etc/default/flexydial-app --name flexydial-autodial flexydial-app python manage.py autodial
+ExecStop=/usr/bin/docker stop flexydial-autodial
+
+[Install]
+WantedBy=multi-user.target
+EOT
+fi

@@ -10,3 +10,5 @@ docker
 Dockerfile
 .dockerignore
 .github
+DEV_SETUP.md 
+Dockerfile.dev
