@@ -949,6 +949,12 @@ class ValidateUserUploadApiView(APIView):
 			user_columns = ['username'] #now taking only usernames which will is mandatory
 			column_names = data.columns.tolist()
 			valid = all(elem in column_names for elem in user_columns)
+			db_usernames=list(User.objects.exclude(username='admin').values_list('username',flat=True))
+			data_usernames=data['username'].tolist()
+			oth_users=set(db_usernames)^set(data_usernames)
+			if len(oth_users)!=0:#checking if users added if added the below cols are mandatory
+				user_columns=['username','password','role','status']
+				valid = all(elem in column_names for elem in user_columns)
 			if valid:
 				data_dict = validate_uploaded_users_file(data)
 				cwd = settings.BASE_DIR
