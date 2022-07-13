@@ -951,8 +951,7 @@ class ValidateUserUploadApiView(APIView):
 			valid = all(elem in column_names for elem in user_columns)
 			db_usernames=list(User.objects.exclude(username='admin').values_list('username',flat=True))
 			data_usernames=data['username'].tolist()
-			oth_users=set(db_usernames)^set(data_usernames)
-			if len(oth_users)!=0:#checking if users added if added the below cols are mandatory
+			if (set(data_usernames).issubset(set(db_usernames))):#checking if users added if added the below cols are mandatory
 				user_columns=['username','password','role','status']
 				valid = all(elem in column_names for elem in user_columns)
 			if valid:
