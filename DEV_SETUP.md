@@ -1,3 +1,6 @@
+echo APP_PATH=<currentAPPdirectory> >> /etc/environment
+example :
+    echo APP_PATH=/home/buzzworks/flexydial >> /etc/environment
 1. sudo su
 2. cd tools/
 3. chmod -R  +x *
