@@ -950,6 +950,11 @@ class ValidateUserUploadApiView(APIView):
 			column_names = data.columns.tolist()
 			valid = all(elem in column_names for elem in user_columns)
 			db_usernames=list(User.objects.exclude(username='admin').values_list('username',flat=True))
+			if 'username' not in data.columns:
+				data = {}
+				data["column_err_msg"] = 'username column is mandatory'
+				data["column_id"] = "#upload-file-error"
+				return Response(data)
 			data_usernames=data['username'].tolist()
 			data_usernames = map(str, data_usernames)#convert to str as if given num takes as int
 			y=(set(data_usernames).issubset(set(db_usernames)))
