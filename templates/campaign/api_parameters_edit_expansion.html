@@ -1,0 +1,124 @@
+{% load static %}
+
+<style>
+    .cancel{
+        position: absolute;
+        float: right;
+        right: 5rem;
+        margin-top: -3.4rem;
+    }
+    .Add{
+        position: absolute;
+        right: 4rem;
+        margin-top: -4px;
+        z-index: 1;
+    }
+</style>
+<div id="api_divs" class="d-none all">
+    <span class="Add"><i class="fas fa-plus-circle text-success"></i></span>
+    <div class="col-lg-12 p-0"> 
+        <div class="formi">
+          <div class="control-group input-group para-block">  
+              <div class="col-lg-5 p-0"> 
+                  <div class="form-group row" id="api_parameters_div">
+                      <label for="" class="col-sm-4 col-form-label">API Parameters:</label>
+                          <div class="col-sm-6">
+                              <select id="api_parameters" class="para" onchange="updatealias(this)">
+                                {% for usr_fields in user_fields%}
+                                    <option value="{{usr_fields}}">{{usr_fields}}</option>
+                                {% endfor %}
+                                {% for field,title in crm_field.items %}
+                                    <option value="{{field}}" title="{{field}}">{{title}}</option>
+                                {% endfor %}
+                                    <option value="custom">custom</option>
+                              </select>
+                          </div>
+                  </div>
+              </div>
+              <div class="col-lg-5 alias_name" id="alias_name">
+                    <div class="form-group row">
+                        <label for="alias_name" class="col-sm-4 col-form-label">Alias Name:</label>
+                       <div class="col-sm-6">
+                        <input type="text" class="form-control alias" id="api_parameter_alias_name" placeholder="Alias Name" name="api_parameter_alias_name">
+                       </div>  
+                    </div>
+              </div>
+              <div class="row d-none alias_check" id="alias_check" >
+                <div class="col-lg-5">
+                    <div class="form-group row">
+                            <label for="" class="col-sm-3 col-form-label">key:</label>
+                        <div class="col-sm-8">
+                            <input type="text" class="form-control alias_key" id="api_parameter_alias_key" placeholder="key" name="api_parameter_alias_key">
+                        </div> 
+                    </div> 
+                </div>
+              <div class="col-lg-5">
+                  <div class="form-group row">
+                          <label for="" class="col-sm-3 col-form-label">value:</label>
+                      <div class="col-sm-8">
+                          <input type="text" class="form-control alias_value" id="api_parameter_alias_value" placeholder="value" name="api_parameter_alias_value">
+                      </div>  
+                  </div>
+              </div>
+            </div> 
+          </div>
+          <span class="cancel"><i class="fa fa-times-circle ml-1 ml-sm-2 text-danger"></i></span>
+        </div>
+    </div>
+</div>
+<!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.0.1/jquery.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/select2/4.0.0/js/select2.min.js"></script> -->
+  <script src="{% static '/js/vendor.bundle.base.js' %}"></script>
+<script>
+function updatealias(parameter_this){
+    console.log(parameter_this.value)
+    if(parameter_this.value=="custom"){
+        var parent_obj = $(parameter_this).parents('.formi')
+        parent_obj.find('.alias_name').addClass('d-none')
+        parent_obj.find('.alias_check').removeClass('d-none')
+    }
+}
+$(document).ready(function() {
+  
+  
+  $('select').select2();
+  $(".Add").click(function() {
+    $('select').select2('destroy');
+    $(".formi").eq(0).clone().show().insertAfter(".formi:last");
+    $(".formi:last").find('.alias_name').removeClass('d-none')
+    $(".formi:last").find('.alias_check').addClass('d-none')
+    $(".formi:last input").val('');
+    $(".formi:last select").val('');
+    $('select').select2();
+  });
+  $('.all').on('click', ".cancel", function() {
+    $(this).closest('.formi').remove();
+  });
+  
+  var thirdparty_obj = {{thirdparty_obj.weburl|safe}};
+  if(thirdparty_obj && thirdparty_obj['parameters']){
+    var parameters = thirdparty_obj['parameters']   
+    var length = Object.keys(parameters).length;
+    var count = 0
+    for (var key in parameters){
+        var value = parameters[key];
+        console.log("count",count, key,value)
+        $('.para').eq(count).val(key).change();
+        if (key == "custom"){
+            $('.alias_name').eq(count).addClass('d-none')
+            $('.alias_check').eq(count).removeClass('d-none')
+            for (var key2 in value){
+                $('.alias_key').eq(count).val(key2);
+                $('.alias_value').eq(count).val(value[key2]);
+            }
+        }else{
+            $('.alias').eq(count).val(value) 
+        }
+        count +=1
+        if (count < length){
+            $('.Add').trigger('click')
+        }
+    }
+  }
+});
+</script>

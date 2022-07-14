@@ -264,6 +264,38 @@ class AlternateContactSerializer(serializers.ModelSerializer):
 	def get_alt_numeric(self, obj):
 		return ','.join(obj.alt_numeric.values())
 
+import pandas as pd
+from .models import *
+class MasterContactSerializer(serializers.ModelSerializer):
+	class Meta:
+		model=MasterContact
+		fields='__all__'
+
+	def validate(self,strdict):
+		strdict['customer_raw_data']=eval(strdict['customer_raw_data'])#converting as dict if string querying not coming
+		return strdict
+
+from datetime import datetime
+class ScheduleMasterContactSerializer(serializers.ModelSerializer):
+	mcdata = serializers.JSONField() # change is here
+	class Meta:
+		model=ScheduleMasterContact
+		fields='__all__'
+
+	def validate(self,data):
+		now=datetime.now()
+		ref_id=now.strftime("%Y%m%d%H%M%S")+str(self.context['request'].user)
+		initial_dict_list=data['mcdata']
+		final_data_list=[]
+		for x in initial_dict_list:
+			modified_dct={}
+			modified_dct.update({"numeric":x.pop('numeric'),"unique_id":x.pop('unique_id'),"customer_raw_data":x})
+			final_data_list.append(modified_dct)
+		df=pd.DataFrame(final_data_list)
+		df=df.to_csv('/var/lib/flexydial/media/upload/'+ref_id+"tmp_file.csv",index=False)
+		data['mcdata']='upload/'+ref_id+"tmp_file.csv"
+		data['ref_id']=ref_id
+		return data
 class UniqueSerializer(serializers.ModelSerializer):
 	cdr_feedback = serializers.SerializerMethodField()
 	c_name=serializers.SerializerMethodField()

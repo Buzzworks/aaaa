@@ -1,3 +1,4 @@
+from enum import unique
 import os,sys
 import ntpath
 from django.shortcuts import render
@@ -16,6 +17,7 @@ from django.db.models import Q, F, Sum, TimeField, Value, Count,Max, Prefetch, C
 from django.db.models.functions import Cast, Coalesce, Concat
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
+from rest_framework.permissions import IsAuthenticated
 import csv
 import itertools
 from django.contrib.sessions.models import Session
@@ -73,7 +75,7 @@ from .utility import (delete_all_unexpired_sessions_for_user, delete_session, ge
 		get_model_data, validate_uploaded_dnc,upload_dnc_nums,submit_feedback, customer_detials, convert_into_timedelta,
 		total_list_users,camp_list_users,user_hierarchy, user_hierarchy_object, update_contact_on_css, get_transform_key, update_contact_on_portifolio,
 		validate_third_party_token,get_temp_contact,get_contact_data, upload_template_sms,get_crm_fields_dict, channel_trunk_single_call, DownloadCssQuery,get_campaign_did, get_group_did,DownloadCssQuery,diff_time_in_seconds,
-		save_report_column_visibility, get_report_visible_column,save_email_log, get_used_did, get_used_did_by_pk,convert_into_timeformat, email_connection, check_non_admin_user, getDaemonsStatus,upload_holiday_dates,read_status,get_agent_status,set_agent_status,get_all_keys_data_df,get_all_keys_data)
+		save_report_column_visibility, get_report_visible_column,save_email_log, get_used_did, get_used_did_by_pk,convert_into_timeformat, email_connection, check_non_admin_user, getDaemonsStatus,upload_holiday_dates,read_status,convert_timedelta_hrs,get_agent_status,set_agent_status,get_all_keys_data_df,get_all_keys_data)
 
 from .decorators import (user_validation, group_validation,campaign_validation,
 		campaign_edit_validation, phone_validation, dispo_validation, relationtag_validation,
@@ -552,8 +554,6 @@ class DashBoardApiView(LoginRequiredMixin, APIView):
 			return JsonResponse(context)
 		context['request'] = request
 		return Response(context)
-
-
 
 class EavesdropSessionApiView(LoginRequiredMixin, APIView):
 	"""
@@ -2461,7 +2461,7 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 		show_result = request.GET.get("show_result", "")
 		context = {'request': request, 'campaign_list': campaign_list}
 		all_fields = {'diallereventlog':['hangup_cause','hangup_cause_code','dialed_status'],'smslog':['sms_sent','sms_message'],
-		"calldetail":['campaign_name','user','full_name','supervisor_name','phonebook','customer_cid','contact_id','uniqueid',
+		"calldetail":['campaign_name','user','full_name','customer_name','client_name','supervisor_name','phonebook','customer_cid','contact_id','uniqueid',
 		'session_uuid','init_time','ring_time','connect_time','hangup_time','wait_time','ring_duration','hold_time','callflow','callmode',
 		'bill_sec','ivr_duration','call_duration','feedback_time','call_length','hangup_source','internal_tc_number','external_tc_number','progressive_time','preview_time','predictive_wait_time','inbound_wait_time','blended_wait_time'],
 		'cdrfeedback':['primary_dispo','feedback','relationtag']}
@@ -3195,7 +3195,7 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		context["report_visible_cols"] = report_visible_cols
 		context["campaign_list"] =campaign_list
 		context['all_fields'] =  ('username','full_name','supervisor_name','campaign','app_idle_time','dialer_idle_time','pause_progressive_time','progressive_time','preview_time',
-				'predictive_wait_time','inbound_wait_time','blended_wait_time','ring_duration','hold_time','media_time','bill_sec','call_duration','feedback_time','break_time','app_login_time'
+				'predictive_wait_time','inbound_wait_time','blended_wait_time','ring_duration','ring_duration_avg','hold_time','media_time','predictive_wait_time_avg','talk','talk_avg','bill_sec','bill_sec_avg','call_duration','feedback_time','feedback_time_avg','break_time','break_time_avg','app_login_time'
 				) + pause_breaks + ('dialer_login_time','total_login_time','first_login_time','last_logout_time','total_calls','total_unique_connected_calls')
 		# context["user_list"] = list(user_list)
 		context["user_list"] = user_in_hirarchy_level(request.user.id)
@@ -3278,6 +3278,7 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 					dialer_idle_time=Cast(Coalesce(Sum('idle_time',filter=dialler_idle_time_filter),default_time),TextField())
 					)
 			break_time_cal= {}
+			total_calls = calldetail.count()
 			break_name = list(PauseBreak.objects.values_list('name',flat=True))
 			for break_cal in break_name:
 				break_time_cal[break_cal] = agentactivity.filter(break_type=break_cal).aggregate(break_time__sum=Cast(Coalesce(Sum('break_time'),default_time),TextField())).get('break_time__sum')
@@ -3285,6 +3286,34 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 			pw_time = convert_into_timedelta(activity_cal['predictive_wait_time']).total_seconds()
 			preview_time = convert_into_timedelta(activity_cal['preview_time']).total_seconds()
 			break_time = convert_into_timedelta(activity_cal['break_time']).total_seconds()
+			talk_call = convert_into_timedelta(calldetail['bill_sec']).total_seconds()
+			ring_duration =convert_into_timedelta(calldetail_cal['ring_duration']).total_seconds()
+			feedback_time =convert_into_timedelta(calldetail_cal['feedback_time']).total_seconds()
+			talk_total = int(talk_call) + int(feedback_time) + int(ring_duration)
+			customer_talk = int(talk_call) + int(ring_duration)
+			calldetail_cal['talk'] = convert_timedelta_hrs(timedelta(seconds=talk_total))
+			calldetail_cal['bill_sec'] = convert_timedelta_hrs(timedelta(seconds=customer_talk)) 
+			if total_calls:
+				break_time_avg = ((convert_into_timedelta(activity_cal['break_time']).total_seconds())/total_calls)
+				talk_avg = ((int(talk_call)+int(feedback_time)+int(ring_duration))/total_calls)
+				feedback_time_avg = ((convert_into_timedelta(calldetail_cal['feedback_time']).total_seconds())/total_calls)
+				customer_avg_talk = ((int(talk_call)+int(ring_duration))/total_calls)
+				pw_wait_avg = (int(pw_time)/total_calls)
+				calldetail_cal['bill_sec_avg'] = convert_timedelta_hrs(timedelta(seconds=customer_avg_talk))
+				wait_avg = ((convert_into_timedelta(calldetail_cal['ring_duration']).total_seconds())/total_calls)
+				calldetail_cal['break_time_avg'] =  convert_timedelta_hrs(timedelta(seconds=break_time_avg))
+				calldetail_cal['talk_avg'] = convert_timedelta_hrs(timedelta(seconds=talk_avg)) 
+				calldetail_cal['feedback_time_avg'] =  convert_timedelta_hrs(timedelta(seconds=feedback_time_avg)) 
+				calldetail_cal['ring_duration_avg'] = convert_timedelta_hrs(timedelta(seconds=wait_avg)) 
+				activity_cal['predictive_wait_time_avg'] = convert_timedelta_hrs(timedelta(seconds=pw_wait_avg)) 
+			else:
+				default_time_delta_sec = timedelta(hours=0,minutes=0,seconds=0).total_seconds()
+				calldetail_cal['break_time_avg'] = time.strftime("%H:%M:%S", time.gmtime(default_time_delta_sec))
+				calldetail_cal['talk_avg'] = time.strftime("%H:%M:%S", time.gmtime(default_time_delta_sec))
+				calldetail_cal['feedback_time_avg'] = time.strftime("%H:%M:%S", time.gmtime(default_time_delta_sec))
+				calldetail_cal['bill_sec_avg'] = time.strftime("%H:%M:%S", time.gmtime(default_time_delta_sec))
+				calldetail_cal['ring_duration_avg'] = time.strftime("%H:%M:%S", time.gmtime(default_time_delta_sec))
+				activity_cal['predictive_wait_time_avg'] = time.strftime("%H:%M:%S", time.gmtime(default_time_delta_sec)) 
 			iw_time = convert_into_timedelta(activity_cal['inbound_wait_time']).total_seconds()
 			bw_time = convert_into_timedelta(activity_cal['blended_wait_time']).total_seconds()
 			ai_time = convert_into_timedelta(activity_cal['app_idle_time']).total_seconds()
@@ -4593,6 +4622,29 @@ class DNCCreateModifyApiView(APIView):
 					temp_contact_data.delete()
 				return Response({"success":"Dnc updated successfully"})
 
+class DNCUpdateApiView(APIView):
+	permission_classes = (IsAuthenticated,)
+
+	def post(self,request):
+		uniqueid = request.data.get("unique_id","")
+		disposition = request.data.get('disposition',"")
+		expiry_date = request.data.get("expiry_date")
+		try:
+			if uniqueid and disposition == "DNC":
+				contact = Contact.objects.filter(uniqueid=uniqueid).first()
+				if contact:
+					DNC.objects.update_or_create(numeric=contact.numeric,global_dnc=True,uniqueid=uniqueid,defaults={"numeric":contact.numeric,"global_dnc":True,"uniqueid":uniqueid,"status":'Active','dnc_end_date':expiry_date})
+					temp_contact_data = TempContactInfo.objects.filter(numeric=contact.numeric)
+					temp_contact_id = temp_contact_data.values_list("id",flat=True)
+					Contact.objects.filter(Q(id__in=temp_contact_id)|Q(numeric=contact.numeric)).update(status="Dnc")
+					temp_contact_data.delete()
+					return JsonResponse({"message":"DNC Updated Sucessfully."},status=200)
+				else:
+					return JsonResponse({"message":"Contact does not exists, Kindly check the Unique_id"},status=500)
+			else:
+				return JsonResponse({"message":"Invalid data."}, status=500)
+		except Exception as e:
+			return JsonResponse({"message":"Contact Administrator. "+e}, status=500)
 
 class DNCUploadApiView(APIView):
 	"""
@@ -4614,6 +4666,37 @@ class DNCUploadApiView(APIView):
 		if improper_file:
 			os.remove(cwd+improper_file)
 		return Response({"msg": "file removed successfully"})
+
+class ThirdPartyApiDispositionUpdateView(APIView):
+	permission_classes = [AllowAny]
+	def post(self,request):
+		serializer = ThirdPartyApiDispositionSerializer(data=request.data)
+		if serializer.is_valid():
+			try:
+				serializer.save()
+				uniqueid_filter = Contact.objects.filter(uniqueid=serializer.data['unique_id'])
+				if not uniqueid_filter:
+					return JsonResponse({"error": f"unique_id {serializer.data['unique_id']} is not found contact."}, status=400)
+				mobile_number = uniqueid_filter[0].numeric
+				extension= None
+				agent_status = pickle.loads(settings.R_SERVER.get("agent_status"))
+				for ext in agent_status:
+					if agent_status[ext]['dial_number'] == str(mobile_number):
+						extension = agent_status[ext]['extension']
+						break			
+				if extension:
+					redis_data = {
+						"extension": extension,
+						"disposition": request.data['disposition'],
+						"disposition_desc": request.data['disposition_desc']
+					}
+					settings.R_SERVER.publish('api_disp_extension',message=json.dumps(redis_data))	
+					return JsonResponse({"message": "Dispositions successfully saved.."}, status=200)
+				return JsonResponse({"message": "Dispositions successfully saved.."}, status=200)
+			except Exception as e:
+				return JsonResponse({"error": f"Something Went Wrong, Kindly Contact Administrator. {e}"}, status=400)
+		else:
+			return JsonResponse(serializer.errors, status=400)
 
 class AutodialCustomerDetail(APIView):
 	"""
@@ -7269,7 +7352,7 @@ class ThirdPartyCreateAPIView(LoginRequiredMixin,APIView):
 		context['campaigns'] = campaigns.exclude(apicampaign__in=ThirdPartyApi.objects.all())
 		context['api_status'] = Status
 		context['api_modes'] = API_MODE
-		context['user_fields'] = ['user_id','username','user_extension','campaign_id', 'campaign_name']
+		context['user_fields'] = ['user_id','username','user_extension','campaign_id', 'campaign_name','numeric','dialed_uuid']
 		context = {**context,**kwargs['permissions']}
 		return Response(context)
 	def post(self,request,**kwargs):
@@ -7301,7 +7384,7 @@ class ThirdPartyEditAPIView(LoginRequiredMixin,APIView):
 			context['non_user_campaign'] = list(thirdparty_obj.campaign.exclude(id__in=campaigns.values_list('id',flat=True)).values_list('name',flat=True))
 		context['campaigns'] = campaigns.exclude(apicampaign__in=ThirdPartyApi.objects.all())
 		context['thirdparty_obj'] = thirdparty_obj
-		context['user_fields'] = ['user_id','username','user_extension','campaign_id', 'campaign_name']
+		context['user_fields'] = ['user_id','username','user_extension','campaign_id', 'campaign_name','numeric','dialed_uuid']
 		crm_obj = CrmField.objects.filter(campaign__name__in=list(thirdparty_obj.campaign.values_list('name',flat=True)))
 		if thirdparty_obj.campaign.exists():
 			if crm_obj:

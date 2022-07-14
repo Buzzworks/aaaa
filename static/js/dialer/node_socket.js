@@ -2,6 +2,8 @@ autodial_hangup = false
 inbound_hangup = false
 blended_hangup = false
 var dap_details_data = ""
+var third_party_api_disp = false
+var third_party_api_sub_dispo = false
 var admin_socket = '';
 var agent_hangup_status = false
 
@@ -178,6 +180,21 @@ function socketevents (){
 			$('.preloader').fadeIn('fast');
 			errorAlert("Connetion Error","Error occured with Node connetion");
 			$('#btnLogMeOut').click();
+		})
+		socket.on("hangup_client", function(data){
+			data =  JSON.parse(data)
+			if (extension == data.extension){
+				if ($('#btnDialHangup').attr("title") == 'Hangup Call'){
+					$('#btnDialHangup').click()			
+				}
+				setTimeout(()=>{
+					third_party_api_disp = data['disposition']
+					third_party_api_sub_dispo = data['disposition_desc']
+					if (third_party_api_disp){
+						$("#submit_customer_info").trigger("click")
+					}
+				},3000)
+			}
 		})
 		socket.on("sip_hangup_client", function(data){
 			if (extension == data){

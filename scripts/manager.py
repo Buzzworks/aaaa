@@ -9,14 +9,22 @@ from apscheduler.jobstores.memory import MemoryJobStore
 from django.db import connections
 from callcenter.models import (Campaign,CallDetail,AgentActivity,User,
 	CdrFeedbck, CSS, CallBackContact, Abandonedcall,CurrentCallBack,
-	Notification,PhonebookBucketCampaign, DiallerEventLog,AdminLogEntry, Switch)
-from crm.models import Contact,TempContactInfo,Phonebook,DownloadReports, PhoneBookUpload
+	Notification,PhonebookBucketCampaign, DiallerEventLog,AdminLogEntry, Switch,LeadRecycle,BroadcastMessages,StickyAgent,)
+from crm.models import Contact,TempContactInfo,Phonebook,DownloadReports, PhoneBookUpload,MasterContact,ScheduleMasterContact
 from django.db.models import Q, Count, F
 from callcenter.utility import (get_agent_status, get_all_keys_data, get_current_users, download_call_detail_report, download_agent_perforance_report, campaignwise_performance_report,
 	download_agent_mis, download_agent_activity_report, download_campaignmis_report, download_callbackcall_report,
-	download_abandonedcall_report, set_agent_status,set_download_progress_redis, download_call_recordings, download_contactinfo_report, download_phonebookinfo_report,
-	download_billing_report, camp_list_users, DownloadCssQuery, download_call_recording_feedback_report,download_management_performance_report,download_alternate_contact_report, freeswicth_server,download_pendingcontacts_report)
+	download_abandonedcall_report,set_download_progress_redis, download_call_recordings, download_contactinfo_report, download_phonebookinfo_report,
+	download_billing_report, camp_list_users, DownloadCssQuery, download_call_recording_feedback_report,download_management_performance_report,download_alternate_contact_report, freeswicth_server,download_pendingcontacts_report,PasswordChangeAndLockedReminder)
 from dialer.dialersession import fs_administration_hangup
+from callcenter.schedulejobs import add_leadrecycle_db
+from subprocess import PIPE, Popen, call
+import inspect,json
+import time,os, sys, glob, shutil
+import dateutil
+from crm.serializers import MasterContactSerializer
+import numpy as np
+import pandas as pd
 
 ENABLE = False
 job_defaults = {
@@ -603,6 +611,327 @@ def set_pb_campaign_status():
 		transaction.commit()
 		connections["default"].close()
 
+def callback_queue():
+	"""
+	This function is used for update the callback contacts into queue and send notifications.
+	"""
+	try:
+		queue_callbacks = CallBackContact.objects.filter(Q(schedule_time__lte = datetime.now() + timedelta(minutes=5)
+			)&Q(status = 'NotDialed'))
+		if queue_callbacks:
+			CurrentCallBack_list=[]		
+			for queue_call in queue_callbacks:
+				if queue_call.callback_type == 'self' or queue_call.assigned_by:
+					message = "Dear Agent you have callback call scheduled by {}".format(queue_call.assigned_by)
+					noti_id = Notification.objects.create(campaign=queue_call.campaign,user=queue_call.user,title='callback',
+						message=message,numeric=queue_call.numeric, contact_id=queue_call.contact_id)
+				else:
+					message ="Dear Agent you have a {} schedule call on {} to {}".format(queue_call.callback_type,queue_call.schedule_time,queue_call.numeric)
+					noti_id = Notification.objects.create(campaign=queue_call.campaign,title='callback',message=message,numeric = queue_call.numeric,contact_id=queue_call.contact_id)
+
+				CurrentCallBack_list.append(CurrentCallBack(campaign=queue_call.campaign,user=queue_call.user,numeric = queue_call.numeric,
+						status ='NotDialed', contact_id =queue_call.contact_id, phonebook=queue_call.phonebook,callback_type=queue_call.callback_type,
+						schedule_time=queue_call.schedule_time,disposition=queue_call.disposition,comment=queue_call.comment,
+						callbackcontact_id=queue_call.id, notification_id=noti_id.id, callmode=queue_call.callmode))
+				camp_obj = Campaign.objects.filter(name=queue_call.campaign).first()
+				if camp_obj:
+					if camp_obj.auto_qcb_dial:
+						PhonebookBucketCampaign.objects.filter(id=camp_obj.id).update(is_contact=True)
+				queue_call.status ='Queued'
+			CurrentCallBack.objects.bulk_create(CurrentCallBack_list)
+			CallBackContact.objects.bulk_update(queue_callbacks,['status'])
+	except Exception as e:
+		print(e)
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
+	finally:
+		transaction.commit()
+		connections["default"].close()
+
+def update_leadrecycle_datetime():
+	"""
+	This function is used for update the lead recycle scheduletime for scheduling the lead into next day.
+	"""	
+	try:
+		leads =  LeadRecycle.objects.filter(Q(status='Active')&Q(schedule_type='schedule_time')&Q(ldr_period_update__lt=datetime.date(datetime.now())))
+		if leads:
+			for lead in leads:
+				schedule_period= json.loads(lead.schedule_period)
+				if schedule_period["start_time"] != "" and schedule_period["end_time"] !="":
+					start_datetime  = date.today().strftime('%Y-%m-%d')+' '+schedule_period["start_time"]+':00'
+					end_datetime = date.today().strftime('%Y-%m-%d')+' '+schedule_period["end_time"]+':00'
+					str_datetime_obj = datetime.strptime(start_datetime, '%Y-%m-%d %H:%M:%S')-timedelta(hours=5,minutes=30)
+					end_datetime_obj = datetime.strptime(end_datetime, '%Y-%m-%d %H:%M:%S')-timedelta(hours=5,minutes=30)
+					job_id = str(lead.campaign)+'_'+str(lead.id)
+					args=[str(lead.campaign),lead.name]			
+					sched.add_job(add_leadrecycle_db, 'interval',args=args, seconds=lead.recycle_time, start_date=str(str_datetime_obj),
+					end_date=str(end_datetime_obj), id =job_id)
+			leads.update(ldr_period_update=datetime.date(datetime.now()))
+	except Exception as e:
+		print(e)
+	finally:
+		transaction.commit()
+		connections['default'].close()
+
+def dump_database(host_name, db_name, user_name, db_password, backup_path='/var/lib/postgresql/'):
+	""" dumping the data into the folder for backup"""
+	try:
+		backup_date = time.strftime('%Y-%m-%d')
+		command = 'PGPASSWORD={5} pg_dump -h {0} -U {1} {2} | gzip > {3}{4}_{2}_backup.gz'.format(host_name, user_name, db_name, backup_path, backup_date,db_password)
+		p = Popen(command,shell=True,stdin=PIPE,stdout=PIPE,stderr=PIPE)
+		#p.communicate(bytes(db_password,'utf-8'))
+		return 
+	except Exception as e:
+		print(e)
+
+def dump_contact(file_path):
+	""" dumping the contact into the folder for backup"""
+	command = 'PGPASSWORD=flexydial pg_dump -h localhost -U flexydial --column-inserts --data-only -t crm_contact crm > {}'.format(file_path)
+	p = Popen(command,shell=True,stdin=PIPE,stdout=PIPE,stderr=PIPE)
+	
+def delete_all_downloads():
+	""" deleting all the downloads after one day"""
+	try:
+		last_date = datetime.now() - timedelta(days=1)
+		reports = DownloadReports.objects.filter(start_date__date__lte=last_date.date())
+		for report in reports:
+			report.downloaded_file.delete(save=False)
+			report.delete()
+	except Exception as e:
+		print(e,"delete_all_downloads error")
+
+def delete_lead_priority_after_period():
+	""" deleting the lead priority after the specific time """
+	try:
+		campaigns=Campaign.objects.filter().exclude(lead_priotize={})
+		if campaigns.exists():
+			for campaign in campaigns:
+				key = ''
+				for keys in campaign.lead_priotize.keys():
+					key = str(keys)
+				if 'tapd' in campaign.lead_priotize[key]:
+					current_date = datetime.now()
+					period = timedelta(days=1)
+					if 'weekly' in campaign.lead_priotize[key]['period']:
+						period = 7
+					if 'monthly' in campaign.lead_priotize[key]['period']:
+						period = 30
+					last_date = current_date - period
+					LeadListPriority.objects.filter(campaign_id=campaign.id,created_date__date__lte=last_date.date()).delete()
+	except Exception as e:
+		print(e,"delete_lead_priority_after_period error")
+		
+def restart_all_services():
+	""" restarting all the services """
+	try:
+		freeswitch_cmd = 'sudo service freeswitch restart'
+		cdrd_cmd = 'sudo service flexydial-cdrd restart'
+		autodial_cmd = 'sudo service flexydial-autodial restart'
+		dialplan_cmd = 'sudo service flexydial-fs-dialplan restart'
+		event_zmq = 'fs_cli -x "reload mod_event_zmq"'
+		xml_rpc ='fs_cli -x "reload  mod_xml_rpc"'
+		xml_curl ='fs_cli -x "reload  mod_xml_curl"'
+		freeswitch_status = call(freeswitch_cmd, shell=True)
+		print("services Re-starting................")
+		if freeswitch_status == 0:
+				event_zmq_status = call(event_zmq, shell=True)
+				xml_rpc_status = call(xml_rpc, shell=True)
+				xml_curl_status = call(xml_curl, shell=True)
+				cdrd_status = call(cdrd_cmd, shell=True)
+				autodial_status = call(autodial_cmd, shell=True)
+				dialplan_status = call(dialplan_cmd, shell=True)
+		else:
+				print("Error Re-starting freeswitch !...........")
+	except Exception as e:
+		print(e,"restart_all_services error")
+
+def reset_Redisdata():
+	""" resetting the redis data keys"""
+	try:
+		settings.R_SERVER.set("agent_status", pickle.dumps({}))
+		settings.R_SERVER.set("campaign_status", pickle.dumps({}))
+		settings.R_SERVER.set("inbound_status", pickle.dumps({}))
+		settings.R_SERVER.set("transfer_agents",{})
+		settings.R_SERVER.set("wfh_agents",pickle.dumps({}))
+		settings.R_SERVER.set("trunk_status", pickle.dumps({}))
+		settings.R_SERVER.set("phonebook", pickle.dumps({}))
+		settings.R_SERVER.set("download", pickle.dumps({}))
+		campaign = Campaign.objects.values('id','name')
+		for camp in campaign:
+			settings.R_SERVER.hset("ad_campaign_status",camp['name'], True)
+			settings.R_SERVER.hset("pb_campaign_status",camp['id'], True)
+		PhonebookBucketCampaign.objects.filter().update(agent_login_count=0)
+	except Exception as e:
+		print('Error in reset_Redisdata',e)
+
+def sagregate_recording_file():
+	""" segregatting the recording files into the folder"""
+	yesterday_date = (date.today() - timedelta(days=1)).strftime('%d-%m-%Y')
+	parent_dir = '/var/spool/freeswitch/default'
+	recording_dir_path = os.path.join(parent_dir, yesterday_date)
+	if not os.path.exists(recording_dir_path):
+		os.makedirs(recording_dir_path,0o777)
+	files = glob.glob(recording_dir_path+'-*')
+	for file in files:
+		shutil.move(file, recording_dir_path)
+	print('recording move to recording date directory')
+	
+
+def delete_one_month_ago_file():
+	"""
+	This function is used to delete
+	"""
+	now = datetime.now()
+	month_back = now + dateutil.relativedelta.relativedelta(months=-1)
+	month_back_date = month_back.date().strftime("%m.%d.%Y")
+	download_folder = settings.MEDIA_ROOT+"/download/"+month_back_date
+	contact_folder = settings.MEDIA_ROOT+"/contact_backup/"+month_back_date
+	if os.path.exists(download_folder):
+		shutil.rmtree(download_folder)	
+	if os.path.exists(contact_folder):
+		shutil.rmtree(contact_folder)	
+
+def sticky_agent_delete():
+	"""
+	This function is used for delete sticky agent entry for more than 7 days
+	"""
+	try:
+		last_date = datetime.now() - timedelta(days=7)
+		StickyAgent.objects.filter(created__date__lte=last_date.date()).delete()
+		Notification.objects.filter(created_date__date__lte=last_date.date()).delete()
+		BroadcastMessages.objects.filter(created__lte=last_date.date()).delete()
+		print('<----------------- DB Backup Start ------------------->')
+		db_backup_path = '/usr/local/src/db_backup/'
+		dump_database('localhost','flexydial','flexydial','flexydial',db_backup_path)
+		dump_database('localhost','crm','flexydial','flexydial',db_backup_path)
+		print('<----------------- DB Backup Complete ------------------->')
+		delete_all_downloads()
+		delete_lead_priority_after_period()
+		reset_Redisdata()
+		sagregate_recording_file()
+		delete_one_month_ago_file()
+		# restart_all_services()
+		# app.logger.info("Starting database backup at: " + backup_date)
+	except Exception as e:
+		print(e)
+	finally:
+		transaction.commit()
+		connections["default"].close()
+
+
+def MasterContactAutodial():
+	try:
+		contactobjs=ScheduleMasterContact.objects.filter(status='scheduled').order_by('id').first()
+
+		if contactobjs:
+			contactobjs.status='started'
+			contactobjs.save()
+			contact_objs_excel=contactobjs.mcdata
+			orginal_df=pd.read_csv(contact_objs_excel)
+
+			if orginal_df.dtypes['numeric']==int:#checking if numeric is intege, if integer then convert to object else pass
+				orginal_df.numeric=orginal_df['numeric'].astype(str)
+
+			lst=[]#list of unique id's for messages in improper data
+			improper_df_numerics=orginal_df[~orginal_df.numeric.apply(lambda x: x.isnumeric())]# remove ~ for proper df
+			lst.append({"notnumericid":improper_df_numerics['unique_id'].tolist()})
+
+			# improper_df_length=orginal_df[~(orginal_df['numeric'].str.len() == 10)]#make == for properdf, for 10 legth use range
+			improper_df_length=orginal_df[((orginal_df['numeric'].str.len() < 6)|(orginal_df['numeric'].str.len() > 10))]
+			# df[(x <= df['columnX']) & (df['columnX'] <= y)]
+
+			lst.append({"notlength":improper_df_length['unique_id'].tolist()})
+
+			cust_unique_id=list(MasterContact.objects.all().values_list('unique_id',flat=True))
+			cust_unique_id.append("911")
+			improper_df_cust_unq=orginal_df[orginal_df['unique_id'].isin(cust_unique_id)]
+			lst.append({"same_unique":improper_df_cust_unq['unique_id'].tolist()})
+
+
+			#CREATING PROPER DF
+			#if df contains other than numerics
+			numerics_lst=lst[0]['notnumericid']
+			proper_df_filtering_numerics=orginal_df[~orginal_df['unique_id'].isin(numerics_lst)]
+
+			#if df contains invalid length of numerics
+			numerics_lst_1=lst[1]['notlength']
+			proper_df_filtering_numerics=proper_df_filtering_numerics[~proper_df_filtering_numerics['unique_id'].isin(numerics_lst_1)]
+
+
+			#if df contains existing unique id's
+			numerics_lst_2=lst[2]['same_unique']
+			proper_df_filtering_numerics=proper_df_filtering_numerics[~proper_df_filtering_numerics['unique_id'].isin(numerics_lst_2)]
+
+			ref_id=contactobjs.ref_id
+			proper_df_filtering_numerics.to_csv("/var/lib/flexydial/media/upload/"+ref_id+"tmp_file_proper.csv",index=False)
+			contactobjs.proper_mcdata='upload/'+ref_id+"tmp_file_proper.csv"	#storing proper csv
+			contactobjs.save()
+
+
+			#CREATING IMPROPER DF
+			improper_df_filtering_numerics=orginal_df[orginal_df['unique_id'].isin(numerics_lst)]
+			improper_df_filtering_numerics['msg1']="must contains only numerics"
+
+			improper_df_filtering_numerics_1=orginal_df[orginal_df['unique_id'].isin(numerics_lst_1)]
+			improper_df_filtering_numerics_1['msg2']="must contain in numbers rnage of 6 to 10"
+
+			improper_df_filtering_numerics_2=orginal_df[orginal_df['unique_id'].isin(numerics_lst_2)]
+			improper_df_filtering_numerics_2['msg3']="must contain different unique id's"
+
+
+			# # learn append, merge, concat
+			improper_df=pd.concat([improper_df_filtering_numerics,improper_df_filtering_numerics_1,improper_df_filtering_numerics_2])
+			aggregation_functions = {'numeric':'first','unique_id':'first','customer_raw_data':'first','msg1': 'sum', 'msg2': 'sum', 'msg3': 'sum'}
+
+			improper_df = improper_df.groupby(improper_df['unique_id']).aggregate(aggregation_functions)
+
+			improper_df.to_csv("/var/lib/flexydial/media/upload/"+ref_id+"tmp_file_improper.csv",index=False)
+			contactobjs.improper_mcdata='upload/'+ref_id+"tmp_file_improper.csv"	#storing improper csv
+			contactobjs.save()
+
+			df_to_dict=proper_df_filtering_numerics.to_dict('records')
+			contactobjs.status='dbsaving'
+			contactobjs.save()
+			contactser=MasterContactSerializer(data=df_to_dict,many=True)
+			if contactser.is_valid():
+				contactser.save()
+				contactobjs.status='finished'
+				contactobjs.save()
+				print("saved in main contact table")
+
+			else:
+				print("errors in contact serializer saving",contactser.errors())
+
+			# contactobjs.status='scheduled'
+			# contactobjs.save()
+
+			"""
+			#this is the autodial code for master contact css execution
+			latest_push_ids=[]
+			for x in contactser.data:
+				id=dict(x)
+				id=id['id']
+				latest_push_ids.append(id)
+			print("latest ids is",latest_push_ids)
+
+			master_css_all=MasterCSS.objects.all()
+			contacts_list=[]
+			for each_query in master_css_all:
+				x=MasterContact.objects.filter(id__in=latest_push_ids).raw(each_query.raw_query)
+				print("x is",str(x),'type is',type(x))
+				for p in x:
+					if not Contact.objects.filter(numeric=p.numeric,campaign=each_query.campaign).exists():
+						contacts_list.append(Contact(numeric=p.numeric,campaign=each_query.campaign,contact_id=p))
+			Contact.objects.bulk_create(contacts_list)"""
+
+		else:
+			print("no scheduled moving are there")
+	except Exception as e:
+		print("exception in code errors",str(e))
+
+
+
 def Execute():
 	""" Script Execution Peridically for Back-end Activities"""
 	global ENABLE
@@ -623,6 +952,14 @@ def Execute():
 					   id='create_calldetial_missing_contact', jobstore='list')
 	sched.add_job(kill_unused_fs_channel,'interval', minutes=5, start_date=execution_time,
 					   id='kill_unused_fs_channel', jobstore='list')
+	sched.add_job(callback_queue, "interval", seconds=15, id='callback_queue')
+	sched.add_job(update_leadrecycle_datetime, "interval", minutes=60, id='update_leadrecycle_datetime')
+	db_backup_time = datetime.strptime('00:00','%H:%M') - timedelta(hours=5, minutes=30)
+	sched.add_job(sticky_agent_delete, 'cron', day_of_week='*', hour=db_backup_time.hour, minute=db_backup_time.minute, id='sticky_agent_delete')
+	password_reminder_email_time = datetime.strptime('00:00','%H:%M') - timedelta(hours=13, minutes=00)
+	sched.add_job(PasswordChangeAndLockedReminder, 'cron', day_of_week='*', hour=password_reminder_email_time.hour, minute=password_reminder_email_time.minute, id='password_change_and_locked_reminder')
+	sched.add_job(MasterContactAutodial,'interval', seconds=10, start_date=execution_time,
+					id='MasterContactAutodial', jobstore='list')
 	if sched.state == 0:
 		sched.start()
 

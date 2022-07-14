@@ -665,6 +665,7 @@ $('#scSubmit').click(function() {
             callback_mode = data['campaign']['callback_mode']
             $('#select_camp option:selected').attr({"data-server":data["campaign"]["switch"]["ip_address"],
             "data-feedback_time":data["campaign"]["auto_feedback_time"],
+            "data-api-disposition": data["api_disp"],
             "data-progressive_time":data["campaign"]["auto_progressive_time"]})
             dnc=data['campaign']['dnc']
             $("#LeadPreview").prop("checked", true)
@@ -1580,6 +1581,8 @@ $('#btnDialHangup').click(function() {
                     $('#iframe_tab_link, #iframe-tab').removeClass('active show')
                     $('#iframe-tab').find('iframe').prop("src", "")
                 }
+                var api_disposition = $("#select_camp option:selected").attr('data-api-disposition');
+                (api_disposition == 'true')?$("#dispo-card").hide():$("#dispo-card").show()
             },
             error: function(data){
                 $("#call-loader").fadeOut("fast")
@@ -2057,7 +2060,7 @@ $(document).on("click", ".contact-set-call", function() {
 
 // this function to create information on feedback submit
 call_reset_agent_status = true
-function create_feedback_data(){
+function create_feedback_data(dispo = {}){
     call_reset_agent_status = true
     if (Object.keys(dummy_session_details).length == 0){
         dummy_session_details = {...session_details[extension]}
@@ -2097,6 +2100,12 @@ function create_feedback_data(){
             primary_dispo = 'PrimaryDial'
         }
         call_reset_agent_status = false
+    }
+    if(third_party_api_disp){
+        primary_dispo = third_party_api_disp
+        if(third_party_api_sub_dispo){
+            feedback_dict['sub_dispo']=third_party_api_sub_dispo
+        }
     }
     custinfo['primary_dispo'] = primary_dispo;
     var callback_field = $("#dispo-form").find('input[name=default_schedule_time]')
@@ -2150,6 +2159,13 @@ function create_feedback_data(){
             custinfo['comment'] = kv.value
         }
     })
+    if(dispo != {}){
+        // primary_dispo = dipso['disposition'];
+        feedback_dict['primary_dispo'] = primary_dispo
+    }
+    if(third_party_api_sub_dispo){
+        feedback_dict['sub_dispo']=third_party_api_sub_dispo
+    }
     if(primary_dispo != 'AutoFeedback' && redial_status == false && call_info_vue.alt_dial == false) {
         custinfo['feedback'] = JSON.stringify(feedback_dict);
     }
@@ -2257,9 +2273,13 @@ function create_feedback_data(){
     return custinfo
 }
 
-$("#submit_customer_info").click(function() {
+$("#submit_customer_info").click(function(dispo) {
     // localStorage.removeItem("connection_failure_data");
+     return submitDispo();
+})
+function submitDispo(dispo = {}){
     customer_hangup = false
+    $("#search_passport").val("")
     if(agent_info_vue.state != 'InCall'){
         if(redial_status == true || auto_feedback == true || $("#dispo-form").isValid() || call_info_vue.alt_dial == true){
             required_validation = []
@@ -2286,13 +2306,16 @@ $("#submit_customer_info").click(function() {
             $("#dummy-fb-time").append('<span id="fb_timer" class="pl-1"></span>')
             $("#feedback_timer").countimer('stop');
             inboundCall_picked = false;
-            var custinfo = create_feedback_data()
+        
+            var custinfo = create_feedback_data(dispo)
             $.ajax({
                 type: 'post',
                 headers: { "X-CSRFToken": csrf_token },
                 url: '/api/submit_dispo/',
                 data: custinfo,
                 success: function(data){
+                    list_of_contacts_table.column('.contactList_action').visible(true)
+                    agent_hangup = null
                     dispo_vue.on_call_dispo = false
                     crm_field_vue.update_crm = false
                     crm_field_vue.required_crm = false
@@ -2329,7 +2352,7 @@ $("#submit_customer_info").click(function() {
                     sessionStorage.removeItem("internal_transfer_no")
                     sessionStorage.removeItem("external_transfer_no")
                     sessionStorage.removeItem("prev_selected_contact_id")
-                    // checking for dap button status
+                    // checking for dap button status 
                     if(!$('#dap_details').hasClass('d-none')){
                         dap_details_data = ""
                         $('#dap_details').addClass('d-none')
@@ -2393,9 +2416,6 @@ $("#submit_customer_info").click(function() {
                     }
                     call_history_table.clear().draw();
                     list_of_contacts_table.clear().draw();
-                    $.each(crm_field_vue.basic_field_data,function(key,value){
-                        $('#script_description').find('[data-id="'+key+'"]').text('${'+key+'}')
-                    })
                     dispo_vue.reset_dispoform()
                     if(sip_error == true) {
                         if(sessionStorage.getItem('outbound')=='Predictive' | sessionStorage.getItem('inbound')==true){
@@ -2461,6 +2481,9 @@ $("#submit_customer_info").click(function() {
                                 $('#email_body_'+value.id).find('[data-id="'+key+'"]').text('${'+key+'}')
                             })
                         })
+                        $.each(crm_field_vue.basic_field_data,function(key,value){
+                            $('#script_description').find('[data-id="'+key+'"]').text('${'+key+'}')
+                        })
                         if(dial_flag==true && !sip_error && socket.connected){
                             if ($.inArray(sessionStorage.getItem('outbound'),["false", "Predictive", null]) == -1){
                                 $("#btnNextCall").click()
@@ -2481,11 +2504,6 @@ $("#submit_customer_info").click(function() {
                     set_agent_dashboard_count()
                     $('#feedback-tab').removeClass('active show')
                     $('#feedback-tab').addClass('hide')
-                    if(agent_hangup_status == true){
-                        $('#btnLogMeOut').click();
-                        agent_hangup_status = false
-                        return
-                    }
                     // view is used to reset agent availability status
                     if (call_reset_agent_status == true && (blndd_status == true||
                         autodial_status == true || ibc_status == true)) {
@@ -2509,7 +2527,7 @@ $("#submit_customer_info").click(function() {
     }else{
         showWarningToast('First hangup call to submit dispostion','top-center')
     }
-})
+}
 
 $("#crm-agent-logout").click(function() {
     if (autodial_status == true) {
@@ -2523,6 +2541,11 @@ $("#crm-agent-logout").click(function() {
     }
 })
 create_data_on_internet_fail = true
+// this function to save live data for login agent
+
+function stopSaveData(){
+    clearInterval(save_data_by_interval)
+}
 // this function to get live data for login agent
 function getAgentLivedata() {
     $.ajax({
@@ -4389,10 +4412,18 @@ function open_third_party_api(data){
             api_url = api_url + '&'
         }
     }
-    var usr_fields = ['user_id','username','user_extension','campaign_id', 'campaign_name']
+    var usr_fields = ['user_id','username','user_extension','campaign_id', 'campaign_name','numeric','dialed_uuid']
     $.each(Object.keys(data['parameters']),function(index,val){
-        api_url = `${api_url}${val}=`
+        param_value = data['parameters'][val]
+        param_key = val
+        if (param_key == "custom"){
+            for (var key2 in param_value){
+                param_key = key2
+                param_value = param_value[key2]
+            }
+        }
         if(usr_fields.indexOf(val) !== -1){
+            api_url = `${api_url}${param_value}=`
             switch(val){
                 case 'user_id':
                     api_url = api_url + user_id
@@ -4409,18 +4440,34 @@ function open_third_party_api(data){
                 case 'campaign_name':
                     api_url = api_url + campaign_name
                     break
+                case 'numeric':
+                    api_url = api_url + call_info_vue.dailed_numeric
+                    break
+                case 'dialed_uuid':
+                    api_url = api_url + session_details[extension]['dialed_uuid']
+                    break
             }
-        }
-        var crm_field = data['parameters'][val].split(':')
-        if(crm_field.length > 1){
-            if(crm_field[0] in crm_field_vue.field_data && crm_field[1] in crm_field_vue.field_data[crm_field[0]]){
-                if(dap_details_data != ""){
-                     api_url = api_url + $.base64.encode(crm_field_vue.field_data[crm_field[0]][crm_field[1]])
-                }else{
-                    api_url = api_url + crm_field_vue.field_data[crm_field[0]][crm_field[1]]
+            
+        }else{
+            console.log(param_key,param_value);
+            var crm_field = param_key.split(':')
+        
+            if(crm_field.length > 1){
+                api_url = `${api_url}${param_value}=`
+                if(crm_field[0] in crm_field_vue.field_data && crm_field[1] in crm_field_vue.field_data[crm_field[0]]){
+                    if(dap_details_data != ""){
+                        api_url = api_url +(crm_field_vue.field_data[crm_field[0]][crm_field[1]])
+                        console.log(api_url,'----utrl1----')
+                    }else{
+                        api_url = api_url + crm_field_vue.field_data[crm_field[0]][crm_field[1]]
+                        console.log(api_url,'----utrl2----')
+                    }
                 }
-            }
+            }else{
+                api_url = `${api_url}${param_key}=${param_value}`
+                }
         }
+
         if (Object.keys(data['parameters']).length-1 != index){
             api_url = api_url + '&'
         }

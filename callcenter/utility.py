@@ -2093,6 +2093,7 @@ def download_agent_perforance_report(filters, user, col_list, download_report_id
 				dialer_idle_time=Cast(Coalesce(Sum('idle_time',filter=dialler_idle_time_filter),default_time),TimeField())
 				)
 			break_time_cal= {}
+			total_calls = calldetail.count()
 			break_name = list(PauseBreak.objects.values_list('name',flat=True))
 			for break_cal in break_name:
 				break_time_cal[break_cal] = agentactivity.filter(break_type=break_cal).aggregate(break_time__sum=Cast(Coalesce(Sum('break_time'),default_time),TimeField())).get('break_time__sum')
@@ -2100,6 +2101,35 @@ def download_agent_perforance_report(filters, user, col_list, download_report_id
 			pw_time = convert_into_timedelta(activity_cal['predictive_wait_time']).total_seconds()
 			preview_time = convert_into_timedelta(activity_cal['preview_time']).total_seconds()
 			break_time = convert_into_timedelta(activity_cal['break_time']).total_seconds()
+			talk_call = convert_into_timedelta(calldetail_cal['bill_sec']).total_seconds()
+			ring_duration =convert_into_timedelta(calldetail_cal['ring_duration']).total_seconds()
+			feedback_time =convert_into_timedelta(calldetail_cal['feedback_time']).total_seconds()
+			talk_total = int(talk_call) + int(feedback_time) + int(ring_duration)
+			customer_talk = int(talk_call) + int(ring_duration)
+			calldetail_cal['talk'] = convert_timedelta_hrs(timedelta(seconds=talk_total))
+			calldetail_cal['bill_sec'] = convert_timedelta_hrs(timedelta(seconds=customer_talk)) 
+			if total_calls:
+				break_time_avg = ((convert_into_timedelta(activity_cal['break_time']).total_seconds())/total_calls)
+				talk_avg = ((int(talk_call)+int(feedback_time)+int(ring_duration))/total_calls)
+				feedback_time_avg = ((convert_into_timedelta(calldetail_cal['feedback_time']).total_seconds())/total_calls)
+				customer_avg_talk = ((int(talk_call)+int(ring_duration))/total_calls)
+				pw_wait_avg = (int(pw_time)/total_calls)
+				# customer_avg = ((convert_into_timedelta(calldetail_cal['customer']).total_seconds())/total_calls)
+				calldetail_cal['bill_sec_avg'] = convert_timedelta_hrs(timedelta(seconds=customer_avg_talk))
+				wait_avg = ((convert_into_timedelta(calldetail_cal['ring_duration']).total_seconds())/total_calls)
+				calldetail_cal['break_time_avg'] =  convert_timedelta_hrs(timedelta(seconds=break_time_avg))
+				calldetail_cal['talk_avg'] = convert_timedelta_hrs(timedelta(seconds=talk_avg)) 
+				calldetail_cal['feedback_time_avg'] =  convert_timedelta_hrs(timedelta(seconds=feedback_time_avg)) 
+				calldetail_cal['ring_duration_avg'] = convert_timedelta_hrs(timedelta(seconds=wait_avg)) 
+				activity_cal['predictive_wait_time_avg'] = convert_timedelta_hrs(timedelta(seconds=pw_wait_avg)) 
+			else:
+				default_time_delta_sec = timedelta(hours=0,minutes=0,seconds=0).total_seconds()
+				calldetail_cal['break_time_avg'] = time.strftime("%H:%M:%S", time.gmtime(default_time_delta_sec))
+				calldetail_cal['talk_avg'] = time.strftime("%H:%M:%S", time.gmtime(default_time_delta_sec))
+				calldetail_cal['feedback_time_avg'] = time.strftime("%H:%M:%S", time.gmtime(default_time_delta_sec))
+				calldetail_cal['bill_sec_avg'] = time.strftime("%H:%M:%S", time.gmtime(default_time_delta_sec))
+				calldetail_cal['ring_duration_avg'] = time.strftime("%H:%M:%S", time.gmtime(default_time_delta_sec))
+				activity_cal['predictive_wait_time_avg'] = time.strftime("%H:%M:%S", time.gmtime(default_time_delta_sec))
 			iw_time = convert_into_timedelta(activity_cal['inbound_wait_time']).total_seconds()
 			bw_time = convert_into_timedelta(activity_cal['blended_wait_time']).total_seconds()
 			ai_time = convert_into_timedelta(activity_cal['app_idle_time']).total_seconds()
@@ -3605,6 +3635,23 @@ def convert_into_timeformat(start,end):
 		minutes = (datetime_diff.seconds//60)%60
 		datetime = str(datetime_diff.days)+" Days "+str(hours)+" Hr " +str(minutes)+" Min "
 		return datetime 
+def convert_timedelta_hrs(duration):
+	""" agent performance timdelta to 24 hours """
+	if duration:
+		days, seconds = duration.days, duration.seconds
+		hours = days * 24 + seconds // 3600
+		minutes = (seconds % 3600) // 60
+		seconds = seconds % 60
+		if hours < 10:
+			hours = "0"+str(hours)
+		if minutes < 10:
+			minutes = "0"+str(minutes)
+		if seconds < 10:
+			seconds = "0"+str(seconds)
+		timeformat = str(hours)+":"+ str(minutes)+":"+str(seconds)
+		return timeformat
+	else:
+		return "00:00:00" 
 
 def getDaemonsStatus():
 	"""

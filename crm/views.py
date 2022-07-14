@@ -21,6 +21,8 @@ from rest_framework.response import Response
 from rest_framework import generics
 from scripts.pagination import DatatablesPageNumberPagination
 from scripts.renderers import DatatablesRenderer
+from crm.s3_fileoperations import *
+
 from io import BytesIO
 import pandas as pd
 import numpy as np
@@ -29,13 +31,13 @@ import louie
 import copy
 
 from .models import (Status, Contact, Phonebook, CrmField,
-	Contact, ContactInfo, CampaignInfo, TempContactInfo, LeadListPriority, DownloadReports, TrashContact, PhoneBookUpload, AlternateContact)
+	Contact, ContactInfo, CampaignInfo, TempContactInfo, LeadListPriority, DownloadReports, TrashContact, PhoneBookUpload, AlternateContact,ScheduleMasterContact)
 from callcenter.models import (Campaign,User, CallDetail, CSS,Disposition, DataUploadLog,PhonebookBucketCampaign, StickyAgent, UserVariable)
 from flexydial.constants import (Status, CONTACT_STATUS, FIELD_CHOICES, ORDER_BY, SEARCH_TYPE)
 
 from .serializers import (PhoneBookSerializer, CrmFieldSerializer, SetContactSerializer,
 		AgentCrmFieldSerializer,ContactListSerializer, PhonebookRefreshSerializer,CrmFieldCustomSerializer,
-		CrmFieldPaginationSerializer, LeadListPrioritySerializer, DownloadReportsSerializer,ContactSerializer, EditContactListSerializer)
+		CrmFieldPaginationSerializer, LeadListPrioritySerializer, DownloadReportsSerializer,ContactSerializer, EditContactListSerializer,ScheduleMasterContactSerializer)
 from callcenter.serializers import DispositionSerializer
 # from flexydial.views import check_permission
 
@@ -165,7 +167,7 @@ class CrmCreatePhonebookApiView(LoginRequiredMixin, APIView):
 		if phonebook_serializer.is_valid():
 			if phone_inst.exists():
 				ex_camp = phone_inst.first().campaign
-				if not request.POST.get("campaign", "") == phone_inst.first().campaign:
+				if  request.POST.get("campaign", "") != phone_inst.first().campaign:
 					update_camp = True
 					camp_name = Campaign.objects.get(id=request.POST.get("campaign", "")).name
 				if update_camp or not str(request.POST.get("order_by", "")) == str(phone_inst.first().order_by) or not str(request.POST.get("priority", "")) == str(phone_inst.first().priority):
@@ -1365,16 +1367,16 @@ class GetEditContactInfoApiView(APIView):
 		return Response(data)
 
 class ContactUploadDataApiView(APIView):
-	parser_classes = [XMLParser]
+	if settings.XML_INSERT_KEY!='':
+		parser_classes = [XMLParser]
 	permission_classes = [AllowAny]
-	def get(self,request):
-		return JsonResponse({"msg": "Testing for Get"})
 	def post(self, request):
 		uniqueid = None
 		data_dict = {}
 		crm_field_dict = {}
 		error_dict ={}
 		phonebook_id = None
+		action = "insert"
 		contact_col_list = ["numeric","alt_numeric","first_name","last_name","user","email", "priority"]
 		data = json.dumps(request.data)
 		data = re.sub("\{http.*?}",'',data)
@@ -1425,8 +1427,9 @@ class ContactUploadDataApiView(APIView):
 						unique_field = crm_field_obj.first().unique_fields
 						if unique_field:
 							unique_field = unique_field[0]
+				
 				uniqueid = row.get(unique_field,None)
-				if uniqueid is not None:								
+				if uniqueid is not None or settings.XML_INSERT_KEY=='':								
 					update_contact = Contact.objects.filter(campaign=campaign.name,uniqueid=uniqueid).first()
 					if action == "update":
 						if update_contact:
@@ -1434,7 +1437,7 @@ class ContactUploadDataApiView(APIView):
 						else:
 							return JsonResponse({"msg":"No matching data found for update.",'status':'error'},status=500)	
 					else:
-						if update_contact:
+						if update_contact and settings.XML_INSERT_KEY!='':
 							return JsonResponse({"msg":"Respected data already present Cant create the New Data,Use Update Structure to update the data",'status':'error'},status=500)
 				else:
 					return JsonResponse({"msg":"Mandatory unique field is missing",'status':'error'},status=500)
@@ -1462,13 +1465,10 @@ class ContactUploadDataApiView(APIView):
 							crm_field_dict[sep_col_field[0].lower()] ={}
 						if len(sep_col_field) == 2:
 							crm_field_dict[sep_col_field[0].lower()][sep_col_field[1].lower()] = row.get(custom_fields)
-						elif len(sep_col_field) == 1:
+						elif len(sep_col_field) == 1 and sep_col_field[0].lower() not in contact_col_list:
 							if "extra_information" not in crm_field_dict:
 								crm_field_dict["extra_information"] = {}	
 							crm_field_dict["extra_information"][sep_col_field[0].lower()] = row.get(custom_fields)
-							# crm_field_dict
-						# crm_field_dict[sep_col_field[0].lower()][sep_col_field[1].lower()] = row.get(custom_fields)
-							
 
 				if data_dict:
 					return JsonResponse({"msg": "","status":"error","data":data_dict}, status=500)
@@ -1504,6 +1504,66 @@ class ContactUploadDataApiView(APIView):
 		else:
 			return JsonResponse({"msg":"Missing Mandatory Field Campaign and Numeric","status":"failed","a":request.data})
 
+# class RecordingPlayAPIView(APIView):
+# 	def get(self,request,file_name):
+# 		s3fileDownloadToServer(file_name,"recordings/"+file_name,"/tmp/")
+# 		with open("/tmp/"+file_name, 'rb') as fh:
+# 			response = HttpResponse(fh.read(), content_type='audio/mpeg')
+# 			response['Content-Disposition'] = 'attachment; filename=/tmp/%s' % file_name
+# 			response['Accept-Ranges'] = 'bytes'
+# 			response['X-Sendfile'] = file_name
+# 			response['Content-Length'] = os.path.getsize("/tmp/"+file_name)
+# 		return response
+# 	def post(self,request,file_name):
+# 		if settings.S3_PHONEBOOK_BUCKET_NAME:
+# 			url = s3singedUrl(file_name)
+# 			return JsonResponse({"msg":url},status=200)
+# 		else:
+# 			return JsonResponse({"msg",""},status=500)
+
+class ApiBulkUpload(APIView):
+	permission_classes = (IsAuthenticated, )
+	def post(self,request):
+		try:
+			ser=ScheduleMasterContactSerializer(data=request.data,context={"request":request})
+			if ser.is_valid():
+				ser.save()
+				return Response({"msg":"Successfully Scheduled",'ref_id':ser.data['ref_id']})
+			else:
+				return Response({"msg":"Failed to Schedule","error":str(ser.errors)})
+		except Exception as e:
+			return Response({"msg":"internal errors","error":str(e)})
+
+class ApiBulkUploadStatus(APIView):
+	permission_classes = (IsAuthenticated, )
+	def get(self,request):
+		try:
+			status=ScheduleMasterContact.objects.get(ref_id=request.data['ref_id'])
+			orginal_path='media/'+str(status.mcdata)
+			orginal_count=pd.read_csv('/var/lib/flexydial/'+orginal_path)
+			orginal_count=len(orginal_count.index)## orginal_count=orginal_count['unique_id'].tolist().count()
+
+			if status.proper_mcdata:
+				proper_path='media/'+str(status.proper_mcdata)
+				proper_count=pd.read_csv('/var/lib/flexydial/'+proper_path)
+				proper_count=len(proper_count.index)
+			else:
+				proper_path=''
+				proper_count=''
+
+			if status.improper_mcdata:
+				improper_path='media/'+str(status.improper_mcdata)
+				improper_count=pd.read_csv('/var/lib/flexydial/'+improper_path)
+				improper_count=len(improper_count.index)
+			else:
+				improper_path=''
+				improper_count=''
+
+			return Response({"status is":status.status,'orginal path':str(orginal_path),"orginal_count":orginal_count,"proper path":str(proper_path),"proper count":proper_count,"improper path":str(improper_path),"improper count":improper_count})
+			# return Response({"status is":status.status,'orginal path':str(orginal_path),"orginal_count":orginal_count})
+
+		except Exception as e:
+			return Response({"msg":"internal errors","error":str(e)})
 class DownloadReportApiView(APIView):
 	def get(self,request,pk,downloaded_file_name):
 		file_name = DownloadReports.objects.filter(id=pk).order_by('-id').first()

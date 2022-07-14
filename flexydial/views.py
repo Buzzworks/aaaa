@@ -249,7 +249,7 @@ class DeleteEntryApiView(APIView):
 				backup_folder = settings.MEDIA_ROOT+"/contact_backup/"+datetime.now().strftime("%m.%d.%Y")+"/"
 				if not os.path.exists(backup_folder):
 					os.makedirs(backup_folder)
-				from scripts.eventdump import dump_contact
+				from scripts.manager import dump_contact
 				dump_contact(backup_folder+"contact_"+datetime.now().strftime("%m.%d.%Y%H:%M:%S")+".sql")
 				# for contact in contacts:
 				#   if TrashContact.objects.filter(numeric=contact.numeric).exists():

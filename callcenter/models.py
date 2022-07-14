@@ -603,6 +603,7 @@ class Campaign(models.Model):
 	inbound_threshold = models.IntegerField(default=0, db_index=True, blank=True)
 	sms_gateway = models.ForeignKey(SMSGateway,on_delete=models.SET_NULL,blank=True, null=True)
 	email_gateway = models.ForeignKey(EmailGateway,on_delete=models.SET_NULL, blank=True, null=True)
+	api_disposition = models.BooleanField(default=False,blank=True, null=True)
 	all_caller_id = JSONField(default=dict)
 
 	class Meta:
@@ -1078,6 +1079,7 @@ class DNC(models.Model):
 	user = models.ForeignKey(User, on_delete=models.SET_NULL,related_name="dnc_user",null=True, blank=True)
 	numeric  = models.CharField(default='', max_length=50,null=True, db_index=True)
 	global_dnc = models.BooleanField(default=False)
+	dnc_end_date = models.DateField(auto_now_add=False, db_index=True,default=None,null=True)
 	uniqueid = models.CharField(default=None, max_length=30, null=True)
 	status = models.CharField(default='Active',choices=Status, max_length=10)
 	created = models.DateTimeField(auto_now_add=True)
@@ -1438,5 +1440,17 @@ class PasswordChangeLogs(models.Model):
 	def __str__(self):
 		return self.username
 
+class ThirdPartyApiDisposition(models.Model):
+	unique_id= models.CharField(max_length=50, default='')
+	disposition	= models.CharField(max_length=100, default='')
+	disposition_desc = models.CharField(max_length=100, default='')
+	callBackDate = models.CharField(max_length=25, default='')
+	callBackTime = models.CharField(max_length=25, default='')
+	flexyAgentId = models.CharField(max_length=10, default='')
+	callid = models.CharField(max_length=100, default='')
+	created = models.DateTimeField(auto_now_add=True)
+
+	def __str__(self):
+		return self.unique_id
 class SourceList(models.Model):
 	sourcename = models.CharField(max_length=150,blank=True,null=True)

@@ -557,7 +557,22 @@
 										</div>
 									</fieldset>
 									<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
-
+										<div class="row">
+											<div class="col-md-6">
+												<div class="form-group row">
+													<label for="Api disposition" class="col-sm-4 col-form-label">Api Disposition :</label>
+													<div class="col-sm-7 form-inline">
+														<div class="form-check">
+															<label class="form-check-label">
+														<input type="checkbox" id="api-dispo-cb" value=True name="apidisposition" {% if campaign.api_disposition %}checked="checked"{% endif %}>
+                                                     </label>
+													 </div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</fieldset>
+									<fieldset class="mt-4 pt-4" style="border-top: 1px dashed #ccc;">
 										<div class="form-group row">
 											<label for="extension" class="col-5 mb-0 col-form-label">Select Disposition (drag and drop)<span class="star">*</span> :</label>
 											<label class="col-2"></label>
@@ -1842,6 +1857,18 @@ $('#users').on('select2:unselecting', function(event) {
 		showDangerToast(`Opration can't perform`,`${event.params.args.data.text} user does not belong in your scope`,'top-right')
 	}
 })
+$(document).ready(function(){
+	function check_api_disp(){
+		var api_disp_checked = $('#api-dispo-cb').is(":checked");
+		if(api_disp_checked){
+			$('#third-party-api').removeClass('d-none')
+		} else {
+			$('#third-party-api').addClass('d-none')
+		}
+	}
+	check_api_disp()
+	$('#api-dispo-cb').on('click', ()=>check_api_disp();)
+});
 </script>
 
 {% endblock extra-js %}

@@ -28,3 +28,6 @@ directory.xml
 .sshpassword.npy
 jobs.sqlite
 .vscode
+fs-dialplan/node_modules/
+fs-dialplan/package-lock.json
+flexydialenv
