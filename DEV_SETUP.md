@@ -1,6 +1,9 @@
 echo APP_PATH=<currentAPPdirectory> >> /etc/environment
 example :
     echo APP_PATH=/home/buzzworks/flexydial >> /etc/environment
+
+echo ENV=DEV >> /etc/enviornment
+    
 1. sudo su
 2. cd tools/
 3. chmod -R  +x *
@@ -18,4 +21,3 @@ REPLACE Mention Telephony Server IP address/domain name
 13. Save the file
 14. ./docker-instance.sh # to create app,nginx container
 15. cd ../freeswitch/ && ./instance.sh
-
