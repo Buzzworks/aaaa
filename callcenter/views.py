@@ -2389,6 +2389,11 @@ class UploadAudioFileApiView(LoginRequiredMixin, APIView):
 			audio_serializer = self.serializer(data=request.data)
 		if audio_serializer.is_valid():
 			audio_serializer.save(created_by=request.user)
+			audio = AudioFile.objects.filter(
+					name__iexact=request.POST["name"]).first()
+			if audio and (settings.GS_BUCKET_NAME or settings.AWS_STORAGE_BUCKET_NAME):
+				audio.audio_file_url = audio.audio_url
+				audio.save()
 			### Admin Log ####
 			create_admin_log_entry(request.user, 'AudioFile', str(log_type),'UPLOADED', request.POST["name"])
 			return Response()

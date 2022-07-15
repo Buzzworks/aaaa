@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
+from datetime import timedelta
 import os
 import socket
 import pickle, redis, re
@@ -255,7 +256,12 @@ AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID',"")
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY',"")
 
 GS_BUCKET_NAME = os.environ.get("GS_BUCKET_NAME","")
-
+JSON_KEY = {}
+if JSON_KEY:
+    from google.oauth2 import service_account
+    GS_CREDENTIALS = service_account.Credentials.from_service_account_info(JSON_KEY)
+    GS_DEFAULT_ACL = None
+    GS_EXPIRATION = timedelta(seconds=86400)
 if AWS_STORAGE_BUCKET_NAME:
     DEFAULT_FILE_STORAGE = 'flexydial.storages.MediaStore'
 elif GS_BUCKET_NAME:

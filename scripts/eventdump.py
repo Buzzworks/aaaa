@@ -267,6 +267,8 @@ def cdr_save(model,kwargs,campaign_obj,user_obj,primary_dispo, campaign_name):
 				hangup_cause_code=kwargs.get('hangup_cause_code'),
 				dialed_status=kwargs.get('dialed_status'),
 				)
+		if cdr.__class__.__name__== 'DiallerEventLog':
+			cdr.callserver=kwargs.get('callserver')
 		if cdr.__class__.__name__!='CallDetail':
 			cdr.transfer_history=kwargs.get('transfer_history'),
 			cdr.info=kwargs.get('info'),

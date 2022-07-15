@@ -21,7 +21,8 @@ from callcenter.signals import (
 	fs_del_user,
 	fs_campaign,
 	fs_user_campaign,
-	fs_switch_action
+	fs_switch_action,
+	recording_file_move
 	)
 timezone = list(pytz.common_timezones)
 USER_TIMEZONE = [(zone, zone) for zone in timezone]
@@ -338,6 +339,7 @@ class AudioFile(models.Model):
 	name = models.CharField(max_length = 100, db_index=True, unique=True)
 	description = models.TextField(blank=True, null=True)
 	audio_file = models.FileField(upload_to='upload', blank=True)
+	audio_file_url = models.TextField(blank=True,null=True)
 	status = models.CharField(default='Active',choices=Status, max_length=10)
 	created_date = models.DateTimeField(auto_now_add=True)
 	modified_date = models.DateTimeField(auto_now=True)
@@ -351,6 +353,10 @@ class AudioFile(models.Model):
 	def audio_file_name(self):
 		if self.audio_file:
 			return os.path.basename(self.audio_file.name)
+	@property
+	def audio_url(self):
+		if self.audio_file:
+			return self.audio_file.url
 
 class Disposition(models.Model):
 	""" This table will store the dispostion infomation """
@@ -879,7 +885,6 @@ class CallDetail(models.Model):
 	uniqueid = models.CharField(default=None, max_length=30, null=True)
 	created = models.DateTimeField(auto_now_add=True, db_index=True)
 	updated = models.DateTimeField(auto_now=True, db_index=True)
-
 	class Meta:
 		get_latest_by = 'created'
 		ordering = ['-created']
@@ -897,6 +902,13 @@ class CallDetail(models.Model):
 		if DiallerEventLog.objects.filter(session_uuid=self.session_uuid).exists():
 			return DiallerEventLog.objects.filter(session_uuid=self.session_uuid)[0]
 		return self
+
+def get_upload_path(instance, filename):
+	date_time = datetime.strptime(instance.ring_time,"%Y-%m-%d %H:%M:%S")
+	year = date_time.strftime("%Y")
+	month = date_time.strftime("%m")
+	day = date_time.strftime("%d")
+	return  'recordings/{0}/{1}/{2}/{3}/{4}/{5}'.format(str(instance.callserver),year,month,day,str(instance.callflow), filename)
 
 class DiallerEventLog(models.Model):
 	"""
@@ -938,6 +950,8 @@ class DiallerEventLog(models.Model):
 	created = models.DateTimeField(auto_now_add=True, db_index=True, editable=False)
 	updated = models.DateTimeField(auto_now=True, db_index=True, editable=False)
 	objects = models.Manager()
+	recording_file = models.FileField(upload_to=get_upload_path, blank=True, help_text='')
+	callserver = models.CharField(max_length=100, null=True, blank=True, verbose_name='Call Server IP')
 
 	class Meta:
 		get_latest_by = 'init_time'
@@ -951,7 +965,8 @@ class DiallerEventLog(models.Model):
 			return re.sub(r'(\\)', '', self.info).split('^')
 		else:
 			return ['']*6
-
+			
+signals.post_save.connect(recording_file_move, sender=DiallerEventLog)
 
 
 class CdrFeedbck(models.Model):

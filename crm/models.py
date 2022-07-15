@@ -259,6 +259,7 @@ class LeadListPriority(models.Model):
 		return self.created_date.strftime("%d-%m-%Y %H:%M:%S")
 
 def get_upload_path(instance, filename):
+	
 	return  'download/{0}/{1}/{2}'.format(datetime.now().strftime("%m.%d.%Y"),str(instance.user), filename)
 
 
@@ -283,39 +284,33 @@ class DownloadReports(models.Model):
 
 	@property
 	def downloaded_file_name(self):
-		improper_file = ''
 		if self.downloaded_file:
-			improper_file = os.path.basename(self.downloaded_file.name)
-		return improper_file
+			return self.downloaded_file.name if settings.GS_BUCKET_NAME or settings.AWS_STORAGE_BUCKET_NAME else os.path.basename(self.downloaded_file.name)
+		return ''
 	@property
 	def downloaded_file_path(self):
-		improper_file = ''
 		if self.downloaded_file:
-			improper_file = self.downloaded_file.url
-		return improper_file
+			return self.downloaded_file.url
+		return ''
 	@property
 	def percentage(self):
-		completed_percentage = 0
 		if not self.downloaded_file:
 			if not self.is_start and not self.status:
-				completed_percentage = 'File not created / Data not available'
+				return 'File not created / Data not available'
 			else:
-				completed_percentage = 'In Progress'
+				return 'In Progress'
 		else:
-			completed_percentage = 100
-		return completed_percentage
+			return 100
 	@property
 	def reportstart_date(self):
-		start_date = '-'
 		if 'start_date' in self.filters:
-			start_date = self.filters['start_date']
-		return start_date
+			return self.filters['start_date']
+		return '-'
 	@property
 	def reportend_date(self):
-		end_date = '-'
 		if 'end_date' in self.filters:
-			end_date = self.filters['end_date']
-		return end_date
+			return self.filters['end_date']
+		return '-'
 
 
 class LeadBucket(models.Model):

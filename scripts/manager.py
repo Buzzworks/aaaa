@@ -14,7 +14,7 @@ from crm.models import Contact,TempContactInfo,Phonebook,DownloadReports, PhoneB
 from django.db.models import Q, Count, F
 from callcenter.utility import (get_agent_status, get_all_keys_data, get_current_users, download_call_detail_report, download_agent_perforance_report, campaignwise_performance_report,
 	download_agent_mis, download_agent_activity_report, download_campaignmis_report, download_callbackcall_report,
-	download_abandonedcall_report,set_download_progress_redis, download_call_recordings, download_contactinfo_report, download_phonebookinfo_report,
+	download_abandonedcall_report, set_agent_status,set_download_progress_redis, download_call_recordings, download_contactinfo_report, download_phonebookinfo_report,
 	download_billing_report, camp_list_users, DownloadCssQuery, download_call_recording_feedback_report,download_management_performance_report,download_alternate_contact_report, freeswicth_server,download_pendingcontacts_report,PasswordChangeAndLockedReminder)
 from dialer.dialersession import fs_administration_hangup
 from callcenter.schedulejobs import add_leadrecycle_db

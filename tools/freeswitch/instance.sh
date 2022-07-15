@@ -131,7 +131,7 @@ TimeoutStartSec=0
 Restart=always
 RestartSec=1
 #ExecStartPre=/usr/bin/docker pull vedakatta/flexydial-app
-ExecStart=/usr/bin/docker run --rm --env-file /etc/default/flexydial-app --name flexydial-cdr flexydial-app python manage.py cdrd
+ExecStart=/usr/bin/docker run --rm --env-file /etc/default/flexydial-app -v ${APP_PATH}:/home/app --name flexydial-cdr flexydial-app python manage.py cdrd
 ExecStop=/usr/bin/docker stop flexydial-cdr
 
 [Install]
@@ -149,7 +149,7 @@ TimeoutStartSec=0
 Restart=always
 RestartSec=1
 #ExecStartPre=/usr/bin/docker pull vedakatta/flexydial-app
-ExecStart=/usr/bin/docker run --rm -v /var/lib/flexydial/media:/var/lib/flexydial/media --env-file /etc/default/flexydial-app --name flexydial-autodial flexydial-app python manage.py autodial
+ExecStart=/usr/bin/docker run --rm -v /var/lib/flexydial/media:/var/lib/flexydial/media -v ${APP_PATH}:/home/app --env-file /etc/default/flexydial-app --name flexydial-autodial flexydial-app python manage.py autodial
 ExecStop=/usr/bin/docker stop flexydial-autodial
 
 [Install]

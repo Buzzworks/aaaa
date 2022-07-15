@@ -81,8 +81,8 @@ function selective_datatable(table) {
                         return data
                     } else {
                         if (row["downloaded_file_name"] != '') {
-                            return '<div class="text-right"><a target="_blank" class="btn btn-link text-info ml-2 file-download p-0" href="/api/download/'+row['id']+'/'+row['downloaded_file_name']+'/" download id="file-' + row['id'] + '" id="'+row['id']+'"><i class="fa fa-download sch-download"></i></a></div>'
-                            // return '<div class="text-right"><a class="btn btn-link text-info ml-2 file-download p-0" href="'+row['downloaded_file_path']+'" download id="file-' + row['id'] + '" id="'+row['id']+'"><i class="fa fa-download sch-download"></i></a></div>'
+                            // return '<div class="text-right"><a target="_blank" class="btn btn-link text-info ml-2 file-download p-0" href="/api/download/'+row['id']+'/'+row['downloaded_file_name']+'/" download id="file-' + row['id'] + '" id="'+row['id']+'"><i class="fa fa-download sch-download"></i></a></div>'
+                            return '<div class="text-right"><a class="btn btn-link text-info ml-2 file-download p-0" href="'+row['downloaded_file_path']+'" download id="file-' + row['id'] + '" id="'+row['id']+'"><i class="fa fa-download sch-download"></i></a></div>'
                         }
                     }
                     return ''
