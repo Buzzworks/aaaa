@@ -2471,10 +2471,23 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 		'bill_sec','ivr_duration','call_duration','feedback_time','call_length','hangup_source','internal_tc_number','external_tc_number','progressive_time','preview_time','predictive_wait_time','inbound_wait_time','blended_wait_time'],
 		'cdrfeedback':['primary_dispo','feedback','relationtag']}
 		# context['users'] = list(user_list)
+
+		crm_camp_fields = []
+		crm_sec_name = {}
+		crm_camp_details = list(CrmField.objects.filter(campaign__id__in=camp_id).values_list('crm_fields',flat=True))
+		for i in crm_camp_details:
+			for j in range(len(i)):
+				crm_sec_name[i[j]['section_name']] = {}
+				for k in i[j]['section_fields']:
+					crm_camp_fields.append(k['db_field'])
+					crm_sec_name[i[j]['section_name']][k['db_field']]=""
+		if crm_camp_fields:
+			all_fields['crm_fields'] = crm_camp_fields
 		if request.user.is_superuser:
 			context['users'] = list(user_list)
 		else:
 			context['users'] = user_in_hirarchy_level(request.user.id)
+		context['crm_sec_name'] = crm_sec_name
 		context['disposition'] = disposition.values("id", "name")
 		context['dispo_keys'] = dispo_keys
 		context['all_fields'] = all_fields
@@ -2559,7 +2572,7 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 
 		page = paginate_queryset(request, queryset, paginator)
 		if page is not None:
-			serializer = self.serializer_class(page, many=True)
+			serializer = self.serializer_class(page, many=True,context={'request': request})
 			return get_paginated_response(serializer.data, paginator)
 		serializer = self.serializer_class(queryset, many=True)
 		return Response(serializer.data)

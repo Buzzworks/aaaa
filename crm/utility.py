@@ -18,7 +18,7 @@ from django.db.models import Q
 from dateutil.parser import parse
 cwd = os.path.join(settings.BASE_DIR, 'static/')
 
-def get_crm_fields(campaign_name):
+def get_crm_fields(campaign_name,temp=False):
 	""" This is used to get the crm fields """ 
 	column_list = []
 	if Campaign.objects.filter(name=campaign_name).exists():
@@ -30,8 +30,18 @@ def get_crm_fields(campaign_name):
 			for section in sections:
 				section_fields = section["section_fields"]
 				for section_field in section_fields:
-					column_list.append(section['section_name']+':'+section_field["field"])
+					if not temp:
+						column_list.append(section['section_name']+':'+section_field["field"])
+					else:
+						column_list.append(section_field["db_field"])
 	return column_list
+
+def campaign_crm_fields(camp_names):
+	crm_camp_fields = []
+	for camp_crms in camp_names:
+			for crm_fields in get_crm_fields(camp_crms,True):
+				crm_camp_fields.append(crm_fields)
+	return crm_camp_fields
 
 def get_customizable_crm_fields(campaign_name):
 	""" This is used to get the crm customizable fields """
