@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from callcenter.models import *
 from flexydial.views import get_login_campaign, get_login_agent
-from crm.models import Contact, ContactInfo
+from crm.models import Contact, ContactInfo,CrmField
 from datetime import timedelta
 from .constants import four_digit_number, three_digits_list
 
@@ -651,6 +651,7 @@ class CallDetailReportSerializer(serializers.ModelSerializer):
 	customer_name = serializers.SerializerMethodField()
 	client_name = serializers.SerializerMethodField()
 	smslog = serializers.SerializerMethodField()
+	crm_fields = serializers.SerializerMethodField()
 	class Meta:
 		model = CallDetail
 		# fields= '__all__'
@@ -709,7 +710,26 @@ class CallDetailReportSerializer(serializers.ModelSerializer):
 		if obj.user:
 			supervisor_name = obj.user.reporting_to.username if obj.user.reporting_to else ""
 		return supervisor_name
-		
+	def get_crm_fields(self,obj):
+		crm_sec_fields = {}
+		crm_fields = {}
+		request = self.context.get("request")
+		camp = Campaign.objects.all().distinct()
+		camp_id = list(camp.values_list("id",flat=True))
+		crm_camp_details = list(CrmField.objects.filter(campaign__id__in=camp_id).values_list('crm_fields',flat=True))
+		contact = Contact.objects.filter(id=obj.contact_id).first()
+		for i in crm_camp_details:
+			for j in range(len(i)):
+				crm_sec_fields[i[j]['db_section_name']] = {}
+				for k in i[j]['section_fields']:
+					if contact and contact.customer_raw_data:
+						crm_sec_fields[i[j]['db_section_name']][k['db_field']]=""
+		if contact:
+			for con_data in contact.customer_raw_data:
+				if con_data in crm_sec_fields:
+					for sec_field,data in contact.customer_raw_data[con_data].items():
+						crm_fields[sec_field]=data
+		return crm_fields
 class CallDetailReportFieldSerializer(serializers.ModelSerializer):
 	""" serlializer to the fields of calldetails report """
 	cdrfeedback = CdrFeedbckReportSeializer()
