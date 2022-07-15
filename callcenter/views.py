@@ -2537,9 +2537,9 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 			user_list_in_hirarchy = user_hierarchy_func(request.user.id,list(all_users))
 			query_string = Q(campaign_name__in=list(selected_campaign), user_id__in=user_list_in_hirarchy)
 		elif selected_user:
-			# query_string = Q(user_id__in=all_users)
-			user_list_in_hirarchy = user_hierarchy_func(request.user.id,list(all_users))
-			query_string = Q(user_id__in=user_list_in_hirarchy)
+			query_string = Q(user_id__in=all_users)
+			# user_list_in_hirarchy = user_hierarchy_func(request.user.id,list(all_users))
+			# query_string = Q(user_id__in=user_list_in_hirarchy)
 		elif selected_campaign:
 			query_string = Q(campaign_name__in=selected_campaign)
 			if not (request.user.is_superuser):
