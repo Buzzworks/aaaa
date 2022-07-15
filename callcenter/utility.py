@@ -2155,7 +2155,7 @@ def download_agent_perforance_report(filters, user, col_list, download_report_id
 				first_login_time = agentactivity.filter(event='LOGIN').order_by('created').first().created.strftime("%Y-%m-%d %H:%M:%S")
 			calldetail_cal['last_logout_time'] = last_logout_time
 			calldetail_cal['first_login_time'] = first_login_time
-			calldetail_cal['total_unique_connected_calls'] = calldetail.exclude(uniqueid=None).distinct('uniqueid').order_by('uniqueid').count()
+			calldetail_cal['total_unique_connected_calls'] = calldetail.distinct('customer_cid').order_by('customer_cid').count()
 			calldetail_cal['supervisor_name'] = '' 
 			if user.reporting_to:
 				calldetail_cal['supervisor_name'] = user.reporting_to.username
