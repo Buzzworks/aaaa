@@ -6540,12 +6540,31 @@ $("#sms-gateway-submit-btn").click(function(){
     if ($("#sms_gateway_id").val() != "") {
         url = `/SMSManagement/Sms-Gateway/edit/${$("#sms_gateway_id").val()}/`
     }
+
+    const obj = {};
+    $('.para-block').each(function(index,val){
+        parameter = $(this).find('.para').val();
+        if (parameter == "custom"){
+            if(obj[parameter] == undefined){
+                obj[parameter] = []
+            }
+            alias_obj= {}
+            alias_key = $(this).find('.alias_key').val();
+            value = $(this).find('.alias_value').val();
+            alias_obj[alias_key] = value
+            obj[parameter].push(alias_obj)
+        }else{
+            obj[parameter] = $(this).find('.alias').val();
+        }
+    });
+
     if(form.isValid()) {
         $.ajax({
             type: 'post',
             headers: {"X-CSRFToken": csrf_token},
             url: url,
-            data: form.serialize(),
+            //data: form.serialize(),
+            data: form.serialize()+ "&url_parameters="+JSON.stringify(obj),
             success: function (data) {
                 if($("#sms_gateway_id").val() !="") {
                     showSwal('success-message', 'SMS Gateway Successfully Updated', '/SMSManagement/gateway-settings/')

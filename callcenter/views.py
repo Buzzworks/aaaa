@@ -225,6 +225,7 @@ class LoginAPIView(APIView):
 	permission_classes = [AllowAny]
 
 	def get(self, request):
+		print("inside getting")
 		forgot_password = False
 		if not request.user.is_anonymous:
 			return redirect_user(request,request.user)
@@ -7226,6 +7227,7 @@ class SmsGatewayCreateEditApiView(LoginRequiredMixin, APIView):
 		trigger_action = TRIGGER_ACTIONS
 		dispo_list = Disposition.objects.all().values("id","name")
 		template_list = SMSTemplate.objects.values("id","name")
+		campaigns = Campaign.objects.values('id','name')
 		if non_admin_user:
 			user_campaigns = Campaign.objects.filter(Q(users=request.user)|Q(group__in=request.user.group.all())|Q(created_by=request.user)).distinct()
 			template_list = template_list.filter(Q(campaign__in=user_campaigns)|Q(template_type='0'))
@@ -7242,28 +7244,37 @@ class SmsGatewayCreateEditApiView(LoginRequiredMixin, APIView):
 			template_list = template_list.exclude(id__in=sms_gateway.template.all().values_list("id",flat=True))
 			if permission_dict['can_update']:
 				can_view = True
+			selected_campaigns = Campaign.objects.filter(sms_gateway__id=pk).values_list('id', flat=True)
 		else:
 			if permission_dict['can_create']:
 				can_view = True
 			sms_gateway = ""
+			selected_campaigns=Campaign.objects.filter().values_list('id', flat=True)
 		context = {"request": request,"sms_gateway_status": Status,
 				"sms_gateway": sms_gateway,'can_view':can_view,'is_edit':is_edit,
 				"trigger_action":trigger_action, "dispo_list":dispo_list, "template_list":template_list,
 				"gateway_template":gateway_template, "gateway_dispo":gateway_dispo,"gateway_mode":gateway_mode,
-				"non_user_sms_template":non_user_sms_template}
+				#"non_user_sms_template":non_user_sms_template}
+				"non_user_sms_template":non_user_sms_template,"campaigns":campaigns, "selected_campaigns":selected_campaigns
+				}
 		context['can_switch'] = permission_dict['can_switch']
 		context['can_boot'] = permission_dict['can_boot']
 		return Response(context)
 	def post(self, request,pk=None,**kwargs):
 		log_type = 1
 		if pk:
+			print("in edit request data",request.data)
 			sms_gateway = get_object(pk, "callcenter", "SMSGateway")
 			sms_gateway_serializer = self.serializer(sms_gateway, data=request.data)
 			log_type = 2
 		else:
+			print("in create request data",request.data)
 			sms_gateway_serializer = self.serializer(data=request.data)
 		if sms_gateway_serializer.is_valid():
-			sms_gateway_serializer.save(created_by=request.user)
+			#sms_gateway_serializer.save(created_by=request.user)
+			sms_gateway = sms_gateway_serializer.save(created_by=request.user)
+			Campaign.objects.filter(sms_gateway__id=pk).update(sms_gateway=None)
+			Campaign.objects.filter(pk__in=request.POST.getlist("campaign")).update(sms_gateway = sms_gateway.id)
 			### Admin Log ####
 			return Response()
 		return JsonResponse(sms_gateway_serializer.errors, status=500)

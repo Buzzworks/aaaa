@@ -1,0 +1,68 @@
+{% load static %}
+
+<style>
+    .cancel{
+        position: absolute;
+        float: right;
+        right: 5rem;
+        margin-top: -3.4rem;
+    }
+    .Add{
+        position: absolute;
+        right: 4rem;
+        margin-top: -4px;
+        z-index: 1;
+    }
+</style>
+<div id="api_divs" class="d-none all">
+    <span class="Add"><i class="fas fa-plus-circle text-success"></i></span>
+    <div class="col-lg-12 p-0"> 
+        <div class="formi">
+          <div class="control-group input-group para-block">  
+              <div class="col-lg-5 p-0"> 
+                  <div class="form-group row" id="api_parameters_div">
+                      <label for="" class="col-sm-4 col-form-label">URL Parameters:</label>
+                          <div class="col-sm-6">
+                            <select id="api_parameters" class="para" data-placeholder="Select Parameter" onchange="updatealias(this)">
+                                <option value="">Select Parameter</option>
+                                <option value="Destination">Destination</option>
+                                <option value="template">Template</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                          </div>
+                  </div>
+              </div>
+              <div class="col-lg-5 alias_name" id="alias_name">
+                    <div class="form-group row">
+                        <label for="alias_name" class="col-sm-4 col-form-label">Alias Name:</label>
+                       <div class="col-sm-6">
+                        <input type="text" class="form-control alias" id="api_parameter_alias_name" placeholder="Alias Name" name="api_parameter_alias_name">
+                       </div>  
+                    </div>
+              </div>
+              <div class="row d-none alias_check" id="alias_check" >
+                  <div class="col-lg-5">
+                      <div class="form-group row">
+                              <label for="" class="col-sm-3 col-form-label">key:</label>
+                          <div class="col-sm-8">
+                              <input type="text" class="form-control alias_key" id="api_parameter_alias_key" placeholder="key" name="api_parameter_alias_key" onkeyup="ValidateKeyInput(this)">
+                              <span class="d-none text-danger">This key value already used!</span>
+                          </div> 
+                      </div> 
+                  </div>
+                <div class="col-lg-5"> 
+                    <div class="form-group row">
+                            <label for="" class="col-sm-3 col-form-label">value:</label>
+                        <div class="col-sm-8">
+                            <input type="text" class="form-control alias_value" id="api_parameter_alias_value" placeholder="value" name="api_parameter_alias_value">
+                        </div>  
+                    </div>
+                </div>
+              </div> 
+          </div>
+          <span class="cancel"><i class="fa fa-times-circle ml-1 ml-sm-2 text-danger"></i></span>
+        </div>
+    </div>
+</div>
+<!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.0.1/jquery.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/select2/4.0.0/js/select2.min.js"></script> -->

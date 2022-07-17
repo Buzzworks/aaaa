@@ -459,6 +459,7 @@ class SMSTemplate(models.Model):
 	class Meta:
 		ordering =['-id']
 
+from flexydial.constants import Gateway_Mode
 class SMSGateway(models.Model):
 	""" This table will store the Sms credentials gateway  information """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
@@ -474,6 +475,8 @@ class SMSGateway(models.Model):
 	modified_date = models.DateTimeField(auto_now=True)
 	created_by = models.ForeignKey('User', related_name='gateway_created_by',on_delete=models.SET_NULL,
 		blank=True, null=True)
+	url_parameters = JSONField(default=dict)
+	gateway_mode = models.CharField(choices=Gateway_Mode,max_length = 50)	
 	def __str__(self):
 		return self.name
 	class Meta:
@@ -1260,7 +1263,8 @@ class SMSLog(models.Model):
 	reciever = models.BigIntegerField(blank=True, null=True, db_index=False)
 	status = models.CharField(default='Active', choices=Status, max_length=10)
 	session_uuid = models.UUIDField(db_index=True, editable=False, null=True)
-	status_message =  models.CharField(max_length=255, blank=True, null=True)
+	#status_message =  models.CharField(max_length=255, blank=True, null=True)
+	status_message =  models.TextField(blank=True, null=True)
 	created = models.DateTimeField(auto_now_add=True)
 
 

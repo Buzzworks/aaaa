@@ -680,8 +680,11 @@ def sendsmsparam(campaign, numeric, session_uuid, message,user_id=None):
 			data['sender_id'] = user_id
 			data['phone_numbers'] = numeric
 			data['session_uuid'] = session_uuid
+			data['url_parameters']=campaign.sms_gateway.url_parameters
+			data['gateway_mode']=campaign.sms_gateway.gateway_mode
 			remove_html = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
 			for sms in message:
+				print("inside for",sms)
 				data['msg'] = re.sub(remove_html,'',sms['text'])
 				response = sendSMS(data, sms['id'])
 		return response
@@ -690,33 +693,68 @@ def sendsmsparam(campaign, numeric, session_uuid, message,user_id=None):
 		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
 		print(exc_type, fname, exc_tb.tb_lineno)
 
-
+from urllib.parse import urlencode
+import urllib
 def sendSMS(data,template_id):
 	""" Sending the sms """
+	print("inside send sms function",data,'tmpl',template_id)
 	url = data['url']
 	msg = data['msg']
+	auth_key = data["auth_key"]
 	msg = re.sub(r'\\x..', ' ', msg)
 	msg = msg.encode('ascii', 'ignore').decode('unicode_escape')
 	reciever = data["phone_numbers"]
-	payload = "sender_id=FSTSMS&message={}&language=english&route=p&numbers={}".format(msg, reciever)
-	headers = {
-	'authorization': data["auth_key"],
-	'Content-Type': "application/x-www-form-urlencoded",
-	'Cache-Control': "no-cache",
-	}
+	url_parameters=data["url_parameters"]
+	print("url params is",url_parameters)
+	# payload = "sender_id=FSTSMS&message={}&language=english&route=p&numbers={}".format(msg, reciever)
+	# headers = {
+	# 'authorization': data["auth_key"],
+	# 'Content-Type': "application/x-www-form-urlencoded",
+	# 'Cache-Control': "no-cache",
+	# }
+
+
+#final_url is https://stackoverflow.com/questions/46982576/the-requests-session-was-deleted-before-the-request-completed-the-user-may-havgateway_key_112&send_to=45634572&msg=hello%20from%20abhi
+
+#http://IP:PORT/ConnectOneUrl/sendsms/sendsms?dest=9196XXXX&msg=Hello&uname=<XXXXX>&pwd=<XXXX>&send=HDFCSC&intl=1
+
+	url_params_destination=url_parameters.pop('Destination','dest')#default set as key of dest if not given any url params
+	url_params_template=url_parameters.pop('template','msg')#default set as key of dest if not given any url params
+	print('url_params_template',url_params_template)
+	final_message = urllib.parse.quote(msg)
+	print('final_message',final_message)
+	if 'custom' in url_parameters:
+		custom_dict=dict(map(dict.popitem, url_parameters['custom']))
+		del url_parameters['custom']
+		url_parameters={**url_parameters,**custom_dict}
+	print("url parameters is",url_parameters)
+	query_string = urlencode(url_parameters)
+	print("query_string is",query_string)
+	final_url = "{}{}?{}={}&{}={}&{}".format(url,auth_key,url_params_destination,reciever,url_params_template,final_message,query_string)
+	if final_url.endswith("&="):
+		final_url=final_url[:-2]
+	elif final_url.endswith("&"):
+		final_url=final_url[:-1]
+	print("final_url is",final_url)
 	try:
-		response = requests.request("POST", url, data=payload, headers=headers)
+		response = requests.request("GET", url=final_url)
 		print(response.status_code,"code")
-		response = json.loads(response.text)
+		# response = json.loads(response.text)
 		msg = 'Unsuccessfully Sent'
 		status = 'Inactive'
-		if response['return']:
+		success_message = response.text.split('|')[0].strip()
+		if 'success' == success_message:
 			msg = 'Successfully Sent'
 			status = 'Active'
+
+		print("status messageo",response.text)
 		SMSLog.objects.create(sms_text=data['msg'], sent_by_id=data["sender_id"], reciever=data["phone_numbers"], status=status,
-			status_message=response["message"],session_uuid=data['session_uuid'], template_id=template_id)
-		return response["message"]
+			status_message=response.text,session_uuid=data['session_uuid'], template_id=template_id)
+		return response.text
 	except Exception as e:
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 		return "Temporary Unavailable"
 
 def csvDownloadTemplate(fields, model, file_type, dummy_value, exclude=[],
