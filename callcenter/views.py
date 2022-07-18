@@ -3304,7 +3304,7 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 			pw_time = convert_into_timedelta(activity_cal['predictive_wait_time']).total_seconds()
 			preview_time = convert_into_timedelta(activity_cal['preview_time']).total_seconds()
 			break_time = convert_into_timedelta(activity_cal['break_time']).total_seconds()
-			talk_call = convert_into_timedelta(calldetail['bill_sec']).total_seconds()
+			talk_call = convert_into_timedelta(calldetail_cal['bill_sec']).total_seconds()
 			ring_duration =convert_into_timedelta(calldetail_cal['ring_duration']).total_seconds()
 			feedback_time =convert_into_timedelta(calldetail_cal['feedback_time']).total_seconds()
 			talk_total = int(talk_call) + int(feedback_time) + int(ring_duration)
