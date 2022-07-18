@@ -702,6 +702,8 @@ def sendSMS(data,template_id):
 	url = data['url']
 	msg = data['msg']
 	auth_key = data["auth_key"]
+	if auth_key == "None":
+		auth_key=''
 	msg = re.sub(r'\\x..', ' ', msg)
 	msg = msg.encode('ascii', 'ignore').decode('unicode_escape')
 	reciever = data["phone_numbers"]
@@ -736,7 +738,7 @@ def sendSMS(data,template_id):
 	query_string = urlencode(url_parameters)
 	print("query_string is",query_string)
 	if gateway_Mode=='0':#'0' is sms, not True, False
-		final_url = "{}{}?{}={}&{}={}&{}".format(url,auth_key,url_params_destination,reciever,url_params_template,final_message,query_string)
+		final_url = "{}/{}?{}={}&{}={}&{}".format(url,auth_key,url_params_destination,reciever,url_params_template,final_message,query_string)
 	elif gateway_Mode=='1':#'1' is whatsapp, not True, False
 		final_url=''
 	if final_url.endswith("&="):
