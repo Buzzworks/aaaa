@@ -38,10 +38,9 @@
 						<label for="" class="col-sm-4 col-form-label">Gateway Mode :</label>
 						<div class="col-sm-8 form-inline">
 							{% for mode in gateway_mode %}
-							<!----	<div class="form-check mr-sm-3"> -->
 								<div class="form-check mr-sm-3 {% if sms_gateway and not sms_gateway.gateway_mode == mode.0 %} d-none {% endif %}">
-								<label class="form-check-label">
-										<input type="radio" class="form-check-input selected" name="gateway_mode" id="mode-{{mode.0}}" value="{{mode.0}}" data-validation="required">{{mode.1}}
+									<label class="form-check-label">
+										<input type="radio" class="form-check-input" {% if sms_gateway.gateway_mode == mode.0 %} checked {% endif %} name="gateway_mode" id="mode-{{mode.0}}" value="{{mode.0}}" data-validation="required">{{mode.1}}
 										<i class="input-helper"></i>
 									</label>
 								</div>
@@ -62,7 +61,7 @@
 				</div>
 				<div class="col-md-6">
 					<div class="form-group row">
-						<label for="extension" class="col-sm-4 col-form-label">Sms Trigger On<span class="star camp_required">*</span> :</label>
+						<label for="extension" class="col-sm-4 col-form-label">Trigger On<span class="star camp_required">*</span> :</label>
 						<div class="col-sm-8">
 							<select class="form-control"  id="sms_trigger_on" name="sms_trigger_on" data-validation="required" data-validation-error-msg-container="#sms_trigger_error">
 								<option value="">Select Trigger Action</option>
@@ -94,23 +93,6 @@
 						</div>
 					</div>
 				</div>
-
-				<div class="col-md-6">
-					<div class="form-group row">
-						<label for="extension" class="col-sm-4 col-form-label">Campaign<span class="star camp_required"></span> :</label>
-						<div class="col-sm-8">
-							<select class="form-control"  id="campaign" name="campaign" data-validation="required" data-validation-error-msg-container="#template_error" multiple>
-								{% for campaign in campaigns %}
-									<option value="{{ campaign.id }}" {% if campaign.id in selected_campaigns %}selected {% endif %}>{{ campaign.name }}</option>
-								{% endfor %}
-							</select>
-							<div id="template_error"></div> 
-						</div>
-					</div>
-				</div>
-				<!-- <div class="col-md-6"> 	
-					<div class="col-md-6"> -->
-
 				<div class="col-md-6">
 					<div class="form-group row">
 						<label for="extension" class="col-sm-4 col-form-label">Template<span class="star camp_required">*</span> :</label>
@@ -162,7 +144,21 @@
 					</div>
 				</div>
 			</div>
-
+			<div class="col-md-6">
+				<div class="form-group row">
+					<label for="extension" class="col-sm-4 col-form-label">Campaign<span class="star camp_required"></span> :</label>
+					<div class="col-sm-8">
+						<select class="form-control"  id="campaign" name="campaign" data-validation="required" data-validation-error-msg-container="#template_error" multiple>
+							{% for campaign in campaigns %}
+								<option value="{{ campaign.id }}" {% if campaign.id in selected_campaigns %}selected {% endif %}>{{ campaign.name }}</option>
+							{% endfor %}
+						</select>
+						<div id="template_error"></div> 
+					</div>
+				</div>
+			</div>
+			<!-- <div class="col-md-6"> 	
+				<div class="col-md-6"> -->
 			<div class="col-md-6"> 	
 				<div class="form-group row">
 					 <label for="dynamic_api" class="col-7 col-sm-5 col-form-label">Dymanic API :</label> 
@@ -177,12 +173,11 @@
 				 </div>
 			</div>
 			{% include "sms_management/smsgateway.html" %} 
-
-			<!-- <div class="row mt-4 d-none" id="whats_app_gateway_div"> -->
-				<!-- <div class="col-md-6">
+			<!-- <div class="row mt-4 d-none" id="whats_app_gateway_div">
+				<div class="col-md-6">
 					<h5>We will integrate this very soon. Sorry for inconvenience </h5>
-				</div>
-			</div>	 -->
+				</div> -->
+			</div>
 			<div class="row mt-4">
 				<div class="col-sm-6">
 					<div class="alert alert-danger d-none" id="script-err-msg">
@@ -210,7 +205,7 @@
 <script src="{% static 'js/admin.js' %}"></script>
 <script type="text/javascript">
 	{% if can_view %}
-		$('#sms_template, #disposition,#campaign').select2()
+		$('#sms_template, #disposition, #campaign').select2()
 		$.validate({
 			form:'#sms-template-create-form',
 		});
@@ -238,7 +233,6 @@
 		disabled_fields()
 	{% endif %}
 </script>
-
 <script>
 	function ValidateKeyInput(key_this){
 		key_values = []
@@ -352,5 +346,4 @@
 	{% endif %}
 	});
 	</script>
-
 {% endblock extra-js %}

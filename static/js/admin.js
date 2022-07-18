@@ -6554,7 +6554,10 @@ $("#sms-gateway-submit-btn").click(function(){
             alias_obj[alias_key] = value
             obj[parameter].push(alias_obj)
         }else{
-            obj[parameter] = $(this).find('.alias').val();
+            //obj[parameter] = $(this).find('.alias').val();
+            if (parameter){
+                                obj[parameter] = $(this).find('.alias').val();
+                            }
         }
     });
 
@@ -6623,16 +6626,16 @@ $("#email-gateway-submit-btn").click(function(){
     
 })
 
-$('[name="gateway_mode"]').change(function(){
-    if ($(this).val() == 0) {
-        $("#whats_app_gateway_div").addClass("d-none")
-        $("#sms_gateway_div").removeClass("d-none")
-    }
-    else{
-      $("#whats_app_gateway_div").removeClass("d-none")
-      $("#sms_gateway_div").addClass("d-none")
-    }
-})
+// $('[name="gateway_mode"]').change(function(){
+//     if ($(this).val() == 0) {
+//         $("#whats_app_gateway_div").addClass("d-none")
+//         $("#sms_gateway_div").removeClass("d-none")
+//     }
+//     else{
+//       $("#whats_app_gateway_div").removeClass("d-none")
+//       $("#sms_gateway_div").addClass("d-none")
+//     }
+// })
 //Thirdparty Api Modules Js 
 
 $(document).on('click','#create-thirdparty-btn,#edit-thirdparty-btn ', function(){

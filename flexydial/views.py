@@ -1,4 +1,5 @@
 import json
+from typing import final
 import xlwt
 import re
 import os
@@ -25,7 +26,7 @@ import pandas as pd
 import pickle
 from datetime import date
 from crm.models import TempContactInfo, Contact, TrashContact, CampaignInfo, AlternateContact, Phonebook
-from .constants import (CRM_FIELDS, USER_FIELDS ,DNC_FIELDS, PAGINATE_BY_LIST, ACTION_TYPE, ALTERNATE_FIELDS,HOLIDAYS_FIELDS)
+from .constants import (CRM_FIELDS, USER_FIELDS ,DNC_FIELDS, PAGINATE_BY_LIST, ACTION_TYPE, ALTERNATE_FIELDS,HOLIDAYS_FIELDS, Gateway_Mode)
 CAMPAIGNS={}
 import base64
 from django.core.mail import EmailMessage,EmailMultiAlternatives, get_connection, BadHeaderError
@@ -705,6 +706,7 @@ def sendSMS(data,template_id):
 	msg = msg.encode('ascii', 'ignore').decode('unicode_escape')
 	reciever = data["phone_numbers"]
 	url_parameters=data["url_parameters"]
+	gateway_Mode=data["gateway_mode"]
 	print("url params is",url_parameters)
 	# payload = "sender_id=FSTSMS&message={}&language=english&route=p&numbers={}".format(msg, reciever)
 	# headers = {
@@ -716,12 +718,15 @@ def sendSMS(data,template_id):
 
 #final_url is https://stackoverflow.com/questions/46982576/the-requests-session-was-deleted-before-the-request-completed-the-user-may-havgateway_key_112&send_to=45634572&msg=hello%20from%20abhi
 
-#http://IP:PORT/ConnectOneUrl/sendsms/sendsms?dest=9196XXXX&msg=Hello&uname=<XXXXX>&pwd=<XXXX>&send=HDFCSC&intl=1
+#http://IP:PORT/ConnectOneUrl/sendsms/sendsms?dest=9196XXXX&msg=Hello&uname=<XXXXX>&pwd=<XXXX>&send=HDFCSC&intl=1(for sms)
 
+#https://media.smsgupshup.com/GatewayAPI/rest?method=SendMessage&send_to=xxxxxxxxxx&msg=Welcome%
+# 20to%20GupShup%20API&msg_type=TEXT&userid=20000xxxxx&auth_scheme=plain&password=password&v=1
+# .1&format=text (for whatsapp)
 	url_params_destination=url_parameters.pop('Destination','dest')#default set as key of dest if not given any url params
 	url_params_template=url_parameters.pop('template','msg')#default set as key of dest if not given any url params
 	print('url_params_template',url_params_template)
-	final_message = urllib.parse.quote(msg)
+	final_message = urllib.parse.quote(msg)#Text should be URL encoded
 	print('final_message',final_message)
 	if 'custom' in url_parameters:
 		custom_dict=dict(map(dict.popitem, url_parameters['custom']))
@@ -730,7 +735,10 @@ def sendSMS(data,template_id):
 	print("url parameters is",url_parameters)
 	query_string = urlencode(url_parameters)
 	print("query_string is",query_string)
-	final_url = "{}{}?{}={}&{}={}&{}".format(url,auth_key,url_params_destination,reciever,url_params_template,final_message,query_string)
+	if gateway_Mode=='0':#'0' is sms, not True, False
+		final_url = "{}{}?{}={}&{}={}&{}".format(url,auth_key,url_params_destination,reciever,url_params_template,final_message,query_string)
+	elif gateway_Mode=='1':#'1' is whatsapp, not True, False
+		final_url=''
 	if final_url.endswith("&="):
 		final_url=final_url[:-2]
 	elif final_url.endswith("&"):
