@@ -681,7 +681,7 @@ def sendsmsparam(campaign, numeric, session_uuid, message,user_id=None):
 			data['sender_id'] = user_id
 			data['phone_numbers'] = numeric
 			data['session_uuid'] = session_uuid
-			data['url_parameters']=campaign.sms_gateway.url_parameters
+			data['url_parameters']=str(campaign.sms_gateway.url_parameters) #need to convert to str as in loop dict is going to sendsms
 			data['gateway_mode']=campaign.sms_gateway.gateway_mode
 			remove_html = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
 			for sms in message:
@@ -708,8 +708,9 @@ def sendSMS(data,template_id):
 	msg = msg.encode('ascii', 'ignore').decode('unicode_escape')
 	reciever = data["phone_numbers"]
 	url_parameters=data["url_parameters"]
+	url_parameters=eval(url_parameters)#use eval not use dict(not working)
 	gateway_Mode=data["gateway_mode"]
-	print("url params is",url_parameters)
+	print("url params is",url_parameters,'type is',type(url_parameters))
 	# payload = "sender_id=FSTSMS&message={}&language=english&route=p&numbers={}".format(msg, reciever)
 	# headers = {
 	# 'authorization': data["auth_key"],
