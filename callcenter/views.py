@@ -3963,7 +3963,9 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 		send_sms_callrecieve = False
 		send_sms_on_dispo = False
 		if campaign.sms_gateway:
-			template = campaign.sms_gateway.template.filter(Q(campaign_id=campaign.id)|Q(template_type='0'))
+			# template = campaign.sms_gateway.template.filter(Q(campaign_id=campaign.id)|Q(template_type='0'))
+			#template=campaign.template_campaign.all()
+			template=campaign.sms_gateway.template #which using for not selecting campaign from template
 			if campaign.sms_gateway.sms_trigger_on=='2':
 				disabled_sms_tab = True
 			elif campaign.sms_gateway.sms_trigger_on=='1':
@@ -7115,6 +7117,12 @@ class SmsTemplateCreateEditApiView(LoginRequiredMixin, APIView):
 			sms_template_serializer = self.serializer(data=request.data)
 		if sms_template_serializer.is_valid():
 			sms_template_serializer.save(created_by=request.user)
+			if sms_template_serializer.data['template_type']=='0':#assigning to all the gateways by which template is global
+				lt=SMSTemplate.objects.get(name=sms_template_serializer.data['name'])
+				sg=SMSGateway.objects.all()
+				for x in sg:
+					x.template.add(lt)
+					x.save()
 			return Response()
 		return JsonResponse(sms_template_serializer.errors, status=500)
 
@@ -7245,11 +7253,13 @@ class SmsGatewayCreateEditApiView(LoginRequiredMixin, APIView):
 			if permission_dict['can_update']:
 				can_view = True
 			selected_campaigns = Campaign.objects.filter(sms_gateway__id=pk).values_list('id', flat=True)
+			# campaigns=Campaign.objects.filter(sms_gateway__id=None)#this query for hiding already selected camapigns in frontend issue so commented need to implement
 		else:
 			if permission_dict['can_create']:
 				can_view = True
 			sms_gateway = ""
-			selected_campaigns=Campaign.objects.filter().values_list('id', flat=True)
+			selected_campaigns=''#in create the selected campaigns will be empty
+			campaigns=Campaign.objects.filter(sms_gateway__id=None)#this query for hiding already selected camapigns
 		context = {"request": request,"sms_gateway_status": Status,
 				"sms_gateway": sms_gateway,'can_view':can_view,'is_edit':is_edit,
 				"trigger_action":trigger_action, "dispo_list":dispo_list, "template_list":template_list,
