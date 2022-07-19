@@ -179,7 +179,7 @@ function customPaginationReport(){
 }
 
 //this function for datatable with serverside pagination
-function report_datatable(table,url,col_list){
+function report_datatable(table,url,col_list,crm_fields){
 	report_table = table.DataTable({
 		"scrollX": true,
 		"serverSide": true,
@@ -272,6 +272,13 @@ function report_datatable(table,url,col_list){
 	        
 	    });
 		
+	}else if(crm_fields) {
+		$(".dataTables_scrollHeadInner #column_name th").each(function(index) {
+	        temp_name = $(this).attr("data-field_name")
+	        if ($.inArray(temp_name, crm_fields) != -1) {
+				report_table.column(index).visible(false)
+	        }
+	    });
 	}
 }
 

@@ -2419,7 +2419,7 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 		report_visible_cols = get_report_visible_column("1",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
-		if request.user.is_superuser:
+		if admin or request.user.is_superuser:
 			camp = Campaign.objects.all().prefetch_related(
 					'users', 'group', 'disposition').distinct()
 			campaign_list = camp.values("id", "name")
@@ -2463,31 +2463,29 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 			dispo_keys = set([item for sublist in dispo_keys for item in sublist])
 		uniquefields = list(CrmField.objects.filter(campaign__in=camp_id).distinct().values_list('unique_fields',flat=True))
 		uniquefields = sorted(set(itertools.chain.from_iterable(uniquefields)))
-		show_result = request.GET.get("show_result", "")
 		context = {'request': request, 'campaign_list': campaign_list}
 		all_fields = {'diallereventlog':['hangup_cause','hangup_cause_code','dialed_status'],'smslog':['sms_sent','sms_message'],
-		"calldetail":['campaign_name','user','full_name','customer_name','client_name','supervisor_name','phonebook','customer_cid','contact_id','uniqueid',
+		"calldetail":['campaign_name','user','full_name','supervisor_name','phonebook','customer_cid','contact_id','uniqueid',
 		'session_uuid','init_time','ring_time','connect_time','hangup_time','wait_time','ring_duration','hold_time','callflow','callmode',
 		'bill_sec','ivr_duration','call_duration','feedback_time','call_length','hangup_source','internal_tc_number','external_tc_number','progressive_time','preview_time','predictive_wait_time','inbound_wait_time','blended_wait_time'],
 		'cdrfeedback':['primary_dispo','feedback','relationtag']}
-		# context['users'] = list(user_list)
 
 		crm_camp_fields = []
-		crm_sec_name = {}
+		# crm_sec_name = {}
 		crm_camp_details = list(CrmField.objects.filter(campaign__id__in=camp_id).values_list('crm_fields',flat=True))
 		for i in crm_camp_details:
 			for j in range(len(i)):
-				crm_sec_name[i[j]['section_name']] = {}
+				# crm_sec_name[i[j]['section_name']] = {}
 				for k in i[j]['section_fields']:
 					crm_camp_fields.append(k['db_field'])
-					crm_sec_name[i[j]['section_name']][k['db_field']]=""
+					# crm_sec_name[i[j]['section_name']][k['db_field']]=""
 		if crm_camp_fields:
 			all_fields['crm_fields'] = crm_camp_fields
 		if request.user.is_superuser:
 			context['users'] = list(user_list)
 		else:
 			context['users'] = user_in_hirarchy_level(request.user.id)
-		context['crm_sec_name'] = crm_sec_name
+		# context['crm_sec_name'] = crm_sec_name
 		context['disposition'] = disposition.values("id", "name")
 		context['dispo_keys'] = dispo_keys
 		context['all_fields'] = all_fields

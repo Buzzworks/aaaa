@@ -648,8 +648,6 @@ class CallDetailReportSerializer(serializers.ModelSerializer):
 	call_length = serializers.SerializerMethodField()
 	cdrfeedback = CdrFeedbckReportSeializer(read_only=True)
 	full_name = serializers.SerializerMethodField()
-	customer_name = serializers.SerializerMethodField()
-	client_name = serializers.SerializerMethodField()
 	smslog = serializers.SerializerMethodField()
 	crm_fields = serializers.SerializerMethodField()
 	class Meta:
@@ -673,30 +671,8 @@ class CallDetailReportSerializer(serializers.ModelSerializer):
 			username = obj.user.first_name + " " + obj.user.last_name
 		return username
 
-	def get_customer_name(self,obj):
-		customer_name = ""
-		contact_inst  = Contact.objects.filter(id=obj.contact_id).first()
-		print(contact_inst)
-		if obj and contact_inst:
-			if contact_inst and contact_inst.customer_raw_data and 'customer_information' in contact_inst.customer_raw_data:
-				if 'customer_name' in contact_inst.customer_raw_data['customer_information']:
-					customer_name = contact_inst.customer_raw_data['customer_information']['customer_name']
-					print(customer_name)
-		return customer_name
-
-	def get_client_name(self,obj):
-		client_name = ""
-		contact_inst  = Contact.objects.filter(id=obj.contact_id).first()
-		if obj and contact_inst:
-			if contact_inst and contact_inst.customer_raw_data and 'customer_information' in contact_inst.customer_raw_data:
-				if 'client_name' in contact_inst.customer_raw_data['customer_information']:
-					client_name = contact_inst.customer_raw_data['customer_information']['client_name']
-		return client_name
-
 	def get_smslog(self,obj):
 		fields_dict = {}
-		message = []
-		sms_list= []
 		fields_dict['sms_sent'] = 'NO'
 		if obj.session_uuid:
 			sms_obj = SMSLog.objects.filter(session_uuid=obj.session_uuid)
@@ -710,26 +686,16 @@ class CallDetailReportSerializer(serializers.ModelSerializer):
 		if obj.user:
 			supervisor_name = obj.user.reporting_to.username if obj.user.reporting_to else ""
 		return supervisor_name
+		
 	def get_crm_fields(self,obj):
-		crm_sec_fields = {}
 		crm_fields = {}
-		request = self.context.get("request")
-		camp = Campaign.objects.all().distinct()
-		camp_id = list(camp.values_list("id",flat=True))
-		crm_camp_details = list(CrmField.objects.filter(campaign__id__in=camp_id).values_list('crm_fields',flat=True))
 		contact = Contact.objects.filter(id=obj.contact_id).first()
-		for i in crm_camp_details:
-			for j in range(len(i)):
-				crm_sec_fields[i[j]['db_section_name']] = {}
-				for k in i[j]['section_fields']:
-					if contact and contact.customer_raw_data:
-						crm_sec_fields[i[j]['db_section_name']][k['db_field']]=""
 		if contact:
 			for con_data in contact.customer_raw_data:
-				if con_data in crm_sec_fields:
-					for sec_field,data in contact.customer_raw_data[con_data].items():
-						crm_fields[sec_field]=data
+				for sec_field,data in contact.customer_raw_data[con_data].items():
+					crm_fields[sec_field]=data
 		return crm_fields
+
 class CallDetailReportFieldSerializer(serializers.ModelSerializer):
 	""" serlializer to the fields of calldetails report """
 	cdrfeedback = CdrFeedbckReportSeializer()

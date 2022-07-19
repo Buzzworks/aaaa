@@ -86,6 +86,9 @@ class Phonebook(models.Model):
 		job_id = self.campaign.replace(" ", "")+self.name.replace(" ", "")+str(self.id)
 		data_upload_inst = DataUploadLog.objects.filter(job_id=job_id)
 		improper_file = ""
+		if data_upload_inst.exists() and data_upload_inst.first().improper_file:
+			improper_file = data_upload_inst.first().improper_file
+			improper_file =  improper_file.url if settings.GS_BUCKET_NAME or settings.AWS_STORAGE_BUCKET_NAME else os.path.basename(improper_file.name)
 		#if data_upload_inst.exists() and data_upload_inst.first().improper_file:
 		#	improper_file = data_upload_inst.first().improper_file.path
 		return improper_file
@@ -290,6 +293,7 @@ class DownloadReports(models.Model):
 	@property
 	def downloaded_file_path(self):
 		if self.downloaded_file:
+
 			return self.downloaded_file.url
 		return ''
 	@property

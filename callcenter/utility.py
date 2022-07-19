@@ -1871,7 +1871,6 @@ def download_call_detail_report(filters, user, col_list, serializer_class, downl
 	this is the function for download call details reports
 	"""	
 	try:
-		query = {}
 		user = User.objects.get(id=user)
 		admin = False
 		if user.user_role and user.user_role.access_level == 'Admin':
@@ -1905,7 +1904,6 @@ def download_call_detail_report(filters, user, col_list, serializer_class, downl
 			selected_campaign.append(selected_campaign[0])
 		if len(all_users) == 1:
 			all_users.append(all_users[0])
-
 		if selected_campaign:
 			sql_query_where = ' ((callcenter_calldetail.campaign_name IN '+str(tuple(selected_campaign))+' AND callcenter_calldetail.user_id IN '+str(tuple(all_users))+') OR ( callcenter_calldetail.campaign_name IN '+str(tuple(selected_campaign))+' AND callcenter_calldetail.user_id IS NULL ))'
 		else:
@@ -1915,14 +1913,13 @@ def download_call_detail_report(filters, user, col_list, serializer_class, downl
 		elif selected_user:
 			sql_query_where = ' (callcenter_calldetail.user_id IN '+str(tuple(all_users))+' ) '
 		elif selected_campaign:
-			if selected_campaign:
-				sql_query_where = ' (callcenter_calldetail.campaign_name IN '+str(tuple(selected_campaign))+' ) '
-				if not (user.is_superuser or admin):
-					get_camp_users = list(get_campaign_users(selected_campaign,
-						user).values_list("id",flat=True))
-					if len(get_camp_users) == 1:
-						get_camp_users.append(get_camp_users[0])
-					sql_query_where = ' ((callcenter_calldetail.campaign_name IN '+str(tuple(selected_campaign))+' AND callcenter_calldetail.user_id IN '+str(tuple(get_camp_users))+') OR ( callcenter_calldetail.campaign_name IN '+str(tuple(selected_campaign))+' AND callcenter_calldetail.user_id IS NULL ))'
+			sql_query_where = ' (callcenter_calldetail.campaign_name IN '+str(tuple(selected_campaign))+' ) '
+			if not (user.is_superuser or admin):
+				get_camp_users = list(get_campaign_users(selected_campaign,
+					user).values_list("id",flat=True))
+				if len(get_camp_users) == 1:
+					get_camp_users.append(get_camp_users[0])
+				sql_query_where = ' ((callcenter_calldetail.campaign_name IN '+str(tuple(selected_campaign))+' AND callcenter_calldetail.user_id IN '+str(tuple(get_camp_users))+') OR ( callcenter_calldetail.campaign_name IN '+str(tuple(selected_campaign))+' AND callcenter_calldetail.user_id IS NULL ))'
 		if selected_disposition:
 			if len(selected_disposition)==1:
 				selected_disposition.append(selected_disposition[0])
@@ -1935,27 +1932,16 @@ def download_call_detail_report(filters, user, col_list, serializer_class, downl
 		sub_dispo = "SELECT "
 
 		from flexydial.views import user_hierarchy_func
-		from crm.utility import campaign_crm_fields,get_crm_fields
 		if not user.is_superuser:
 			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(user.id)+list(str(user.id)), users__isnull=False)).distinct()
 		else:
 			camp = Campaign.objects.all()
 		camp_names = list(camp.values_list("name",flat=True))
 		crm_camp_details = list(CrmField.objects.filter(campaign__name__in=camp_names).values_list('crm_fields',flat=True))
-		crm_sec_fields = {}
-		contact = Contact.objects.all().first()
+		cdr_download_col = CDR_DOWNLOAD_COl
 		for i in crm_camp_details:
 			for j in range(len(i)):
-				crm_sec_fields[i[j]['db_section_name']] = {}
-				for k in i[j]['section_fields']:
-					if contact and contact.customer_raw_data:
-						crm_sec_fields[i[j]['db_section_name']][k['db_field']]=""
-
-		cdr_download_col = CDR_DOWNLOAD_COl
-		for i in campaign_crm_fields(camp_names):
-			for j,k in crm_sec_fields.items():
-				if i in k:
-					cdr_download_col[i] = "customer_raw_data -> '{}' ->> '{}' as {}".format(j,i,i)
+				cdr_download_col[i[j]['section_fields'][0]['db_field']] = "customer_raw_data -> '{}' ->> '{}' as {}".format(i[j]['db_section_name'],i[j]['section_fields'][0]['db_field'],i[j]['section_fields'][0]['field'])
 		for index,col_name in enumerate(col_list, start=1):
 			if col_name in cdr_download_col:
 				if col_name == 'uniqueid':
@@ -1964,32 +1950,27 @@ def download_call_detail_report(filters, user, col_list, serializer_class, downl
 					else:
 						sub_dispo += 'callcenter_calldetail.uniqueid as uniqueid'
 				else:
-					sub_dispo += CDR_DOWNLOAD_COl[col_name]+" "
+					sub_dispo += cdr_download_col[col_name]+" "
 			elif col_name in dispo_keys:
 				sub_dispo += "callcenter_cdrfeedbck.feedback ->> '"+str(col_name)+"' as "+'"'+str(col_name)+'"'
 			if index < len(col_list) and sub_dispo[-2:] != ", ":
-				sub_dispo += ", "
-		# sub_dispo += "from callcenter_calldetail left join callcenter_diallereventlog on callcenter_diallereventlog.session_uuid = callcenter_calldetail.session_uuid left join callcenter_cdrfeedbck on callcenter_cdrfeedbck.calldetail_id=callcenter_calldetail.id left join callcenter_user usr on usr.id = callcenter_calldetail.user_id left join callcenter_user supr on supr.id = usr.reporting_to_id left join (select sms.session_uuid as session_uuid, string_agg(template.name, ', ') as name from callcenter_smslog sms left join callcenter_smstemplate template on sms.template_id = template.id group by sms.session_uuid) sms on sms.session_uuid = callcenter_calldetail.session_uuid " + where
+				sub_dispo += ", "			
 		db_settings = settings.DATABASES['default']
 		sub_dispo += "from callcenter_calldetail left join callcenter_diallereventlog on callcenter_diallereventlog.session_uuid = callcenter_calldetail.session_uuid left join callcenter_cdrfeedbck on callcenter_cdrfeedbck.calldetail_id=callcenter_calldetail.id left join callcenter_user usr on usr.id = callcenter_calldetail.user_id left join callcenter_user supr on supr.id = usr.reporting_to_id left join (select sms.session_uuid as session_uuid, string_agg(template.name, ', ') as name from callcenter_smslog sms left join callcenter_smstemplate template on sms.template_id = template.id group by sms.session_uuid) sms on sms.session_uuid = callcenter_calldetail.session_uuid left join ( SELECT * FROM dblink('dbname=crm port={port} host={host} user={user} password={password}','SELECT id, customer_raw_data,created_date FROM crm_contact') AS tb2 (id bigint, customer_raw_data jsonb,created_date timestamp with time zone)) AS tb2 ON tb2.id = callcenter_calldetail.contact_id ".format(port = db_settings['PORT'], host = db_settings['HOST'], user = db_settings['USER'], password=db_settings['PASSWORD']) + where
 		download_folder = settings.MEDIA_ROOT+"/download/"+datetime.now().strftime("%m.%d.%Y")+"/"+str(user.id)+"/"
-		download_sw_file = "/download/"+datetime.now().strftime("%m.%d.%Y")+"/"+str(user.id)+"/"
 		if not os.path.exists(download_folder):
 			os.makedirs(download_folder)
-		# file_path = download_folder+str(user.id)+'_'+str('call_details')+'_'+str(datetime.now().strftime("%m.%d.%Y.%H.%M.%S"))+".xls"
 		if download_report_id:
 			set_download_progress_redis(download_report_id, 25, is_refresh=True)
 		db_settings = settings.DATABASES['default']
 		db_connection = "postgresql://{user}:{password}@{host}:{port}/{db_name}".format(user = db_settings['USER'], password=db_settings['PASSWORD'], host = db_settings['HOST'], db_name = db_settings['NAME'], port = db_settings['PORT'])
 		if download_type == 'xls':
 			file_path = download_folder+str(user.id)+'_'+str('call_details')+'_'+str(datetime.now().strftime("%m.%d.%Y.%H.%M.%S"))+".xlsx"
-			file_nfs_path = download_sw_file+str(user.id)+'_'+str('call_details')+'_'+str(datetime.now().strftime("%m.%d.%Y.%H.%M.%S"))+".xlsx"
 			with pd.ExcelWriter(file_path, engine="xlsxwriter",options={'remove_timezone': True}) as writer:
 				df = pd.read_sql(sub_dispo,db_connection)
 				df.to_excel(writer, sheet_name = "Sheet1", header = True, index = False)
 		else:
 			file_path = download_folder+str(user.id)+'_'+str('call_details')+'_'+str(datetime.now().strftime("%m.%d.%Y.%H.%M.%S"))+".csv"
-			file_nfs_path = download_sw_file+str(user.id)+'_'+str('call_details')+'_'+str(datetime.now().strftime("%m.%d.%Y.%H.%M.%S"))+".csv"
 			df = pd.read_sql(sub_dispo,db_connection)
 			df.to_csv(file_path, index = False)
 		f = open(file_path, 'rb')
