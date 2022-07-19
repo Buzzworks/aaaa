@@ -7253,7 +7253,9 @@ class SmsGatewayCreateEditApiView(LoginRequiredMixin, APIView):
 			if permission_dict['can_update']:
 				can_view = True
 			selected_campaigns = Campaign.objects.filter(sms_gateway__id=pk).values_list('id', flat=True)
-			# campaigns=Campaign.objects.filter(sms_gateway__id=None)#this query for hiding already selected camapigns in frontend issue so commented need to implement
+			all_available_campaigns=list(Campaign.objects.filter(sms_gateway__id=None).values_list("id",flat=True))
+			all_selected_campaigns=list(Campaign.objects.filter(sms_gateway__id=pk).values_list('id', flat=True))
+			campaigns = Campaign.objects.filter(id__in=all_available_campaigns+all_selected_campaigns).values('id','name')
 		else:
 			if permission_dict['can_create']:
 				can_view = True
