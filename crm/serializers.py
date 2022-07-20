@@ -215,7 +215,7 @@ class PhonebookRefreshSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Phonebook
 		fields = ('name','id', 'campaign_name','percentage', 'improper_file_name', 'improper_file_path',
-			'expire_date','created_by', 'status','last_updated_contact_count', 'total_contact_count')
+			'expire_date','created_by', 'status','last_updated_contact_count', 'total_contact_count', 'created_date', 'modified_date')
 
 	def get_total_contact_count(self,obj):
 		return obj.contacts.count()
