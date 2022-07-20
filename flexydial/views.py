@@ -726,22 +726,34 @@ def sendSMS(data,template_id):
 #https://media.smsgupshup.com/GatewayAPI/rest?method=SendMessage&send_to=xxxxxxxxxx&msg=Welcome%
 # 20to%20GupShup%20API&msg_type=TEXT&userid=20000xxxxx&auth_scheme=plain&password=password&v=1
 # .1&format=text (for whatsapp)
-	url_params_destination=url_parameters.pop('Destination','dest')#default set as key of dest if not given any url params
-	url_params_template=url_parameters.pop('template','msg')#default set as key of dest if not given any url params
-	print('url_params_template',url_params_template)
-	final_message = urllib.parse.quote(msg)#Text should be URL encoded
-	print('final_message',final_message)
-	if 'custom' in url_parameters:
-		custom_dict=dict(map(dict.popitem, url_parameters['custom']))
-		del url_parameters['custom']
-		url_parameters={**url_parameters,**custom_dict}
-	print("url parameters is",url_parameters)
-	query_string = urlencode(url_parameters)
-	print("query_string is",query_string)
 	if gateway_Mode=='0':#'0' is sms, not True, False
+		url_params_destination=url_parameters.pop('Destination','dest')#default set as key of dest if not given any url params
+		url_params_template=url_parameters.pop('template','msg')#default set as key of dest if not given any url params
+		print('url_params_template',url_params_template)
+		final_message = urllib.parse.quote(msg)#Text should be URL encoded
+		print('final_message',final_message)
+		if 'custom' in url_parameters:
+			custom_dict=dict(map(dict.popitem, url_parameters['custom']))
+			del url_parameters['custom']
+			url_parameters={**url_parameters,**custom_dict}
+		print("url parameters is",url_parameters)
+		query_string = urlencode(url_parameters)
+		print("query_string is",query_string)
 		final_url = "{}/{}?{}={}&{}={}&{}".format(url,auth_key,url_params_destination,reciever,url_params_template,final_message,query_string)
 	elif gateway_Mode=='1':#'1' is whatsapp, not True, False
-		final_url=''
+		url_params_destination=url_parameters.pop('Destination','send_to')#default set as key of send_to if not given any url params
+		url_params_template=url_parameters.pop('template','msg')#default set as key of dest if not given any url params
+		print('url_params_template',url_params_template)
+		final_message = urllib.parse.quote(msg)#Text should be URL encoded
+		print('final_message',final_message)
+		if 'custom' in url_parameters:
+			custom_dict=dict(map(dict.popitem, url_parameters['custom']))
+			del url_parameters['custom']
+			url_parameters={**url_parameters,**custom_dict}
+		print("url parameters is",url_parameters)
+		query_string = urlencode(url_parameters)
+		print("query_string is",query_string)
+		final_url="{}?method=SendMessage&{}={}&{}={}&{}".format(url,url_params_destination,reciever,url_params_template,final_message,query_string)
 	if final_url.endswith("&="):
 		final_url=final_url[:-2]
 	elif final_url.endswith("&"):
