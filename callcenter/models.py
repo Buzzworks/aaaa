@@ -296,7 +296,7 @@ class UserVariable(models.Model):
 			we wait this defined time before trying him again')
 	protocol      = models.CharField(default=PROTOCOL_CHOICES[0][0],
 			choices=PROTOCOL_CHOICES, max_length=30)
-	created_date = models.DateTimeField(auto_now_add=True)
+	created_date = models.DateTimeField(auto_now_add=True,db_index=True)
 	modified_date = models.DateTimeField(auto_now=True)
 	enabled = models.DateTimeField(null=True, blank=True, db_index=True)
 	w_req_callback = models.BooleanField(default=False,null=True, blank=True)
@@ -560,7 +560,7 @@ class DiaTrunkGroup(models.Model):
 
 class Campaign(models.Model):
 	""" This table stores all the campaign related info """
-	name = models.CharField(max_length=100)
+	name = models.CharField(max_length=100,db_index=True)
 	slug = models.SlugField(max_length=100, unique=True)
 	description = models.TextField(blank=True, null=True)
 	users = models.ManyToManyField(User, related_name='campaign_users', null=True, blank=True)
@@ -852,7 +852,7 @@ class CallDetail(models.Model):
 	callflow = models.CharField(default='', max_length=50, null=True)
 	callmode = models.CharField(default='', max_length=50, null=True)
 	destination_extension = models.CharField(default='', max_length=50, null=True)
-	dialed_status = models.CharField(default='',choices=auto_dialed_status, max_length=50)
+	dialed_status = models.CharField(default='',choices=auto_dialed_status, max_length=50,db_index=True)
 	session_uuid = models.UUIDField(db_index=True,  null=True)
 	a_leg_uuid = models.UUIDField(null=True)
 	b_leg_uuid = models.UUIDField(null=True)
@@ -882,7 +882,7 @@ class CallDetail(models.Model):
 	inbound_wait_time = models.TimeField(default=default_time, null=True, blank=True)
 	blended_time = models.TimeField(default=default_time, blank=True, null=True)
 	blended_wait_time = models.TimeField(default=default_time, blank=True, null=True)
-	uniqueid = models.CharField(default=None, max_length=30, null=True)
+	uniqueid = models.CharField(default=None, max_length=30, null=True,db_index=True)
 	created = models.DateTimeField(auto_now_add=True, db_index=True)
 	updated = models.DateTimeField(auto_now=True, db_index=True)
 	class Meta:
@@ -925,7 +925,7 @@ class DiallerEventLog(models.Model):
 	session_uuid = models.UUIDField(db_index=True, editable=False, null=True)
 	a_leg_uuid = models.UUIDField(editable=False, null=True)
 	b_leg_uuid = models.UUIDField(editable=False, null=True)
-	init_time = models.DateTimeField(editable=False,null=True, blank=True, default=None)
+	init_time = models.DateTimeField(editable=False,null=True, blank=True, default=None,db_index=True)
 	ring_time = models.DateTimeField(default=None, editable=False,	null=True, blank=True)
 	ring_duration = models.TimeField(default=default_time, null=True, blank=True)
 	connect_time = models.DateTimeField(default=None, editable=False, null=True, blank=True)
@@ -974,7 +974,7 @@ class CdrFeedbck(models.Model):
 	This model is used to store feedback submitted on hangup
 	"""
 
-	primary_dispo = models.CharField(default='', max_length=250, null=True)
+	primary_dispo = models.CharField(default='', max_length=250, null=True,db_index=True)
 	feedback = JSONField()
 	relation_tag = JSONField()
 	calldetail = models.OneToOneField(CallDetail, related_name='cdrfeedback', on_delete=models.CASCADE, null=True,db_index=True)
@@ -1050,7 +1050,7 @@ class AgentActivity(models.Model):
 	""" This table stores the every agents activity performed while login onwards"""
 	user = models.ForeignKey(User, on_delete=models.SET_NULL,db_index=True, null=True)
 	event = models.CharField(max_length=255, blank=True, null=True)
-	event_time = models.DateTimeField(blank=True, null=True)
+	event_time = models.DateTimeField(blank=True, null=True,db_index=True)
 	tos = models.TimeField(default=default_time, blank=True, null=True)
 	app_time = models.TimeField(default=default_time, blank=True, null=True)
 	campaign_name = models.CharField(max_length=50, null=True, blank=True)
@@ -1064,9 +1064,9 @@ class AgentActivity(models.Model):
 	predictive_time = models.TimeField(default=default_time, blank=True, null=True)
 	predictive_wait_time = models.TimeField(default=default_time, blank=True, null=True)
 	feedback_time = models.TimeField(default=default_time, blank=True, null=True)
-	break_type = models.CharField(default='',max_length=50, null=True, blank=True)
+	break_type = models.CharField(default='',max_length=50, null=True, blank=True,db_index=True)
 	break_time = models.TimeField(default=default_time, blank=True, null=True)
-	created = models.DateTimeField(auto_now_add=True)
+	created = models.DateTimeField(auto_now_add=True,db_index=True)
 	hold_time = models.TimeField(default=default_time, blank=True, null=True)
 	transfer_time = models.TimeField(default=default_time, blank=True, null=True)
 	pause_progressive_time  = models.TimeField(default=default_time, blank=True, null=True,
@@ -1196,12 +1196,12 @@ class Notification(models.Model):
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
 			on_delete=models.CASCADE,null=True)
 	contact_id = models.BigIntegerField(blank=True, null=True, db_index=True)
-	campaign = models.CharField(max_length=100,null=True, blank=True)
+	campaign = models.CharField(max_length=100,null=True, blank=True, db_index=True)
 	user = models.CharField(max_length=100,null=True)
 	title=models.CharField(max_length=256,null=True)
 	message = models.TextField()
 	numeric = models.CharField(default='', max_length=50,null=True, db_index=True)
-	viewed  = models.BooleanField(default=False)
+	viewed  = models.BooleanField(default=False, db_index=True)
 	created_date = models.DateTimeField(auto_now_add=True)
 	modified_date = models.DateTimeField(auto_now=True)
 	notification_type = models.CharField(max_length=100, null=True, blank=True)
