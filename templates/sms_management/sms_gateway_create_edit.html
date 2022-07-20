@@ -148,7 +148,7 @@
 				<div class="form-group row">
 					<label for="extension" class="col-sm-4 col-form-label">Campaign<span class="star camp_required"></span> :</label>
 					<div class="col-sm-8">
-						<select class="form-control"  id="campaign" name="campaign" data-validation="required" data-validation-error-msg-container="#template_error" multiple>
+						<select class="form-control"  id="campaign" name="campaign" data-validation="" data-validation-error-msg-container="#template_error" multiple>
 							{% for campaign in campaigns %}
 								<option value="{{ campaign.id }}" {% if campaign.id in selected_campaigns %}selected {% endif %}>{{ campaign.name }}</option>
 							{% endfor %}
