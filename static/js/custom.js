@@ -704,7 +704,8 @@ $('#scSubmit').click(function() {
         },
         error: function(data) {
             $('.preloader').fadeOut('fast');
-            errorAlert('OOPS!!! Something Went Wrong','');
+            let err = data['responseJSON'] ? data['responseJSON']['error'] : data['error']
+            errorAlert('OOPS!!! Something Went Wrong',err);
             initial_dialler_state()
             $("#select_camp").prop('selectedIndex', 0);
             $('#scSubmit').prop('disabled', true);
