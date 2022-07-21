@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.conf import settings 
 from callcenter.models import AudioFile
+import os
 
 class Command(BaseCommand):
 
@@ -12,6 +13,8 @@ class Command(BaseCommand):
 			for message in bob_p.listen():
 				if message and message['type']!='subscribe':
 					try:
+						if not os.path.exists(settings.MEDIA_ROOT+"/upload"):
+							os.makedirs(settings.MEDIA_ROOT+"/upload")
 						audio = AudioFile.objects.filter(
 							id=message['data'].decode("utf-8") ).first()
 						if audio.audio_file:
