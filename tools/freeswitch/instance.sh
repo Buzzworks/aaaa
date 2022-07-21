@@ -119,6 +119,25 @@ ExecStop=/usr/bin/docker stop flexydial-autodial
 [Install]
 WantedBy=multi-user.target
 EOT
+
+cat <<EOT > /etc/systemd/system/flexydial-audio-fs-docker.service
+[Unit]
+Description=FlexyDial Audio File transfer Container
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+Restart=always
+RestartSec=1
+#ExecStartPre=/usr/bin/docker pull vedakatta/flexydial-app
+ExecStart=/usr/bin/docker run --rm -v /var/lib/flexydial/media:/var/lib/flexydial/media --env-file /etc/default/flexydial-app --name flexydial-audio-fs vedakatta/flexydial-app python manage.py audio_callserver
+ExecStop=/usr/bin/docker stop flexydial-audio-fs
+
+[Install]
+WantedBy=multi-user.target
+EOT
+
 else
 cat <<EOT > /etc/systemd/system/flexydial-cdrd-docker.service
 [Unit]
@@ -151,6 +170,25 @@ RestartSec=1
 #ExecStartPre=/usr/bin/docker pull vedakatta/flexydial-app
 ExecStart=/usr/bin/docker run --rm -v /var/lib/flexydial/media:/var/lib/flexydial/media -v ${APP_PATH}:/home/app --env-file /etc/default/flexydial-app --name flexydial-autodial flexydial-app python manage.py autodial
 ExecStop=/usr/bin/docker stop flexydial-autodial
+
+[Install]
+WantedBy=multi-user.target
+EOT
+
+
+cat <<EOT > /etc/systemd/system/flexydial-audio-fs-docker.service
+[Unit]
+Description=FlexyDial Audio File transfer Container
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+Restart=always
+RestartSec=1
+#ExecStartPre=/usr/bin/docker pull vedakatta/flexydial-app
+ExecStart=/usr/bin/docker run --rm -v /var/lib/flexydial/media:/var/lib/flexydial/media -v ${APP_PATH}:/home/app --env-file /etc/default/flexydial-app --name flexydial-audio-fs flexydial-app python manage.py audio_callserver
+ExecStop=/usr/bin/docker stop flexydial-audio-fs
 
 [Install]
 WantedBy=multi-user.target
