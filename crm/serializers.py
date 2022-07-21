@@ -1,7 +1,8 @@
 import datetime
 from rest_framework import serializers
-from .models import (Phonebook, CrmField, TempContactInfo, Contact, LeadListPriority, DownloadReports, LeadBucket, AlternateContact)
+from .models import (MasterContact, Phonebook, CrmField, ScheduleMasterContact, TempContactInfo, Contact, LeadListPriority, DownloadReports, LeadBucket, AlternateContact)
 from callcenter.models import CSS, CdrFeedbck, User,CallDetail
+import pandas as pd
 
 class PhoneBookSerializer(serializers.ModelSerializer):
 	""" This serializer is used for phonebook display """
@@ -264,8 +265,7 @@ class AlternateContactSerializer(serializers.ModelSerializer):
 	def get_alt_numeric(self, obj):
 		return ','.join(obj.alt_numeric.values())
 
-import pandas as pd
-from .models import *
+
 class MasterContactSerializer(serializers.ModelSerializer):
 	class Meta:
 		model=MasterContact
@@ -275,7 +275,6 @@ class MasterContactSerializer(serializers.ModelSerializer):
 		strdict['customer_raw_data']=eval(strdict['customer_raw_data'])#converting as dict if string querying not coming
 		return strdict
 
-from datetime import datetime
 class ScheduleMasterContactSerializer(serializers.ModelSerializer):
 	mcdata = serializers.JSONField() # change is here
 	class Meta:
@@ -283,7 +282,7 @@ class ScheduleMasterContactSerializer(serializers.ModelSerializer):
 		fields='__all__'
 
 	def validate(self,data):
-		now=datetime.now()
+		now=datetime.datetime.now()
 		ref_id=now.strftime("%Y%m%d%H%M%S")+str(self.context['request'].user)
 		initial_dict_list=data['mcdata']
 		final_data_list=[]
@@ -312,7 +311,7 @@ class UniqueSerializer(serializers.ModelSerializer):
 
 	def get_c_name(self,obj):
 		full_name = ''
-		
+
 		# contact=''
 		# if obj and obj.customer_raw_data and 'customer_details' in contact.customer_raw_data:
 		# 	if "first_name" in contact.customer_raw_data['customer_details'] and contact.customer_raw_data['customer_details']['first_name'] != None:
