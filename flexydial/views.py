@@ -393,12 +393,14 @@ def user_in_hirarchy_level(user_id):
 def user_hierarchy_func(user_id,users_list=""):
 	"""this function takes the username and returns usernames based on reporting_to hierarchy"""
 	user_obj = User.objects.get(id=user_id)
+
 	if user_obj.is_superuser:
 		users_list = list(User.objects.all().values_list("id",flat=True))
 	elif str(user_obj.user_role) == 'admin':
 		users_list = list(User.objects.all().exclude(is_superuser=True).values_list("id",flat=True))
 	else:
 		users_id=User.objects.filter(id=user_id).values_list('id',flat=True)
+		created_users = list(User.objects.filter(created_by__id=user_id).values_list('id',flat=True))
 		lst_1=lst_2=lst_3=[]
 		if users_list:
 			users_1=User.objects.filter(reporting_to__id__in=users_list)
@@ -415,9 +417,9 @@ def user_hierarchy_func(user_id,users_list=""):
 			if users_3:
 				lst_3=list(users_3.values_list('id',flat=True))
 		if users_list:
-			users_list = [int(i) for i in users_list]+lst_1+lst_2+lst_3
+			users_list = [int(i) for i in users_list]+lst_1+lst_2+lst_3+created_users
 		else:
-			users_list = lst_1+lst_2+lst_3
+			users_list = lst_1+lst_2+lst_3+created_users
 	users_list=list(set(users_list))#using set because reporting_to given of python superuser admin, it's not possible but given intentionally(shell, users bulk, db).
 	return users_list
 
