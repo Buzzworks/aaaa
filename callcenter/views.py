@@ -699,6 +699,7 @@ class CampaignLiveDataView(LoginRequiredMixin, APIView):
 	def get(self, request):
 		page = int(request.GET.get('page' ,1))
 		paginate_by = int(request.GET.get('paginate_by', 10))
+
 		filter_by_camp = request.GET.get('campaign',None)
 		r_campaigns = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps({}))
 		lc_data = []            #live campaign data
@@ -709,8 +710,10 @@ class CampaignLiveDataView(LoginRequiredMixin, APIView):
 					)).filter(status="Active").distinct().values("id","name")
 		if filter_by_camp:
 			active_campaign = active_campaign.filter(name__icontains=filter_by_camp)
+
 		queryset = get_paginated_object(active_campaign, page, paginate_by)
 		pagination_dict = data_for_vue_pagination(queryset)
+		
 		for campaign in queryset:
 			campaign_dict = {}
 			phonebooks = Phonebook.objects.filter(campaign=campaign['id'])
@@ -1524,6 +1527,7 @@ class DialTrunkModifyApiView(APIView):
 	def put(self, request, pk, format=None):
 		object_data = get_object(pk, "callcenter", "DialTrunk")
 		serializer = self.serializer_class(object_data, data=request.data)
+		print(serializer)
 		if serializer.is_valid():
 			updated_obj = serializer.save()
 			if DiaTrunkGroup.objects.filter(trunks__trunk_id=pk).exists():
@@ -2413,12 +2417,13 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 		admin = False
 		report_visible_cols = get_report_visible_column("1",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
-			admin = True
-		if request.user.is_superuser:
+			admin = True 
+		if request.user.is_superuser or admin:
 			camp = Campaign.objects.all().prefetch_related(
 					'users', 'group', 'disposition').distinct()
 			campaign_list = camp.values("id", "name")
 			camp_id = list(camp.values_list("id",flat=True))
+			camp_names = list(camp.values_list("name",flat=True))
 			user_list = User.objects.all().exclude(
 					user_role__access_level="Admin").prefetch_related(
 					'group', 'reporting_to', 'user_role').values("id", "username")
@@ -2426,11 +2431,14 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 			dispo_keys = list(disposition.values_list('dispo_keys',flat=True))
 			dispo_keys = set([item for sublist in dispo_keys for item in sublist])
 		else:
-			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
+			# camp = Campaign.objects.filter(Q(created_by__id=request.user.id))
+			camp = Campaign.objects.filter(Q(created_by__id=request.user.id)
+				|Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).prefetch_related(
 					'users', 'group', 'disposition').distinct()
 			campaign_list = camp.values("id", "name")
 			camp_id = list(camp.values_list("id",flat=True))
+			camp_names = list(camp.values_list("name",flat=True))
 			c_user  = []
 			c_group = []
 			for campaign in camp:
@@ -2465,24 +2473,20 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 		'session_uuid','init_time','ring_time','connect_time','hangup_time','wait_time','ring_duration','hold_time','callflow','callmode',
 		'bill_sec','ivr_duration','call_duration','feedback_time','call_length','hangup_source','internal_tc_number','external_tc_number','progressive_time','preview_time','predictive_wait_time','inbound_wait_time','blended_wait_time'],
 		'cdrfeedback':['primary_dispo','feedback','relationtag']}
-		# context['users'] = list(user_list)
 
+		#Showing Crm Fields In Column Visibility Start
 		crm_camp_fields = []
-		crm_sec_name = {}
-		crm_camp_details = list(CrmField.objects.filter(campaign__id__in=camp_id).values_list('crm_fields',flat=True))
-		for i in crm_camp_details:
-			for j in range(len(i)):
-				crm_sec_name[i[j]['section_name']] = {}
-				for k in i[j]['section_fields']:
-					crm_camp_fields.append(k['db_field'])
-					crm_sec_name[i[j]['section_name']][k['db_field']]=""
+		from crm.utility import get_crm_fields
+		for crm_fields in camp_names:
+			crm_camp_fields.extend(get_crm_fields(crm_fields))
 		if crm_camp_fields:
-			all_fields['crm_fields'] = crm_camp_fields
+			all_fields['crm_fields'] = list(set(crm_camp_fields))
+		#Showing Crm Fields In Column Visibility End
+		
 		if request.user.is_superuser:
 			context['users'] = list(user_list)
 		else:
 			context['users'] = user_in_hirarchy_level(request.user.id)
-		context['crm_sec_name'] = crm_sec_name
 		context['disposition'] = disposition.values("id", "name")
 		context['dispo_keys'] = dispo_keys
 		context['all_fields'] = all_fields
@@ -2552,7 +2556,7 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 		elif selected_user:
 			# query_string = Q(user_id__in=all_users)
 			user_list_in_hirarchy = user_hierarchy_func(request.user.id,list(all_users))
-			query_string = Q(user_id__in=user_list_in_hirarchy)
+			query_string = Q(user_id__in=all_users)
 		elif selected_campaign:
 			query_string = Q(campaign_name__in=selected_campaign)
 			if not (request.user.is_superuser):
