@@ -260,7 +260,6 @@
 		}
 	}
 	function updatealias(parameter_this){
-		console.log(parameter_this.value)
 		if(parameter_this.value=="custom"){
 			var parent_obj = $(parameter_this).parents('.formi')
 			parent_obj.find('.alias_name').addClass('d-none')
@@ -283,7 +282,6 @@
 		
 	  $('select').select2();
 	  $(".Add").click(function() {
-		console.log("ADD Clicked")
 		$('select').select2('destroy');
 		selected_values = []
 		$('.para-block').each(function(index,val){
@@ -295,12 +293,6 @@
 		$(".formi:last").find('.alias_check').addClass('d-none')
 		$(".formi:last input").val('');
 		$('select').select2();
-
-		// selected_values.forEach(function(val, index){
-		// 	if(val != 'custom'){
-		// 		$(".formi:last").find('.para').find(`option[value='${val}']`).remove()
-		// 	}
-		// })
 	  });
 	  $('.all').on('click', ".cancel", function() {
 		$(this).closest('.formi').remove();
@@ -316,10 +308,8 @@
 		var count = 0
 		for (var key in parameters){
 			var value = parameters[key];
-			console.log("count",count, key,value)
 			$('.para').eq(count).val(key).change();									
 			if (key == "custom"){
-				console.log(value.length)
 				value.forEach(function(item, index, array){
 					$('.alias_name').eq(count).addClass('d-none')
 					$('.alias_check').eq(count).removeClass('d-none')
@@ -327,13 +317,11 @@
 						$('.alias_key').eq(count).val(key2);
 						$('.alias_value').eq(count).val(item[key2]);
 					}
-					console.log(index, array.length)
 					if(index < array.length-1){
 						length +=1 
 						count +=1
 						$('.Add').trigger('click')
 						$('.para').eq(count).val(key).change();
-						console.log("after click")
 					}
 				})
 			}else{

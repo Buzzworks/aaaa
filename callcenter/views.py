@@ -225,7 +225,6 @@ class LoginAPIView(APIView):
 	permission_classes = [AllowAny]
 
 	def get(self, request):
-		print("inside getting")
 		forgot_password = False
 		if not request.user.is_anonymous:
 			return redirect_user(request,request.user)

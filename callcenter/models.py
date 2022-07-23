@@ -10,7 +10,7 @@ from django.db.models import signals, Q
 import pytz,os
 import re
 from django.conf  import settings
-from flexydial.constants import (Status, REPORTS_LIST,auto_dialed_status, PROTOCOL_CHOICES, TRUNK_TYPE, CALL_TYPE,
+from flexydial.constants import (Gateway_Mode, Status, REPORTS_LIST,auto_dialed_status, PROTOCOL_CHOICES, TRUNK_TYPE, CALL_TYPE,
 	CALLBACK_MODE, DIAL_RATIO_CHOICES, CAMPAIGN_STRATEGY_CHOICES, DNC_MODE, ACCESS_LEVEL, DISPO_FIELD_TYPE,
 	SCHEDULE_TYPE, SCHEDULE_DAYS, CONTACT_STATUS, UPLOAD_STATUS, VB_MODE, TEMPLATE_TYPE, TRIGGER_ACTIONS, SMS_STATUS, ACTION,
 	TYPE_OF_DID, STRATEGY_CHOICES, REPORT_NAME, COUNTRY_CODES,BROADCAST_MESSAGE_TYPE,PasswordChangeType,SHOW_DISPOS_TYPE)
@@ -459,7 +459,6 @@ class SMSTemplate(models.Model):
 	class Meta:
 		ordering =['-id']
 
-from flexydial.constants import Gateway_Mode
 class SMSGateway(models.Model):
 	""" This table will store the Sms credentials gateway  information """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
