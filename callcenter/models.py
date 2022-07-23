@@ -10,7 +10,7 @@ from django.db.models import signals, Q
 import pytz,os
 import re
 from django.conf  import settings
-from flexydial.constants import (Status, REPORTS_LIST,auto_dialed_status, PROTOCOL_CHOICES, TRUNK_TYPE, CALL_TYPE,
+from flexydial.constants import (Gateway_Mode, Status, REPORTS_LIST,auto_dialed_status, PROTOCOL_CHOICES, TRUNK_TYPE, CALL_TYPE,
 	CALLBACK_MODE, DIAL_RATIO_CHOICES, CAMPAIGN_STRATEGY_CHOICES, DNC_MODE, ACCESS_LEVEL, DISPO_FIELD_TYPE,
 	SCHEDULE_TYPE, SCHEDULE_DAYS, CONTACT_STATUS, UPLOAD_STATUS, VB_MODE, TEMPLATE_TYPE, TRIGGER_ACTIONS, SMS_STATUS, ACTION,
 	TYPE_OF_DID, STRATEGY_CHOICES, REPORT_NAME, COUNTRY_CODES,BROADCAST_MESSAGE_TYPE,PasswordChangeType,SHOW_DISPOS_TYPE)
@@ -480,6 +480,8 @@ class SMSGateway(models.Model):
 	modified_date = models.DateTimeField(auto_now=True)
 	created_by = models.ForeignKey('User', related_name='gateway_created_by',on_delete=models.SET_NULL,
 		blank=True, null=True)
+	url_parameters = JSONField(default=dict)
+	gateway_mode = models.CharField(choices=Gateway_Mode,max_length = 50)	
 	def __str__(self):
 		return self.name
 	class Meta:
@@ -1275,7 +1277,8 @@ class SMSLog(models.Model):
 	reciever = models.BigIntegerField(blank=True, null=True, db_index=False)
 	status = models.CharField(default='Active', choices=Status, max_length=10)
 	session_uuid = models.UUIDField(db_index=True, editable=False, null=True)
-	status_message =  models.CharField(max_length=255, blank=True, null=True)
+	#status_message =  models.CharField(max_length=255, blank=True, null=True)
+	status_message =  models.TextField(blank=True, null=True)
 	created = models.DateTimeField(auto_now_add=True)
 
 

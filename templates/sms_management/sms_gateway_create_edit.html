@@ -38,9 +38,9 @@
 						<label for="" class="col-sm-4 col-form-label">Gateway Mode :</label>
 						<div class="col-sm-8 form-inline">
 							{% for mode in gateway_mode %}
-								<div class="form-check mr-sm-3">
+								<div class="form-check mr-sm-3 {% if sms_gateway and not sms_gateway.gateway_mode == mode.0 %} d-none {% endif %}">
 									<label class="form-check-label">
-										<input type="radio" class="form-check-input selected" name="gateway_mode" id="mode-{{mode.0}}" value="{{mode.0}}" data-validation="required">{{mode.1}}
+										<input type="radio" class="form-check-input" {% if sms_gateway.gateway_mode == mode.0 %} checked {% endif %} name="gateway_mode" id="mode-{{mode.0}}" value="{{mode.0}}" data-validation="required">{{mode.1}}
 										<i class="input-helper"></i>
 									</label>
 								</div>
@@ -61,7 +61,7 @@
 				</div>
 				<div class="col-md-6">
 					<div class="form-group row">
-						<label for="extension" class="col-sm-4 col-form-label">Sms Trigger On<span class="star camp_required">*</span> :</label>
+						<label for="extension" class="col-sm-4 col-form-label">Trigger On<span class="star camp_required">*</span> :</label>
 						<div class="col-sm-8">
 							<select class="form-control"  id="sms_trigger_on" name="sms_trigger_on" data-validation="required" data-validation-error-msg-container="#sms_trigger_error">
 								<option value="">Select Trigger Action</option>
@@ -135,20 +135,51 @@
 				</div>
 				<div class="col-md-6">
 					<div class="form-group row">
-						<label for="name" class="col-sm-4 col-form-label">Gateway API Key<span class="star">*</span> :</label>
+						<label for="name" class="col-sm-4 col-form-label">Gateway API Key<span class="star"></span> :</label>
 						<div class="col-sm-8">
-							<input type="text" class="form-control" data-toggle="tooltip" data-original-title="Enter SMS Template Name" id="key" name="key" data-validation="required" data-validation-error-msg-container="#gateway-key-error"
+							<input type="text" class="form-control" data-toggle="tooltip" data-original-title="Enter SMS Template Name" id="key" name="key" data-validation="" data-validation-error-msg-container="#gateway-key-error"
 							value="{{sms_gateway.key}}">
 							<span id="gateway-key-error"></span>
 						</div>
 					</div>
 				</div>
 			</div>
-			<div class="row mt-4 d-none" id="whats_app_gateway_div">
+			<div class="row">
+			<div class="col-md-6">
+				<div class="form-group row">
+					<label for="extension" class="col-sm-4 col-form-label">Campaign<span class="star camp_required"></span> :</label>
+					<div class="col-sm-8">
+						<select class="form-control"  id="campaign" name="campaign" data-validation="" data-validation-error-msg-container="#template_error" multiple>
+							{% for campaign in campaigns %}
+								<option value="{{ campaign.id }}" {% if campaign.id in selected_campaigns %}selected {% endif %}>{{ campaign.name }}</option>
+							{% endfor %}
+						</select>
+						<div id="template_error"></div> 
+					</div>
+				</div>
+			</div>
+			</div>
+			<div class="row">
+			<div class="col-md-6"> 	
+				<div class="form-group row">
+					 <label for="dynamic_api" class="col-7 col-sm-4 col-form-label">Dynamic API :</label>
+					 <div class="col-5 col-sm-7 form-inline">
+						 <div class="form-check">
+							 <label class="form-check-label">
+								 <input type="checkbox" class="form-check-input" name="dynamic_api" id="sms_dynamic_api" >
+								 <i class="input-helper"></i>
+							 </label>
+						 </div>
+					 </div>
+				 </div>
+			</div>
+			</div>
+			{% include "sms_management/smsgateway.html" %} 
+			<!-- <div class="row mt-4 d-none" id="whats_app_gateway_div">
 				<div class="col-md-6">
 					<h5>We will integrate this very soon. Sorry for inconvenience </h5>
 				</div>
-			</div>
+			</div> -->
 			<div class="row mt-4">
 				<div class="col-sm-6">
 					<div class="alert alert-danger d-none" id="script-err-msg">
@@ -176,7 +207,7 @@
 <script src="{% static 'js/admin.js' %}"></script>
 <script type="text/javascript">
 	{% if can_view %}
-		$('#sms_template, #disposition').select2()
+		$('#sms_template, #disposition, #campaign').select2()
 		$.validate({
 			form:'#sms-template-create-form',
 		});
@@ -184,7 +215,9 @@
 		{% if sms_gateway.sms_trigger_on == "1" %}
 			$("#sms_trigger_on").trigger("change")
 		{% endif %}
+		{% if not sms_gateway %}
 		$("#mode-0").prop("checked",true)
+		{% endif %}
 		$( document ).ready(function() {
 			var itemsToKeep = {{non_user_sms_template|safe}}
 			$('#sms_template').on('select2:unselecting', function(event) {
@@ -202,4 +235,105 @@
 		disabled_fields()
 	{% endif %}
 </script>
+<script>
+	function ValidateKeyInput(key_this){
+		key_values = []
+		$('.para-block').each(function(index,val){
+			value = $(this).find('.alias_key').val()
+			if(value && $(this).find('.alias_key').get(0) != key_this){
+				key_values.push(value.toLowerCase())
+			}
+		});
+		$('.para-block').each(function(index,val){
+			value = $(this).find('.para').val()
+			if(value != 'custom'){
+				key_values.push(value.toLowerCase())
+			}
+		});
+
+		if (key_values.includes($(key_this).val().toLowerCase())){
+			$(key_this).next().removeClass('d-none')
+			$('#sms-gateway-submit-btn').prop('disabled', true);
+		}else{
+			$(key_this).next().addClass('d-none')
+			$('#sms-gateway-submit-btn').prop('disabled', false);
+		}
+	}
+	function updatealias(parameter_this){
+		if(parameter_this.value=="custom"){
+			var parent_obj = $(parameter_this).parents('.formi')
+			parent_obj.find('.alias_name').addClass('d-none')
+			parent_obj.find('.alias_check').removeClass('d-none')
+		}else{
+			var parent_obj = $(parameter_this).parents('.formi')
+			parent_obj.find('.alias_name').removeClass('d-none')
+			parent_obj.find('.alias_check').addClass('d-none')
+			parent_obj.find('.alias_check').find('input').val('')
+		}
+	}
+	$(document).on('click', '#sms_dynamic_api', function() {
+		if(this.checked == true){
+			$('#api_divs').removeClass('d-none')
+		}else{
+			$('#api_divs').addClass('d-none')
+		}
+	})
+	$(document).ready(function() {
+		
+	  $('select').select2();
+	  $(".Add").click(function() {
+		$('select').select2('destroy');
+		selected_values = []
+		$('.para-block').each(function(index,val){
+			selected_values.push($(this).find('.para').val())
+		});
+		
+		$(".formi").eq(0).clone().show().insertAfter(".formi:last");
+		$(".formi:last").find('.alias_name').removeClass('d-none')
+		$(".formi:last").find('.alias_check').addClass('d-none')
+		$(".formi:last input").val('');
+		$('select').select2();
+	  });
+	  $('.all').on('click', ".cancel", function() {
+		$(this).closest('.formi').remove();
+	  });
+	
+	
+	{% if sms_gateway %}
+	var thirdparty_obj = {{sms_gateway.url_parameters|safe}};
+	if(Object.keys(thirdparty_obj).length > 0){
+		$('#sms_dynamic_api').trigger('click')
+		var parameters = thirdparty_obj   
+		var length = Object.keys(parameters).length;
+		var count = 0
+		for (var key in parameters){
+			var value = parameters[key];
+			$('.para').eq(count).val(key).change();									
+			if (key == "custom"){
+				value.forEach(function(item, index, array){
+					$('.alias_name').eq(count).addClass('d-none')
+					$('.alias_check').eq(count).removeClass('d-none')
+					for (var key2 in item){
+						$('.alias_key').eq(count).val(key2);
+						$('.alias_value').eq(count).val(item[key2]);
+					}
+					if(index < array.length-1){
+						length +=1 
+						count +=1
+						$('.Add').trigger('click')
+						$('.para').eq(count).val(key).change();
+					}
+				})
+			}else{
+				$('.alias').eq(count).val(value) 
+			}
+			count +=1
+			if (count < length){
+				$('.Add').trigger('click')
+			}
+		}
+	}
+	{% endif %}
+	});
+	</script>
 {% endblock extra-js %}

@@ -798,7 +798,7 @@ class GatewayPaginationSerializer(serializers.ModelSerializer):
 class SmsGatewaySerializer(serializers.ModelSerializer):
 	class Meta:
 		model = SMSGateway
-		fields = ('name','disposition','sms_trigger_on', 'status','template','gateway_url','key')
+		fields = ('name','disposition','sms_trigger_on', 'status','template','gateway_url','key','url_parameters','gateway_mode')
 
 class EmailGatewayPaginationSerializer(serializers.ModelSerializer):
 	""" This serializer for pagination of the emailgateway that is created """

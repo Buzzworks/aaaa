@@ -3990,7 +3990,9 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 		send_sms_callrecieve = False
 		send_sms_on_dispo = False
 		if campaign.sms_gateway:
-			template = campaign.sms_gateway.template.filter(Q(campaign_id=campaign.id)|Q(template_type='0'))
+			# template = campaign.sms_gateway.template.filter(Q(campaign_id=campaign.id)|Q(template_type='0'))
+			#template=campaign.template_campaign.all()
+			template=campaign.sms_gateway.template #which using for not selecting campaign from template
 			if campaign.sms_gateway.sms_trigger_on=='2':
 				disabled_sms_tab = True
 			elif campaign.sms_gateway.sms_trigger_on=='1':
@@ -7142,6 +7144,12 @@ class SmsTemplateCreateEditApiView(LoginRequiredMixin, APIView):
 			sms_template_serializer = self.serializer(data=request.data)
 		if sms_template_serializer.is_valid():
 			sms_template_serializer.save(created_by=request.user)
+			if sms_template_serializer.data['template_type']=='0':#assigning to all the gateways by which template is global
+				lt=SMSTemplate.objects.get(name=sms_template_serializer.data['name'])
+				sg=SMSGateway.objects.all()
+				for x in sg:
+					x.template.add(lt)
+					x.save()
 			return Response()
 		return JsonResponse(sms_template_serializer.errors, status=500)
 
@@ -7254,6 +7262,7 @@ class SmsGatewayCreateEditApiView(LoginRequiredMixin, APIView):
 		trigger_action = TRIGGER_ACTIONS
 		dispo_list = Disposition.objects.all().values("id","name")
 		template_list = SMSTemplate.objects.values("id","name")
+		campaigns = Campaign.objects.values('id','name')
 		if non_admin_user:
 			user_campaigns = Campaign.objects.filter(Q(users=request.user)|Q(group__in=request.user.group.all())|Q(created_by=request.user)).distinct()
 			template_list = template_list.filter(Q(campaign__in=user_campaigns)|Q(template_type='0'))
@@ -7270,28 +7279,41 @@ class SmsGatewayCreateEditApiView(LoginRequiredMixin, APIView):
 			template_list = template_list.exclude(id__in=sms_gateway.template.all().values_list("id",flat=True))
 			if permission_dict['can_update']:
 				can_view = True
+			selected_campaigns = Campaign.objects.filter(sms_gateway__id=pk).values_list('id', flat=True)
+			all_available_campaigns=list(Campaign.objects.filter(sms_gateway__id=None).values_list("id",flat=True))
+			all_selected_campaigns=list(Campaign.objects.filter(sms_gateway__id=pk).values_list('id', flat=True))
+			campaigns = Campaign.objects.filter(id__in=all_available_campaigns+all_selected_campaigns).values('id','name')
 		else:
 			if permission_dict['can_create']:
 				can_view = True
 			sms_gateway = ""
+			selected_campaigns=''#in create the selected campaigns will be empty
+			campaigns=Campaign.objects.filter(sms_gateway__id=None)#this query for hiding already selected camapigns
 		context = {"request": request,"sms_gateway_status": Status,
 				"sms_gateway": sms_gateway,'can_view':can_view,'is_edit':is_edit,
 				"trigger_action":trigger_action, "dispo_list":dispo_list, "template_list":template_list,
 				"gateway_template":gateway_template, "gateway_dispo":gateway_dispo,"gateway_mode":gateway_mode,
-				"non_user_sms_template":non_user_sms_template}
+				#"non_user_sms_template":non_user_sms_template}
+				"non_user_sms_template":non_user_sms_template,"campaigns":campaigns, "selected_campaigns":selected_campaigns
+				}
 		context['can_switch'] = permission_dict['can_switch']
 		context['can_boot'] = permission_dict['can_boot']
 		return Response(context)
 	def post(self, request,pk=None,**kwargs):
 		log_type = 1
 		if pk:
+			print("in edit request data",request.data)
 			sms_gateway = get_object(pk, "callcenter", "SMSGateway")
 			sms_gateway_serializer = self.serializer(sms_gateway, data=request.data)
 			log_type = 2
 		else:
+			print("in create request data",request.data)
 			sms_gateway_serializer = self.serializer(data=request.data)
 		if sms_gateway_serializer.is_valid():
-			sms_gateway_serializer.save(created_by=request.user)
+			#sms_gateway_serializer.save(created_by=request.user)
+			sms_gateway = sms_gateway_serializer.save(created_by=request.user)
+			Campaign.objects.filter(sms_gateway__id=pk).update(sms_gateway=None)
+			Campaign.objects.filter(pk__in=request.POST.getlist("campaign")).update(sms_gateway = sms_gateway.id)
 			### Admin Log ####
 			return Response()
 		return JsonResponse(sms_gateway_serializer.errors, status=500)
