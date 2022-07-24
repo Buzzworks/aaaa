@@ -2,7 +2,7 @@ echo APP_PATH=<currentAPPdirectory> >> /etc/environment
 example :
     echo APP_PATH=/home/buzzworks/flexydial >> /etc/environment
 
-echo ENV=DEV >> /etc/enviornment
+echo ENV=DEV >> /etc/environment
     
 1. sudo su
 2. cd tools/
