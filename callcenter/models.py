@@ -605,6 +605,7 @@ class Campaign(models.Model):
 	inbound_threshold = models.IntegerField(default=0, db_index=True, blank=True)
 	sms_gateway = models.ForeignKey(SMSGateway,on_delete=models.SET_NULL,blank=True, null=True)
 	email_gateway = models.ForeignKey(EmailGateway,on_delete=models.SET_NULL, blank=True, null=True)
+	whatsapp_gateway = models.ForeignKey(SMSGateway,on_delete=models.SET_NULL,blank=True, null=True,related_name='whatsapp_campaign')
 	api_disposition = models.BooleanField(default=False,blank=True, null=True)
 	all_caller_id = JSONField(default=dict)
 
