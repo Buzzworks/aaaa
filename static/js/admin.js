@@ -6351,8 +6351,8 @@ $("#sms_campaign_select").change(function() {
 })
 $("#sms-template-submit-btn").click(function() {
     var sms_data= tinyMCE.get('scriptEditor').getContent();
-    if (tinyMCE.get('scriptEditor').getContent({format : 'text'}).length > 150){
-        $("#script-err-msg").removeClass("d-none").text("Msg length should be less than 150 characters")
+    if (tinyMCE.get('scriptEditor').getContent({format : 'text'}).length > 1000){
+        $("#script-err-msg").removeClass("d-none").text("Msg length should be less than 1000 characters")
         setTimeout(function(){ $("#script-err-msg").addClass("d-none") }, 3000);
         return false
     }
