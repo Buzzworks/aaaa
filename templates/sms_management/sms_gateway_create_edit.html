@@ -357,6 +357,42 @@
 			}
 		}
 	}
+	var trigger_params = {{sms_gateway.trigger_params|safe}};
+	if(Object.keys(trigger_params).length > 0){
+		var parameters = trigger_params   
+		var length = Object.keys(parameters).length;
+		var count = 0
+		for (var key in parameters){
+			var value = parameters[key];
+			console.log('outside loop',count,length)
+			$('.para-trigger').eq(count).val(key).change();	
+			if (key == "1"){
+				value.forEach(function(item, index, array){
+					$('.dispos').eq(count).removeClass('d-none')
+					for (var key2 in item){
+						console.log("for inside",count,length,item[key2])
+						$('.dispos').eq(count).val(key2);
+						$('.templates').eq(count).val(item[key2]);
+					}
+					if(index < array.length-1){
+						length +=1 
+						count +=1
+						console.log("for inside if",count,length)
+
+						$('.Add1').trigger('click')
+						$('.para-trigger').eq(count).val(key).change();
+					}
+				})
+			}else{
+				console.log("else",count,length,value)
+				$('.templates').eq(count).val(value);
+			}
+			count +=1
+			if (count < length){
+				$('.Add1').trigger('click')
+			}
+		}
+	}
 	{% endif %}
 	});
 	</script>

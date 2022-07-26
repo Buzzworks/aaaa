@@ -3981,19 +3981,19 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 				print(template)
 			# if template.exists():
 			# 	template = list(template.values('id','text'))
-		if campaign.whatsapp_gateway:
-			# template = campaign.sms_gateway.template.filter(Q(campaign_id=campaign.id)|Q(template_type='0'))
-			#template=campaign.template_campaign.all()
-			template=campaign.whatsapp_gateway.template #which using for not selecting campaign from template
-			if campaign.whatsapp_gateway.sms_trigger_on=='2':
-				disabled_whatsapp_tab = True
-			elif campaign.whatsapp_gateway.sms_trigger_on=='1':
-				send_whatsapp_on_dispo = True
-			else:
-				send_whatsapp_callrecieve = True
+		# if campaign.whatsapp_gateway:
+		# 	# template = campaign.sms_gateway.template.filter(Q(campaign_id=campaign.id)|Q(template_type='0'))
+		# 	#template=campaign.template_campaign.all()
+		# 	template=campaign.whatsapp_gateway.template #which using for not selecting campaign from template
+		# 	if campaign.whatsapp_gateway.sms_trigger_on=='2':
+		# 		disabled_whatsapp_tab = True
+		# 	elif campaign.whatsapp_gateway.sms_trigger_on=='1':
+		# 		send_whatsapp_on_dispo = True
+		# 	else:
+		# 		send_whatsapp_callrecieve = True
 
-			if template.exists():
-				template = list(template.values('id','text'))
+		# 	if template.exists():
+		# 		template = list(template.values('id','text'))
 		if campaign.email_gateway and campaign.email_gateway.status == 'Active':
 			email_gateway['gateway_id'] = campaign.email_gateway.id
 			email_gateway['email_templates'] = campaign.email_gateway.template.filter(status='Active').values('id','email_body','email_subject')
@@ -7268,10 +7268,10 @@ class SmsGatewayCreateEditApiView(LoginRequiredMixin, APIView):
 		non_user_sms_template = []
 		if pk:
 			sms_gateway= get_object(pk, "callcenter", "SMSGateway")
-			dispo_list =  dispo_list.exclude(id__in=sms_gateway.disposition.all().values_list("id", flat=True))
+			# dispo_list =  dispo_list.exclude(id__in=sms_gateway.disposition.all().values_list("id", flat=True))
 			if non_admin_user:
 				non_user_sms_template =list(sms_gateway.template.exclude(id__in=template_list.values_list('id',flat=True)).values_list('name',flat=True))
-			template_list = template_list.exclude(id__in=sms_gateway.template.all().values_list("id",flat=True))
+			# template_list = template_list.exclude(id__in=sms_gateway.template.all().values_list("id",flat=True))
 			if permission_dict['can_update']:
 				can_view = True
 			if sms_gateway.gateway_mode == '0':

@@ -21,9 +21,9 @@
 			<div class="control-group input-group para-block-trigger">  
 				<div class="col-lg-5 p-0">
 					<div class="form-group row" id="sms_trigger_div">
-						<label for="extension" class="col-sm-4 col-form-label">Trigger On<span class="star camp_required">*</span> :</label>
+						<label for="extension" class="col-sm-4 col-form-label ">Trigger On<span class="star camp_required">*</span> :</label>
 						<div class="col-sm-6">
-							<select class="form-control para-trigger"  id="sms_trigger_on" name="sms_trigger_on" onchange="updatetrigger(this)" data-validation="required" data-validation-error-msg-container="#sms_trigger_error">
+							<select class="form-control para-trigger para1"  id="sms_trigger_on" name="sms_trigger_on" onchange="updatetrigger(this)" data-validation="required" data-validation-error-msg-container="#sms_trigger_error">
 								<option value="">Select Trigger Action</option>
 								{% for action in trigger_action %}
 										<option value="{{action.0}}">{{ action.1 }}</option>

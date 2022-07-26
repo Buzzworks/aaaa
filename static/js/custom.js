@@ -647,6 +647,8 @@ $('#scSubmit').click(function() {
             agent_info_vue.camp_name = campaign_name
             agent_info_vue.is_portfolio = data["campaign"]["portifolio"]
             sms_templates.templates = data['sms_templates']
+            console.log(data['sms_templates'])
+            console.log(sms_templates.templates)
             if (data['email_gateway']){
                 email_templates.gateway_id = data['email_gateway']['gateway_id']
                 email_templates.templates = data['email_gateway']['email_templates']

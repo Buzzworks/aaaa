@@ -6563,10 +6563,10 @@ $("#sms-gateway-submit-btn").click(function(){
     const trigger_obj = {};
     $('.para-block-trigger').each(function(index,val){
         trigger = $(this).find('.para-trigger').val();
+        if(trigger_obj[trigger] == undefined){
+            trigger_obj[trigger] = []
+        }
         if (trigger == '1'){
-            if(trigger_obj[trigger] == undefined){
-                trigger_obj[trigger] = []
-            }
             triggers_data = {}
             trigger_disp = $(this).find('.dispos').val();
             trigger_template = $(this).find('.templates').val();
@@ -6574,7 +6574,8 @@ $("#sms-gateway-submit-btn").click(function(){
             trigger_obj[trigger].push(triggers_data)
         }else{
             if(trigger){
-                trigger_obj[trigger] = $(this).find('.templates').val()
+                
+                trigger_obj[trigger].push($(this).find('.templates').val())
             }
         }
     })
