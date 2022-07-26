@@ -6574,8 +6574,9 @@ $("#sms-gateway-submit-btn").click(function(){
             trigger_obj[trigger].push(triggers_data)
         }else{
             if(trigger){
-                
-                trigger_obj[trigger].push($(this).find('.templates').val())
+                trigger_obj[trigger] = $(this).find('.templates').val()
+
+                //trigger_obj[trigger].push($(this).find('.templates').val())
             }
         }
     })
