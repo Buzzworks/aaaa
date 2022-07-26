@@ -59,7 +59,7 @@
 						</div>
 					</div>
 				</div>
-				<div class="col-md-6">
+				{% comment %} <div class="col-md-6">
 					<div class="form-group row">
 						<label for="extension" class="col-sm-4 col-form-label">Trigger On<span class="star camp_required">*</span> :</label>
 						<div class="col-sm-8">
@@ -77,8 +77,8 @@
 							<div id="sms_trigger_error"></div>
 						</div>
 					</div>
-				</div>										
-				<div class="col-md-6 d-none" id="disposition_div">
+				</div>										 {% endcomment %}
+				{% comment %} <div class="col-md-6 d-none" id="disposition_div">
 					<div class="form-group row">
 						<label for="" class="col-sm-4 col-form-label">Disposition :</label>
 						<div class="col-sm-8">
@@ -92,8 +92,8 @@
 						</select>
 						</div>
 					</div>
-				</div>
-				<div class="col-md-6">
+				</div> {% endcomment %}
+				{% comment %} <div class="col-md-6">
 					<div class="form-group row">
 						<label for="extension" class="col-sm-4 col-form-label">Template<span class="star camp_required">*</span> :</label>
 						<div class="col-sm-8">
@@ -108,7 +108,7 @@
 							<div id="template_error"></div>
 						</div>
 					</div>
-				</div>
+				</div> {% endcomment %}
 				<div class="col-md-6">
 					<div class="form-group row">
 						<label for="" class="col-sm-4 col-form-label">Status :</label>
@@ -259,6 +259,15 @@
 			$('#sms-gateway-submit-btn').prop('disabled', false);
 		}
 	}
+	function updatetrigger(trigger_val){
+		var parent_obj = $(trigger_val).parents('.formi1')
+		console.log(trigger_val.value)
+		if(trigger_val.value == "1"){
+			parent_obj.find('.disposition_div').removeClass('d-none')
+		}else{
+			parent_obj.find('.disposition_div').addClass('d-none')
+		}
+	}
 	function updatealias(parameter_this){
 		if(parameter_this.value=="custom"){
 			var parent_obj = $(parameter_this).parents('.formi')
@@ -294,10 +303,25 @@
 		$(".formi:last input").val('');
 		$('select').select2();
 	  });
+	  $(".Add1").click(function() {
+		$('select').select2('destroy');
+		selected_values = []
+		$('.para-block').each(function(index,val){
+			selected_values.push($(this).find('.para').val())
+		});
+		
+		$(".formi1").eq(0).clone().show().insertAfter(".formi1:last");
+		$(".formi1:last").find('.alias_name').removeClass('d-none')
+		$(".formi1:last").find('.alias_check').addClass('d-none')
+		$(".formi1:last input").val('');
+		$('select').select2();
+	  });
 	  $('.all').on('click', ".cancel", function() {
 		$(this).closest('.formi').remove();
 	  });
-	
+	  $('.all1').on('click', ".cancel", function() {
+		$(this).closest('.formi1').remove();
+	  });
 	
 	{% if sms_gateway %}
 	var thirdparty_obj = {{sms_gateway.url_parameters|safe}};
@@ -330,6 +354,42 @@
 			count +=1
 			if (count < length){
 				$('.Add').trigger('click')
+			}
+		}
+	}
+	var trigger_params = {{sms_gateway.trigger_params|safe}};
+	if(Object.keys(trigger_params).length > 0){
+		var parameters = trigger_params   
+		var length = Object.keys(parameters).length;
+		var count = 0
+		for (var key in parameters){
+			var value = parameters[key];
+			console.log('outside loop',count,length)
+			$('.para-trigger').eq(count).val(key).change();	
+			if (key == "1"){
+				value.forEach(function(item, index, array){
+					$('.dispos').eq(count).removeClass('d-none')
+					for (var key2 in item){
+						console.log("for inside",count,length,item[key2])
+						$('.dispos').eq(count).val(key2);
+						$('.templates').eq(count).val(item[key2]);
+					}
+					if(index < array.length-1){
+						length +=1 
+						count +=1
+						console.log("for inside if",count,length)
+
+						$('.Add1').trigger('click')
+						$('.para-trigger').eq(count).val(key).change();
+					}
+				})
+			}else{
+				console.log("else",count,length,value)
+				$('.templates').eq(count).val(value);
+			}
+			count +=1
+			if (count < length){
+				$('.Add1').trigger('click')
 			}
 		}
 	}

@@ -6560,6 +6560,25 @@ $("#sms-gateway-submit-btn").click(function(){
                             }
         }
     });
+    const trigger_obj = {};
+    $('.para-block-trigger').each(function(index,val){
+        trigger = $(this).find('.para-trigger').val();
+        if(trigger_obj[trigger] == undefined){
+            trigger_obj[trigger] = []
+        }
+        if (trigger == '1'){
+            triggers_data = {}
+            trigger_disp = $(this).find('.dispos').val();
+            trigger_template = $(this).find('.templates').val();
+            triggers_data[trigger_disp] = trigger_template
+            trigger_obj[trigger].push(triggers_data)
+        }else{
+            if(trigger){
+                
+                trigger_obj[trigger].push($(this).find('.templates').val())
+            }
+        }
+    })
 
     if(form.isValid()) {
         $.ajax({
@@ -6567,7 +6586,7 @@ $("#sms-gateway-submit-btn").click(function(){
             headers: {"X-CSRFToken": csrf_token},
             url: url,
             //data: form.serialize(),
-            data: form.serialize()+ "&url_parameters="+JSON.stringify(obj),
+            data: form.serialize()+ "&url_parameters="+JSON.stringify(obj)+"&trigger_params="+JSON.stringify(trigger_obj),
             success: function (data) {
                 if($("#sms_gateway_id").val() !="") {
                     showSwal('success-message', 'SMS Gateway Successfully Updated', '/SMSManagement/gateway-settings/')

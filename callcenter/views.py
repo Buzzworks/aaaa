@@ -3995,29 +3995,33 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 		if campaign.sms_gateway:
 			# template = campaign.sms_gateway.template.filter(Q(campaign_id=campaign.id)|Q(template_type='0'))
 			#template=campaign.template_campaign.all()
-			template=campaign.sms_gateway.template #which using for not selecting campaign from template
-			if campaign.sms_gateway.sms_trigger_on=='2':
-				disabled_sms_tab = True
-			elif campaign.sms_gateway.sms_trigger_on=='1':
-				send_sms_on_dispo = True
-			else:
-				send_sms_callrecieve = True
+			# template=campaign.sms_gateway.template #which using for not selecting campaign from template
+			trigger_params = campaign.sms_gateway.trigger_params
+			if trigger_params:
+				trigger_types = list(trigger_params.keys())
+				if '0' in trigger_types:
+					send_sms_callrecieve = True
+				if '1' in trigger_types:
+					send_sms_on_dispo = True
+				if '2' in trigger_types:
+					disabled_sms_tab = True
+					template = list(SMSTemplate.objects.filter(id__in=trigger_params['2']).values('id','text'))
+				print(template)
+			# if template.exists():
+			# 	template = list(template.values('id','text'))
+		# if campaign.whatsapp_gateway:
+		# 	# template = campaign.sms_gateway.template.filter(Q(campaign_id=campaign.id)|Q(template_type='0'))
+		# 	#template=campaign.template_campaign.all()
+		# 	template=campaign.whatsapp_gateway.template #which using for not selecting campaign from template
+		# 	if campaign.whatsapp_gateway.sms_trigger_on=='2':
+		# 		disabled_whatsapp_tab = True
+		# 	elif campaign.whatsapp_gateway.sms_trigger_on=='1':
+		# 		send_whatsapp_on_dispo = True
+		# 	else:
+		# 		send_whatsapp_callrecieve = True
 
-			if template.exists():
-				template = list(template.values('id','text'))
-		if campaign.whatsapp_gateway:
-			# template = campaign.sms_gateway.template.filter(Q(campaign_id=campaign.id)|Q(template_type='0'))
-			#template=campaign.template_campaign.all()
-			template=campaign.whatsapp_gateway.template #which using for not selecting campaign from template
-			if campaign.whatsapp_gateway.sms_trigger_on=='2':
-				disabled_whatsapp_tab = True
-			elif campaign.whatsapp_gateway.sms_trigger_on=='1':
-				send_whatsapp_on_dispo = True
-			else:
-				send_whatsapp_callrecieve = True
-
-			if template.exists():
-				template = list(template.values('id','text'))
+		# 	if template.exists():
+		# 		template = list(template.values('id','text'))
 		if campaign.email_gateway and campaign.email_gateway.status == 'Active':
 			email_gateway['gateway_id'] = campaign.email_gateway.id
 			email_gateway['email_templates'] = campaign.email_gateway.template.filter(status='Active').values('id','email_body','email_subject')
@@ -7278,7 +7282,7 @@ class SmsGatewayCreateEditApiView(LoginRequiredMixin, APIView):
 		trigger_action = TRIGGER_ACTIONS
 		dispo_list = Disposition.objects.all().values("id","name")
 		template_list = SMSTemplate.objects.values("id","name")
-		campaigns = Campaign.objects.values('id','name')
+		# campaigns = Campaign.objects.values('id','name')
 		if non_admin_user:
 			user_campaigns = Campaign.objects.filter(Q(users=request.user)|Q(group__in=request.user.group.all())|Q(created_by=request.user)).distinct()
 			template_list = template_list.filter(Q(campaign__in=user_campaigns)|Q(template_type='0'))
@@ -7292,10 +7296,10 @@ class SmsGatewayCreateEditApiView(LoginRequiredMixin, APIView):
 		non_user_sms_template = []
 		if pk:
 			sms_gateway= get_object(pk, "callcenter", "SMSGateway")
-			dispo_list =  dispo_list.exclude(id__in=sms_gateway.disposition.all().values_list("id", flat=True))
+			# dispo_list =  dispo_list.exclude(id__in=sms_gateway.disposition.all().values_list("id", flat=True))
 			if non_admin_user:
 				non_user_sms_template =list(sms_gateway.template.exclude(id__in=template_list.values_list('id',flat=True)).values_list('name',flat=True))
-			template_list = template_list.exclude(id__in=sms_gateway.template.all().values_list("id",flat=True))
+			# template_list = template_list.exclude(id__in=sms_gateway.template.all().values_list("id",flat=True))
 			if permission_dict['can_update']:
 				can_view = True
 			if sms_gateway.gateway_mode == '0':
@@ -7359,19 +7363,31 @@ class SendSMSApiView(APIView):
 		primary_dispo = request.POST.get('primary_dispo','')
 		message = request.POST.get('templates',[])
 		session_uuid = request.POST.get('session_uuid','')
-		if message:
-			message = json.loads(message)
-		print(message,"mesage")
-		sms_text  = ''
-		if not message:
-			return JsonResponse({'status':'No templates available'}, status=400)
+		
 		if campaign_id:
 			campaign = Campaign.objects.get(id=campaign_id)
 			if dispo_submit=='true' and primary_dispo:
-				dispo = campaign.sms_gateway.disposition.filter(name=primary_dispo)
-				if not dispo.exists():
-					return JsonResponse({'status':'This Disposition is not available'}, status=400)
-			response=sendsmsparam(campaign,numeric, session_uuid, message,request.user.id)
+				trigger_params = campaign.sms_gateway.trigger_params
+				if '1' in trigger_params:
+					dispo = Disposition.objects.filter(name=primary_dispo).first()
+					if dispo:
+						print(dispo,trigger_params)
+						disp_template_ids = []
+						# disp_template_ids.extend(trigger_params['1'][str(dispo.id)])
+						for disp in trigger_params['1']:
+							if str(dispo.id) in disp:
+								disp_template_ids.extend(disp[str(dispo.id)])
+						if disp_template_ids:
+							message = SMSTemplate.objects.filter(id__in=disp_template_ids).values('id','text')
+							print(message)
+					else:
+						return JsonResponse({'status':'This Disposition is not available'}, status=400)
+		if message and primary_dispo=='':
+			message = json.loads(message)
+		print(message,"mesage")
+		if not message:
+			return JsonResponse({'status':'No templates available'}, status=400)
+		response=sendsmsparam(campaign,numeric, session_uuid, message,request.user.id)
 		return JsonResponse({'status':response})
 
 @method_decorator(check_read_permission, name='get')

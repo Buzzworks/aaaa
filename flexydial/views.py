@@ -688,6 +688,7 @@ def sendsmsparam(campaign, numeric, session_uuid, message,user_id=None):
 			for sms in message:
 				print("inside for",sms)
 				data['msg'] = re.sub(remove_html,'',sms['text'])
+				print(data)
 				response = sendSMS(data, sms['id'])
 		return response
 	except Exception as e:
@@ -719,7 +720,7 @@ def sendSMS(data,template_id):
 			del url_parameters['custom']
 			url_parameters={**url_parameters,**custom_dict}
 		query_string = urlencode(url_parameters)
-		final_url = "{}/{}?{}={}&{}={}&{}".format(url,auth_key,url_params_destination,reciever,url_params_template,final_message,query_string)
+		final_url = "{}?{}={}&{}={}&{}".format(url,url_params_destination,reciever,url_params_template,final_message,query_string)
 	elif gateway_Mode=='1':#'1' is whatsapp, not True, False
 		url_params_destination=url_parameters.pop('Destination','send_to')#default set as key of send_to if not given any url params
 		url_params_template=url_parameters.pop('template','msg')#default set as key of dest if not given any url params
@@ -1012,3 +1013,4 @@ def get_all_keys_data(team_extensions=""):
 
 def get_all_agent_key():
 	return settings.R_SERVER.scan_iter("flexydial_*")
+
