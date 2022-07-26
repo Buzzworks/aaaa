@@ -476,6 +476,7 @@ class SMSGateway(models.Model):
 		blank=True, null=True)
 	url_parameters = JSONField(default=dict)
 	gateway_mode = models.CharField(choices=Gateway_Mode,max_length = 50)	
+	trigger_params = JSONField(default=dict)
 	def __str__(self):
 		return self.name
 	class Meta:
