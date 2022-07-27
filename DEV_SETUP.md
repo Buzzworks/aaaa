@@ -1,23 +1,79 @@
-echo APP_PATH=<currentAPPdirectory> >> /etc/environment
-example :
-    echo APP_PATH=/home/buzzworks/flexydial >> /etc/environment
+# Flexydial-6 Dev 
 
-echo ENV=DEV >> /etc/environment
-    
-1. sudo su
-2. cd tools/
-3. chmod -R  +x *
-4. ./docker-install.sh # to install Docker in the system.
-5. cd redis/
-6. ./docker-instance.sh # to create redis container
-7. cd .. && cd postgres && ./docker-instance.sh # to create postgres container
-8. cd ../../fs-dialplan/ && ./dev_setup.sh # to create websocket image locally
-9. cd ../tools/websocket/ && ./docker-instance.sh # to create websocket container
-10. cd ../../ && ./dev-setup.sh # to create app image locally
-11. cd tools/app/ 
-12. modify docker-instance.sh 
-REPLACE Mention WebSocket Server IP address/domain name
-REPLACE Mention Telephony Server IP address/domain name
-13. Save the file
-14. ./docker-instance.sh # to create app,nginx container
-15. cd ../freeswitch/ && ./instance.sh
+## Prerequisites:
+Prerequisites to do any new dev setup or Ip changes occured.
+
+```
+echo APP_HOST=enter_ip_of_app >> /etc/environment
+echo REDIS_HOST=enter_ip_of_app >> /etc/environment
+echo DB_HOST=enter_ip_of_app >> /etc/environment
+echo SOCKET_HOST=enter_ip_of_app >> /etc/environment
+echo TELEPHONY_HOST=enter_ip_of_app >> /etc/environment
+echo APP_PATH= >> /etc/environment 
+example : echo APP_PATH=/home/buzzworks/flexydial >> /etc/environment
+echo ENV=DEV >> /etc/enviornment
+```
+
+## Installation Steps/Hints:
+```
+sudo su
+```
+```
+cd tools/
+```
+```
+chmod -R +x *
+```
+```
+./docker-install.sh # to install Docker in the system.
+```
+```
+cd redis/
+```
+```
+./docker-instance.sh # to create redis container
+```
+- To Create postgres container.
+```
+cd .. && cd postgres && ./docker-instance.sh # to create postgres container
+```
+- To create Websocket image
+```
+cd ../../fs-dialplan/ && ./dev_setup.sh # to create websocket image locally
+```
+- To Create WebSocket container
+```
+cd ../tools/websocket/ && ./docker-instance.sh # to create websocket container
+```
+- To Create App Local Image
+```
+cd ../../ && ./dev-setup.sh # to create app image locally
+```
+```
+cd tools/app/
+```
+- Modify docker-instance.sh REPLACE Mention WebSocket Server IP address/domain name REPLACE Mention Telephony Server IP address/domain name
+Save the file
+- To Create Certificates
+```
+./flexycrt.sh
+```
+- To Create App and Nginx Container
+```
+./docker-instance.sh # to create app,nginx container
+```
+- To create Freeswitch installation, cdr and autodial daemons
+```
+cd ../freeswitch/ && ./instance.sh
+```
+
+
+## Imp Docker Commands:
+-To get the all the docker process list
+```
+sudo docker ps
+```
+- To get the logs
+```
+sudo docker logs <container-name> -f
+```
