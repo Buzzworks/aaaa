@@ -1,4 +1,4 @@
-from crm.models import TempContactInfo, LeadListPriority
+from crm.models import Contact, TempContactInfo, LeadListPriority
 from datetime import datetime, timedelta
 from django.db.models import Q
 from django.db import transaction
@@ -54,3 +54,7 @@ def autodial_num_update(campaign, numbers, description=""):
 			# TempContactInfo.objects.filter(id__in=numbers).delete()
 	except Exception as e:
 		print(e)
+	finally:
+		transaction.commit()
+		connections["crm"].close()
+		connections["default"].close()
