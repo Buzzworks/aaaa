@@ -750,7 +750,7 @@ def sendSMS(data,template_id):
 		print("status message ",response.text.encode("utf-8"))
 		SMSLog.objects.create(sms_text=data['msg'], sent_by_id=data["sender_id"], reciever=data["phone_numbers"], status=status,
 			status_message=response.text.encode("utf-8"),session_uuid=data['session_uuid'], template_id=template_id)
-		return str(response.text.encode("utf-8"))
+		return str(response.text)
 	except Exception as e:
 		exc_type, exc_obj, exc_tb = sys.exc_info()
 		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
