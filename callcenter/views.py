@@ -7379,12 +7379,12 @@ class SendSMSApiView(APIView):
 								disp_template_ids.extend(disp[str(dispo.id)])
 						if disp_template_ids:
 							message = SMSTemplate.objects.filter(id__in=disp_template_ids).values('id','text')
-							print(message)
+						else:
+							return JsonResponse({'status':'SMS not configured to this Disposition'}, status=400)
 					else:
 						return JsonResponse({'status':'This Disposition is not available'}, status=400)
 		if message and primary_dispo=='':
-			message = json.loads(message)
-		print(message,"mesage")
+			message = json.loads(message)			
 		if not message:
 			return JsonResponse({'status':'No templates available'}, status=400)
 		response=sendsmsparam(campaign,numeric, session_uuid, message,request.user.id)
