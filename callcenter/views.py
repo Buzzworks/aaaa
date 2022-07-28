@@ -4006,6 +4006,8 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 				if '2' in trigger_types:
 					disabled_sms_tab = True
 					template = list(SMSTemplate.objects.filter(id__in=trigger_params['2']).values('id','text'))
+				elif send_sms_on_dispo or send_sms_callrecieve:
+					template = [{'id': 1, 'text': '<p>TemplateCustom</p>'}]
 				print(template)
 			# if template.exists():
 			# 	template = list(template.values('id','text'))
