@@ -22,7 +22,7 @@ class Command(BaseCommand):
         superuser.set_password("flexydial")
         superuser.save()
         UserVariable.objects.filter(user=superuser).delete()
-        UserVariable.objects.create(user=superuser, extension="1000")
+        user_varibale_obj=UserVariable.objects.create(user=superuser, extension="1000")
         admin_user = User.objects.filter(username="admin")
         if admin_user:
             admin_user = admin_user[0]
@@ -45,7 +45,9 @@ class Command(BaseCommand):
             Switch.objects.all().delete()
 
             # #default switch
-            Switch.objects.bulk_create([Switch(name="call_server", ip_address=settings.FREESWITCH_IP_ADDRESS, created_by=admin_user)])
+            switch_objects=Switch.objects.bulk_create([Switch(name="call_server", ip_address=settings.FREESWITCH_IP_ADDRESS, created_by=admin_user)])
+            user_varibale_obj.domain=switch_objects[0]
+            user_varibale_obj.save()
 
             DialTrunk.objects.all().delete()
             camp_switch = Switch.objects.filter(name="call_server").first()
