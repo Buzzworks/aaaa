@@ -1,6 +1,7 @@
 """
 Dumping Events in DB or Logger
 """
+import json
 import time,os, sys
 from subprocess import PIPE, Popen, call
 from django.core.exceptions import ObjectDoesNotExist
@@ -190,18 +191,16 @@ def event_dump(kwargs):
 							if trigger_params:
 								trigger_types = list(trigger_params.keys())
 								if '3' in trigger_types:
-									sms_template = list(SMSTemplate.objects.filter(id__in=trigger_params['3']).values('id','text'))
+									sms_template = SMSTemplate.objects.filter(id__in=trigger_params['3']).values('id','text')
 									numeric = kwargs.get('customer_cid','')
 									session_uuid = kwargs.get('session_uuid','')
 									try:
-										for message in sms_template:
-											print(message)
-											web_url = settings.WEB_URL
-											if not web_url:
-												sendsmsparam(campaign_obj,numeric,session_uuid,message)
-											else:
-												res = requests.post(f"{web_url}/api/send_sms/",data={"campaign_id":campaign_obj.id,"numeric":numeric,"abd_trigger":"true","session_uuid":session_uuid,"templates":message})
-												print("SENDSMS RES",res)
+										web_url = settings.WEB_URL
+										if not web_url:
+											sendsmsparam(campaign_obj,numeric,session_uuid,sms_template)
+										else:
+											res = requests.post(f"{web_url}/api/send_sms/",data={"campaign_id":campaign_obj.id,"numeric":numeric,"abd_trigger":"true","session_uuid":session_uuid,"templates":json.dumps(list(sms_template))})
+											print("SENDSMS RES",res)
 									except Exception as e:
 										print("sendSMS exception",e)
 					notification_obj.save()
