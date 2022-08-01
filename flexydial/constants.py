@@ -252,6 +252,7 @@ TRIGGER_ACTIONS = (
 		('0', 'On Pre-Call'),
 		('1', 'On Disposition'),
 		('2', 'On Call'),
+		('3','On Abandonded Call')
 		)
 
 SMS_STATUS = (

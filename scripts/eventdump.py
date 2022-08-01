@@ -6,9 +6,12 @@ from subprocess import PIPE, Popen, call
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction, connection, connections
 from datetime import datetime,date,timedelta
+
+import requests
 from flexydial import settings
 from flexydial.views import sendsmsparam
 from callcenter.models import (
+	SMSTemplate,
 	UserVariable,
 	Campaign,
 	CallDetail,
@@ -162,37 +165,53 @@ def event_dump(kwargs):
 								kwargs['dialed_status'] = 'Drop'
 			else:
 				models=['CallDetail','DiallerEventLog']
-				ivr_duration = kwargs.get('billsec', None) 
-				bill_sec = 0 
+				ivr_duration = kwargs.get('billsec', None)
+				bill_sec = 0
 				inbound_uuids = pickle.loads(settings.R_SERVER.get("inbound_status") or pickle.dumps(AGENTS))
 				if kwargs['session_uuid'] in inbound_uuids:
 					del inbound_uuids[kwargs['session_uuid']]
 					settings.R_SERVER.set("inbound_status", pickle.dumps(inbound_uuids))
 				if kwargs.get('dialed_status') == 'CBR':
 					CallBackContact.objects.create(numeric = kwargs.get('customer_cid'),campaign = kwargs.get('campaign'),disposition = kwargs.get('dialed_status'),callback_type = 'queue',schedule_time = datetime.now(),status = 'NotDialed',customer_raw_data={},contact_id=kwargs["contact_id"], callmode=kwargs.get('call_mode', ''))					
-				else: 
+				else:
 					message = "Dear Agent you have a Call Back Request from this number {}".format(kwargs.get('customer_cid'))
 					abandoned_obj = Abandonedcall.objects.create(campaign=kwargs.get('campaign'),caller_id=kwargs.get('caller_id'),numeric = kwargs.get('customer_cid'), status =kwargs.get('dialed_status'))
 					notification_obj = Notification.objects.create(campaign=kwargs.get('campaign'),title='Abandonedcall', 					
-						message=message,numeric = kwargs.get('customer_cid')) 				
-					if user_obj == None: 					
-						notification_obj.notification_type = "campaign_abandonedcall" 				
-					else: 					
+						message=message,numeric = kwargs.get('customer_cid'))
+					if user_obj == None:
+						notification_obj.notification_type = "campaign_abandonedcall"
+					else:
 						notification_obj.notification_type = "user_abandonedcall"
 						notification_obj.user=user_obj.username
 						abandoned_obj.user = kwargs.get('user')
 						abandoned_obj.save()
-					notification_obj.save()				
+						if camp.sms_gateway and camp.name == campaign_name:
+							trigger_params = camp.sms_gateway.trigger_params
+							if trigger_params:
+								trigger_types = list(trigger_params.keys())
+								if '3' in trigger_types:
+									sms_template = list(SMSTemplate.objects.filter(id__in=trigger_params['2']).values('id','text'))
+									numeric = kwargs.get('customer_cid','')
+									session_uuid = kwargs.get('session_uuid','')
+									try:
+										for message in sms_template:
+											web_url = settings.WEB_URL
+											if not web_url:
+												sendsmsparam(camp,numeric,session_uuid,message)
+											else:
+												requests.post(f"{web_url}/api/send_sms/",data={"campaign_id":camp.id,"numeric":numeric,"abd_trigger":"true","session_uuid":session_uuid,"templates":message})
+									except Exception as e:
+										print("sendSMS exception",e)
+					notification_obj.save()
 		if wfh:
 			wfh_agents = {}
 			AGENTS = get_agent_status(username)
 			if username in AGENTS and AGENTS[username]['wfh'] or kwargs.get('wfh_call'):
 				models=['CallDetail','DiallerEventLog']
 			wfh_agents = pickle.loads(settings.R_SERVER.get("wfh_agents") or pickle.dumps(wfh_agents))
-			if wfh_agents:
-				if kwargs.get('session_uuid') in wfh_agents:
-					del wfh_agents[kwargs.get('session_uuid')]
-					settings.R_SERVER.set("wfh_agents",pickle.dumps(wfh_agents))
+			if wfh_agents and kwargs.get('session_uuid') in wfh_agents:
+				del wfh_agents[kwargs.get('session_uuid')]
+				settings.R_SERVER.set("wfh_agents",pickle.dumps(wfh_agents))
 		if kwargs.get('call_mode') == 'click-to-call' or kwargs.get('call_mode') == "voice-blaster":
 				models=['CallDetail','DiallerEventLog']
 				if kwargs.get('call_mode') == "voice-blaster" and kwargs.get('dialed_status')=="Connected":

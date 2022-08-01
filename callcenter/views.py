@@ -3984,7 +3984,7 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 			AGENTS[extension]['dialerSession_switch'] = campaign.switch.ip_address
 			AGENTS[extension]['dialerSession_uuid'] = status['ori_uuid']
 			set_agent_status(extension,AGENTS[extension])
-		template = []
+		sms_template = []
 		email_gateway = {}
 		disabled_sms_tab = False
 		send_sms_callrecieve = False
@@ -4005,10 +4005,10 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 					send_sms_on_dispo = True
 				if '2' in trigger_types:
 					disabled_sms_tab = True
-					template = list(SMSTemplate.objects.filter(id__in=trigger_params['2']).values('id','text'))
+					sms_template = list(SMSTemplate.objects.filter(id__in=trigger_params['2']).values('id','text'))
 				elif send_sms_on_dispo or send_sms_callrecieve:
-					template = [{'id': 1, 'text': '<p>TemplateCustom</p>'}]
-				print(template)
+					sms_template = [{'id': 1, 'text': '<p>TemplateCustom</p>'}]
+				print(sms_template)
 			# if template.exists():
 			# 	template = list(template.values('id','text'))
 		# if campaign.whatsapp_gateway:
@@ -4034,7 +4034,7 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 				'campaign':campaign_data, 'disposition':disposition,'relation_tag':relation_tag,
 				'crm_fields':crm_fields, 'campaign_caller_id': caller_id,'script':script,
 				'crm_fieds_data':crm_fieds_data, 'total_camp_assigned_calls':total_camp_assigned_calls,
-				'sms_templates':template,'disabled_sms_tab':disabled_sms_tab,'send_sms_on_dispo':send_sms_on_dispo,'send_sms_callrecieve':send_sms_callrecieve,'disabled_whatsapp_tab':disabled_whatsapp_tab,'send_whatsapp_on_dispo':send_whatsapp_on_dispo,'send_whatsapp_callrecieve':send_whatsapp_callrecieve,'lead_user':lead_user,
+				'sms_templates':sms_template,'disabled_sms_tab':disabled_sms_tab,'send_sms_on_dispo':send_sms_on_dispo,'send_sms_callrecieve':send_sms_callrecieve,'disabled_whatsapp_tab':disabled_whatsapp_tab,'send_whatsapp_on_dispo':send_whatsapp_on_dispo,'send_whatsapp_callrecieve':send_whatsapp_callrecieve,'lead_user':lead_user,
 				'email_gateway':email_gateway, 'sip_udp_port':sip_udp_port, 'wss_port':wss_port, 'rpc_port':rpc_port,
 				'required_fields':required_field_list,'on_call_dispositions':on_call_dispositions,"not_on_call_dispostion":not_on_call_dispostion })
 
@@ -7356,6 +7356,8 @@ class SendSMSApiView(APIView):
 	"""
 	Send sms for the defined templates
 	"""
+	permission_classes = [AllowAny]
+
 	def post(self,request):
 		data = {'url':'','msg':'','phone_numbers':[],'auth_key':'','sender_id':'','session_uuid':''}
 		url = "https://www.fast2sms.com/dev/bulk"
@@ -7365,7 +7367,7 @@ class SendSMSApiView(APIView):
 		primary_dispo = request.POST.get('primary_dispo','')
 		message = request.POST.get('templates',[])
 		session_uuid = request.POST.get('session_uuid','')
-		
+		abd_trigger = request.POST.get('abd_trigger','')
 		if campaign_id:
 			campaign = Campaign.objects.get(id=campaign_id)
 			if dispo_submit=='true' and primary_dispo:
@@ -7385,8 +7387,9 @@ class SendSMSApiView(APIView):
 							return JsonResponse({'status':'SMS not configured to this Disposition'}, status=400)
 					else:
 						return JsonResponse({'status':'This Disposition is not available'}, status=400)
-		if message and primary_dispo=='':
-			message = json.loads(message)			
+
+		if message and primary_dispo=='' and abd_trigger == "":
+			message = json.loads(message)
 		if not message:
 			return JsonResponse({'status':'No templates available'}, status=400)
 		response=sendsmsparam(campaign,numeric, session_uuid, message,request.user.id)
