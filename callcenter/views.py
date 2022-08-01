@@ -7388,7 +7388,7 @@ class SendSMSApiView(APIView):
 					else:
 						return JsonResponse({'status':'This Disposition is not available'}, status=400)
 
-		if message and primary_dispo=='' and abd_trigger == "":
+		if message and primary_dispo=='':
 			message = json.loads(message)
 		if not message:
 			return JsonResponse({'status':'No templates available'}, status=400)
