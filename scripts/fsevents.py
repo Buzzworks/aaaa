@@ -70,7 +70,7 @@ def capture_events(signal, sender, **kwargs):
 				'info':kwargs.get('variable_details', ''),
 				'dtmf':kwargs.get('variable_digits_received',None),
 				# 'caller_id':kwargs.get('Caller-Destination-Number', kwargs.get('variable_user_uname', None)),
-				'caller_id':kwargs.get('variable_caller_id',kwargs.get('Caller-Destination-Number', kwargs.get('variable_user_uname', None))),
+				'caller_id':kwargs.get('Caller-Destination-Number', kwargs.get('variable_user_uname', None)) if kwargs.get('Call-Direction') == 'inbound' else kwargs.get('variable_caller_id',kwargs.get('Caller-Destination-Number', kwargs.get('variable_user_uname', None))),
 				'unique_id':kwargs.get('variable_uniqueid',None),
 				'wfh_call' :kwargs.get('variable_wfh_call',None),
 				'callserver':kwargs.get('FreeSWITCH-IPv4',''),

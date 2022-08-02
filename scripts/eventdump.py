@@ -143,15 +143,16 @@ def event_dump(kwargs):
 				user_obj = UserVariable.objects.get(extension=kwargs.get('user')).user
 				username = user_obj.username
 			except:
-				user_obj = None
+				user_obj = User.objects.filter(caller_id = kwargs.get('caller_id')).first()
+				if user_obj:
+					username = user_obj.username
+				else:
+					user_obj = None
 		else:
+			print('2222')
 			user_obj = User.objects.filter(caller_id = kwargs.get('caller_id')).first()
 			if user_obj:
 				username = user_obj.username
-				contact = Contact.objects.filter(numeric=kwargs.get('customer_cid')).first()
-				if contact:
-					campaign_obj =  Campaign.objects.get(name=contact.campaign)
-					campaign_name = campaign_obj.name
 			else:
 				user_obj = None
 		primary_dispo='NF(No Feedback)'
@@ -195,8 +196,11 @@ def event_dump(kwargs):
 						notification_obj.user=user_obj.username
 						abandoned_obj.user = user_obj.username
 						abandoned_obj.save()
-						if campaign_obj and campaign_obj.sms_gateway and campaign_obj.name == campaign_name:
-							trigger_params = campaign_obj.sms_gateway.trigger_params
+						contact = Contact.objects.filter(numeric=kwargs.get('customer_cid')).first()
+						if contact:
+							campaign_obj_sms =  Campaign.objects.get(name=contact.campaign)
+						if contact and campaign_obj_sms and campaign_obj_sms.sms_gateway :
+							trigger_params = campaign_obj_sms.sms_gateway.trigger_params
 							if trigger_params:
 								trigger_types = list(trigger_params.keys())
 								if '3' in trigger_types:
@@ -206,9 +210,9 @@ def event_dump(kwargs):
 									try:
 										web_url = settings.WEB_URL
 										if not web_url:
-											sendsmsparam(campaign_obj,numeric,session_uuid,sms_template)
+											sendsmsparam(campaign_obj_sms,numeric,session_uuid,sms_template)
 										else:
-											res = requests.post(f"{web_url}/api/send_sms/",data={"campaign_id":campaign_obj.id,"numeric":numeric,"abd_trigger":"true","session_uuid":session_uuid,"templates":json.dumps(list(sms_template))},verify=False)
+											res = requests.post(f"{web_url}/api/send_sms/",data={"campaign_id":campaign_obj_sms.id,"numeric":numeric,"abd_trigger":"true","session_uuid":session_uuid,"templates":json.dumps(list(sms_template))},verify=False)
 											print("SENDSMS RES",res)
 									except Exception as e:
 										print("sendSMS exception",e)
@@ -262,6 +266,9 @@ def event_dump(kwargs):
 			cdr_save(model,kwargs,campaign_obj,user_obj,primary_dispo, campaign_name)
 	except Exception as e:
 		print("erro from event_dump : %s"%(e))
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 	finally:
 		transaction.commit()
 		connections["crm"].close()
