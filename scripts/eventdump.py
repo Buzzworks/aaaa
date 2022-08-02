@@ -13,6 +13,7 @@ from flexydial import settings
 from flexydial.views import sendsmsparam
 from callcenter.models import (
 	SMSTemplate,
+	User,
 	UserVariable,
 	Campaign,
 	CallDetail,
@@ -144,7 +145,15 @@ def event_dump(kwargs):
 			except:
 				user_obj = None
 		else:
-			user_obj = None
+			user_obj = User.objects.filter(caller_id = kwargs.get('caller_id')).first()
+			if user_obj:
+				username = user_obj.username
+				contact = Contact.objects.filter(numeric=kwargs.get('customer_cid')).first()
+				if contact:
+					campaign_obj =  Campaign.objects.get(name=contact.campaign)
+					campaign_name = campaign_obj.name
+			else:
+				user_obj = None
 		primary_dispo='NF(No Feedback)'
 		list_causecode = ["USER_BUSY","NO_ANSWER","NO_USER_RESPONSE","NORMAL_CLEARING","NORMAL_TEMPORARY_FAILURE","CALL_REJECTED","ORIGINATOR_CANCEL"]			
 		models=['DiallerEventLog']
@@ -184,9 +193,9 @@ def event_dump(kwargs):
 					else:
 						notification_obj.notification_type = "user_abandonedcall"
 						notification_obj.user=user_obj.username
-						abandoned_obj.user = kwargs.get('user')
+						abandoned_obj.user = user_obj.username
 						abandoned_obj.save()
-						if campaign_obj.sms_gateway and campaign_obj.name == campaign_name:
+						if campaign_obj and campaign_obj.sms_gateway and campaign_obj.name == campaign_name:
 							trigger_params = campaign_obj.sms_gateway.trigger_params
 							if trigger_params:
 								trigger_types = list(trigger_params.keys())
@@ -199,7 +208,7 @@ def event_dump(kwargs):
 										if not web_url:
 											sendsmsparam(campaign_obj,numeric,session_uuid,sms_template)
 										else:
-											res = requests.post(f"{web_url}/api/send_sms/",data={"campaign_id":campaign_obj.id,"numeric":numeric,"abd_trigger":"true","session_uuid":session_uuid,"templates":json.dumps(list(sms_template))})
+											res = requests.post(f"{web_url}/api/send_sms/",data={"campaign_id":campaign_obj.id,"numeric":numeric,"abd_trigger":"true","session_uuid":session_uuid,"templates":json.dumps(list(sms_template))},verify=False)
 											print("SENDSMS RES",res)
 									except Exception as e:
 										print("sendSMS exception",e)
