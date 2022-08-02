@@ -196,9 +196,9 @@ def event_dump(kwargs):
 						notification_obj.user=user_obj.username
 						abandoned_obj.user = user_obj.username
 						abandoned_obj.save()
-						contact = Contact.objects.filter(numeric=kwargs.get('customer_cid')).first()
+						contact = Contact.objects.filter(numeric=kwargs.get('customer_cid')).order_by('-id').first()
 						if contact:
-							campaign_obj_sms =  Campaign.objects.get(name=contact.campaign)
+							campaign_obj_sms =  Campaign.objects.filter(name=contact.campaign).first()
 						if contact and campaign_obj_sms and campaign_obj_sms.sms_gateway :
 							trigger_params = campaign_obj_sms.sms_gateway.trigger_params
 							if trigger_params:
