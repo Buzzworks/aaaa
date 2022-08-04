@@ -220,11 +220,12 @@
 			var url = "/CallReports/CallDetailReport/"
 			var dialerlog_table = $('#diallerlog-list-table')
             report_visible_cols = []
+            report_visible_cols={{report_visible_cols|safe}}
+            crm_fields = {{all_fields.crm_fields|safe}}
             {% if report_visible_cols %}
-                report_visible_cols={{report_visible_cols|safe}}
                 report_datatable(dialerlog_table,url,report_visible_cols)
             {% else %}
-                report_datatable(dialerlog_table,url)
+                report_datatable(dialerlog_table,url,'',crm_fields)
             {% endif %}
 			users = {{users|safe}}
 		{% else %}

@@ -1136,14 +1136,14 @@ class LeadListChurnAPI(LoginRequiredMixin, APIView):
 						else:
 							contact_query = Q(disposition=dispo, status="Dialed")
 						contact_count = contact.filter(contact_query).count()
-						contact.filter(contact_query).update(status='NotDialed', churncount=F('churncount')+1)
+						contact.filter(contact_query).update(status='NotDialed', churncount=F('churncount')+1,modified_date=datetime.now())
 					else:
 						if users:
 							contact_query = Q(status=dispo, last_connected_user__in=users)
 						else:
 							contact_query = Q(status=dispo)
 						contact_count = contact.filter(contact_query).count()
-						contact.filter(status=dispo).update(status='NotDialed', churncount=F('churncount')+1)
+						contact.filter(status=dispo).update(status='NotDialed', churncount=F('churncount')+1,modified_date=datetime.now())
 					final_count = final_count + contact_count
 				if final_count > 0:
 					PhonebookBucketCampaign.objects.filter(id=campaign_obj.id).update(is_contact=True)

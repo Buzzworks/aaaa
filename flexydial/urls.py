@@ -58,7 +58,6 @@ urlpatterns = [
     path("api/generate-token/", authviews.obtain_auth_token),
 
     path('captcha/', include('captcha.urls')),
-
 ] #+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 #if settings.DEBUG:

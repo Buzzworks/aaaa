@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
+from datetime import timedelta
 import os
 import socket
 import pickle, redis, re
@@ -239,7 +240,7 @@ INTERNAL_IPS = [IP_ADDRESS, "127.0.0.1"]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
-SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_IDLE_TIMEOUT = 240*60  # 4 hours
 SESSION_COOKIE_AGE = 540*60    # 9 hours
 # resetting the password url valid days
@@ -255,7 +256,12 @@ AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID',"")
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY',"")
 
 GS_BUCKET_NAME = os.environ.get("GS_BUCKET_NAME","")
-
+JSON_KEY = {}
+if JSON_KEY:
+    from google.oauth2 import service_account
+    GS_CREDENTIALS = service_account.Credentials.from_service_account_info(JSON_KEY)
+    GS_DEFAULT_ACL = None
+    GS_EXPIRATION = timedelta(seconds=86400)
 if AWS_STORAGE_BUCKET_NAME:
     DEFAULT_FILE_STORAGE = 'flexydial.storages.MediaStore'
 elif GS_BUCKET_NAME:
@@ -296,3 +302,4 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SECURE = True
 REDIS_KEY_EXPIRE_IN_SEC = os.environ.get('REDIS_KEY_EXPIRE_IN_SEC',32400)
+WEB_URL = os.environ.get('WEB_URL','')

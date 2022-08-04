@@ -67,7 +67,7 @@
 								<div class="form-check mr-sm-3">
 									<label class="form-check-label">
 										<input type="radio" class="form-check-input" name="template_type" value="{{template.0}}" data-validation="required" id="{{template.0}}" checked='checked'>
-										{{template.1}}
+										GateWay {{template.1}}
 										<i class="input-helper"></i>
 									</label>
 								</div>
@@ -75,7 +75,7 @@
 								<div class="form-check mr-sm-3">
 									<label class="form-check-label">
 										<input type="radio" class="form-check-input" name="template_type" id="{{template.0}}" value="{{template.0}}" data-validation="required">
-										{{template.1}}
+										gateway {{template.1}}
 										<i class="input-helper"></i>
 									</label>
 								</div>
@@ -85,7 +85,8 @@
 					</div>
 				</div>
 				<div class="col-md-6">
-					<div class="form-group row d-none" id="camp_div">
+					<!--commenting because as now we are taking campaign from gateway and not by template-->
+					<!-- <div class="form-group row d-none" id="camp_div">
 						<label for="extension" class="col-sm-4 col-form-label">Campaign<span class="star camp_required">*</span> :</label>
 						<div class="col-sm-8">
 							<select class="form-control"  id="sms_campaign_select" name="campaign"  data-validation-error-msg-container="#sms_template_error">
@@ -101,7 +102,7 @@
 							</select>
 							<div id="sms_template_error"></div>
 						</div>
-					</div>
+					</div> -->
 				</div>
 			</div>
 			<div class="row mt-3 pt-3" style="border-top: 1px dashed #ccc;">

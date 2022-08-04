@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import os
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.memory import MemoryJobStore
 from flexydial import settings
@@ -14,8 +15,8 @@ from callcenter.schedulejobs import (
 	leadrecycle_del,
 	usr_campaign_switch_rpc,
 	)
-from django.db import connection
-from django.db import transaction
+from django.core.files import File
+
 
 sched = BackgroundScheduler()
 sched.add_jobstore(MemoryJobStore(), 'task')
@@ -119,3 +120,19 @@ def fs_user_campaign(sender, **kwargs):
 		execution_time = datetime.now() + timedelta(seconds=5)
 	sched.add_job(user_campaign_rpc,'date', run_date=execution_time,name='calls',
 			jobstore='task', kwargs=kwargs)
+
+def recording_file_move(sender,**kwargs):
+	"""
+	this function to insert recording file into bucket
+	"""
+	if settings.AWS_STORAGE_BUCKET_NAME or settings.GS_BUCKET_NAME:
+		dialereventlog = kwargs["instance"]
+		if not dialereventlog.recording_file:
+			file_path=settings.RECORDING_ROOT+"/"+datetime.strptime(dialereventlog.ring_time,"%Y-%m-%d %H:%M:%S").strftime("%d-%m-%Y-%H-%M")+"_"+dialereventlog.customer_cid+"_"+dialereventlog.session_uuid+".mp3"
+			if os.path.isfile(file_path) and (dialereventlog.connect_time or dialereventlog.dialed_status=='Connected'):
+				f = open(file_path, 'rb')
+				dialereventlog.recording_file.save(os.path.basename(f.name), File(f), save=True)
+				dialereventlog.save()
+				f.close()
+			else:
+				print('File not exists ::',file_path)

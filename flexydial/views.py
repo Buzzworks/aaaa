@@ -25,7 +25,7 @@ import pandas as pd
 import pickle
 from datetime import date
 from crm.models import TempContactInfo, Contact, TrashContact, CampaignInfo, AlternateContact, Phonebook
-from .constants import (CRM_FIELDS, USER_FIELDS ,DNC_FIELDS, PAGINATE_BY_LIST, ACTION_TYPE, ALTERNATE_FIELDS,HOLIDAYS_FIELDS)
+from .constants import (CRM_FIELDS, USER_FIELDS ,DNC_FIELDS, PAGINATE_BY_LIST, ACTION_TYPE, ALTERNATE_FIELDS,HOLIDAYS_FIELDS, Gateway_Mode)
 CAMPAIGNS={}
 import base64
 from django.core.mail import EmailMessage,EmailMultiAlternatives, get_connection, BadHeaderError
@@ -36,6 +36,8 @@ from django.utils.encoding import force_bytes
 from django.contrib.auth.views import PasswordResetCompleteView, PasswordResetConfirmView, INTERNAL_RESET_SESSION_TOKEN
 import requests
 from django.contrib.auth.forms import SetPasswordForm
+from urllib.parse import urlencode
+import urllib
 
 def freeswicth_server(server_ip):
 	"""
@@ -682,9 +684,13 @@ def sendsmsparam(campaign, numeric, session_uuid, message,user_id=None):
 			data['sender_id'] = user_id
 			data['phone_numbers'] = numeric
 			data['session_uuid'] = session_uuid
+			data['url_parameters']=str(campaign.sms_gateway.url_parameters) #need to convert to str as in loop dict is going to sendsms
+			data['gateway_mode']=campaign.sms_gateway.gateway_mode
 			remove_html = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
 			for sms in message:
+				print("inside for",sms)
 				data['msg'] = re.sub(remove_html,'',sms['text'])
+				print(data)
 				response = sendSMS(data, sms['id'])
 		return response
 	except Exception as e:
@@ -697,28 +703,60 @@ def sendSMS(data,template_id):
 	""" Sending the sms """
 	url = data['url']
 	msg = data['msg']
+	auth_key = data["auth_key"]
+	if auth_key == "None":
+		auth_key=''
 	msg = re.sub(r'\\x..', ' ', msg)
 	msg = msg.encode('ascii', 'ignore').decode('unicode_escape')
 	reciever = data["phone_numbers"]
-	payload = "sender_id=FSTSMS&message={}&language=english&route=p&numbers={}".format(msg, reciever)
-	headers = {
-	'authorization': data["auth_key"],
-	'Content-Type': "application/x-www-form-urlencoded",
-	'Cache-Control': "no-cache",
-	}
+	url_parameters=data["url_parameters"]
+	url_parameters=eval(url_parameters)#use eval not use dict(not working)
+	gateway_Mode=data["gateway_mode"]
+
+	if gateway_Mode=='0':#'0' is sms, not True, False
+		url_params_destination=url_parameters.pop('Destination','dest')#default set as key of dest if not given any url params
+		url_params_template=url_parameters.pop('template','msg')#default set as key of dest if not given any url params
+		final_message = urllib.parse.quote(msg)#Text should be URL encoded
+		if 'custom' in url_parameters:
+			custom_dict=dict(map(dict.popitem, url_parameters['custom']))
+			del url_parameters['custom']
+			url_parameters={**url_parameters,**custom_dict}
+		query_string = urlencode(url_parameters)
+		final_url = "{}?{}={}&{}={}&{}".format(url,url_params_destination,reciever,url_params_template,final_message,query_string)
+	elif gateway_Mode=='1':#'1' is whatsapp, not True, False
+		url_params_destination=url_parameters.pop('Destination','send_to')#default set as key of send_to if not given any url params
+		url_params_template=url_parameters.pop('template','msg')#default set as key of dest if not given any url params
+		final_message = urllib.parse.quote(msg)#Text should be URL encoded
+		if 'custom' in url_parameters:
+			custom_dict=dict(map(dict.popitem, url_parameters['custom']))
+			del url_parameters['custom']
+			url_parameters={**url_parameters,**custom_dict}
+		query_string = urlencode(url_parameters)
+		final_url="{}?method=SendMessage&{}={}&{}={}&{}".format(url,url_params_destination,reciever,url_params_template,final_message,query_string)
+	if final_url.endswith("&="):
+		final_url=final_url[:-2]
+	elif final_url.endswith("&"):
+		final_url=final_url[:-1]
+	print("final_url is",final_url)
 	try:
-		response = requests.request("POST", url, data=payload, headers=headers)
+		response = requests.request("GET", url=final_url)
 		print(response.status_code,"code")
-		response = json.loads(response.text)
+		# response = json.loads(response.text)
 		msg = 'Unsuccessfully Sent'
 		status = 'Inactive'
-		if response['return']:
+		success_message = response.text.split('|')[0].strip()
+		if 'success' == success_message:
 			msg = 'Successfully Sent'
 			status = 'Active'
+
+		print("status message ",response.text.encode("utf-8"))
 		SMSLog.objects.create(sms_text=data['msg'], sent_by_id=data["sender_id"], reciever=data["phone_numbers"], status=status,
-			status_message=response["message"],session_uuid=data['session_uuid'], template_id=template_id)
-		return response["message"]
+			status_message=response.text.encode("utf-8"),session_uuid=data['session_uuid'], template_id=template_id)
+		return str(response.text)
 	except Exception as e:
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 		return "Temporary Unavailable"
 
 def csvDownloadTemplate(fields, model, file_type, dummy_value, exclude=[],
@@ -977,3 +1015,4 @@ def get_all_keys_data(team_extensions=""):
 
 def get_all_agent_key():
 	return settings.R_SERVER.scan_iter("flexydial_*")
+

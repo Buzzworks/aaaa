@@ -57,3 +57,4 @@ systemctl enable postgres-docker
 systemctl start postgres-docker
 docker exec -it postgres-db psql -d flexydial -Uflexydial -c 'create extension hstore;'
 docker exec -it postgres-db psql -d crm -Uflexydial -c 'create extension hstore;'
+docker exec -it postgres-db psql -d flexydial -Uflexydial -c 'create extension dblink;'

@@ -40,13 +40,6 @@ def get_crm_fields(campaign_name,temp=False):
 		return crm_section_fields
 	return column_list
 
-def campaign_crm_fields(camp_names):
-	crm_camp_fields = []
-	for camp_crms in camp_names:
-			for crm_fields in get_crm_fields(camp_crms,True):
-				crm_camp_fields.append(crm_fields)
-	return crm_camp_fields
-
 def get_customizable_crm_fields(campaign_name):
 	""" This is used to get the crm customizable fields """
 	column_list = []
