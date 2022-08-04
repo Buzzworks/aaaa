@@ -790,7 +790,8 @@ $(document).on('click','.file-download', function(e){
 		parent_path = `${parent_path}/${file_date}`
 	}
 	$('#'+row_data['session_uuid']).attr('href',row_data['recording_url'])
-	$('#'+row_data['session_uuid']).attr('download',`${file_date}-${file_time}_${row_data['customer_cid']}_${row_data['session_uuid']}.mp3`)
+	$('#'+row_data['session_uuid']).attr('download',row_data['recording_url'])
+	$('#'+row_data['session_uuid']).attr('target',"_blank")
 	$('#'+row_data['session_uuid'])[0].click()
 	return
 	$.ajax({
