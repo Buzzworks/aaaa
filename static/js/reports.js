@@ -780,7 +780,7 @@ $(document).on('click','.file-download', function(e){
 	e.preventDefault;
 	$(this).parent('tr').addClass('highlighted_row')
 	downlod_btn = $(this)
-	var parent_path = `${location.protocol}//${row_data['ip_address']}/recordings`
+	var parent_path = `${location.protocol}//${location.hostname}/recordings`
 	var row = $(this).parents('tr')
 	var row_data = custom_pagination_table.row(row).data()
 	var date = new Date(row_data['ring_time']);
