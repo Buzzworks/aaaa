@@ -721,7 +721,7 @@ $(document).on('click', '.play-recording', function(){
 	if (date.setHours(0,0,0,0) != new Date().setHours(0,0,0,0)){
 		parent_path = `${parent_path}/${file_date}`
 	}
-	setAudioTag(`/recordings-play/${file_date}-${file_time}_${row_data['customer_cid']}_${row_data['session_uuid']}.mp3/`,row_data)
+	setAudioTag(row_data['recording_url'],row_data)
 	return 
 	$.ajax({
         type: 'post',
