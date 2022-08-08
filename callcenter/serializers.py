@@ -624,7 +624,7 @@ class DiallerEventLogSerializer(serializers.ModelSerializer):
 			ip_address = list(Campaign.objects.filter(name=obj.campaign_name).values_list('switch__ip_address', flat=True))[0]
 		return ip_address
 	def get_recording_url(self,obj):
-		if obj.recording_url:
+		if obj and obj.recording_url:
 			print('recording_url',obj.recording_url)
 			return obj.recording_url
 		else:
