@@ -697,8 +697,9 @@ class CallDetailReportSerializer(serializers.ModelSerializer):
 	def get_crm_fields(self,obj):
 		contact = Contact.objects.filter(id=obj.contact_id).first()
 		con_data={}
-		for i in contact.customer_raw_data.values():
-			con_data.update(i)
+		if contact:
+			for i in contact.customer_raw_data.values():
+				con_data.update(i)
 		return con_data
 	#Showing Crm Fields Data In Table Start
 class CallDetailReportFieldSerializer(serializers.ModelSerializer):
