@@ -790,7 +790,7 @@ class ContactInfoApiView(LoginRequiredMixin, APIView):
 	def get(self, request, **kwargs):
 		add_crm_field = True
 		# campaign_list = Campaign.objects.values("name", "id")
-		campaign_list = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)))).distinct().values("name", "id")
+		campaign_list = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id))).distinct().values("name", "id")
 		phonebook = list(Phonebook.objects.values(
 		"id", "name", "campaign", "status"))
 		disposition = list(Disposition.objects.values("id","name"))
@@ -855,9 +855,7 @@ class ContactInfoApiView(LoginRequiredMixin, APIView):
 			if filter_by_phonebook:
 				contacts = contacts.filter(phonebook__id__in=filter_by_phonebook)
 			if filter_by_user:
-				# contacts = contacts.filter(user__in=filter_by_user)
-				user_in_hirarchy=user_hierarchy_func(request.user,filter_by_user)
-				contacts = contacts.filter(user__in=user_in_hirarchy)
+				contacts = contacts.filter(user__in=filter_by_user)
 			if numeric:
 				contacts = contacts.filter(numeric=numeric)
 			if disposition:

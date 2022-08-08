@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from callcenter.models import *
-from flexydial.views import get_login_campaign, get_login_agent
+from flexydial.views import get_login_campaign, get_login_agent,user_hierarchy_func
 from crm.models import Contact, ContactInfo,CrmField
 from datetime import timedelta
 from .constants import four_digit_number, three_digits_list
@@ -692,16 +692,15 @@ class CallDetailReportSerializer(serializers.ModelSerializer):
 		if obj.user:
 			supervisor_name = obj.user.reporting_to.username if obj.user.reporting_to else ""
 		return supervisor_name
-		
-	def get_crm_fields(self,obj):
-		crm_fields = {}
-		contact = Contact.objects.filter(id=obj.contact_id).first()
-		if contact:
-			for con_data in contact.customer_raw_data:
-				for sec_field,data in contact.customer_raw_data[con_data].items():
-					crm_fields[sec_field]=data
-		return crm_fields
 
+	#Showing Crm Fields Data In Table Start
+	def get_crm_fields(self,obj):
+		contact = Contact.objects.filter(id=obj.contact_id).first()
+		con_data={}
+		for i in contact.customer_raw_data.values():
+			con_data.update(i)
+		return con_data
+	#Showing Crm Fields Data In Table Start
 class CallDetailReportFieldSerializer(serializers.ModelSerializer):
 	""" serlializer to the fields of calldetails report """
 	cdrfeedback = CdrFeedbckReportSeializer()
