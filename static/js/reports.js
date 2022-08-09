@@ -721,7 +721,8 @@ $(document).on('click', '.play-recording', function(){
 	if (date.setHours(0,0,0,0) != new Date().setHours(0,0,0,0)){
 		parent_path = `${parent_path}/${file_date}`
 	}
-	setAudioTag(`/recordings-play/${file_date}-${file_time}_${row_data['customer_cid']}_${row_data['session_uuid']}.mp3/`,row_data)
+	console.log(row_data)
+	setAudioTag(row_data['recording_url'],row_data)
 	return 
 	$.ajax({
         type: 'post',
@@ -779,7 +780,7 @@ $(document).on('click','.file-download', function(e){
 	e.preventDefault;
 	$(this).parent('tr').addClass('highlighted_row')
 	downlod_btn = $(this)
-	var parent_path = `${location.protocol}//${row_data['ip_address']}/recordings`
+	var parent_path = `${location.protocol}//${location.hostname}/recordings`
 	var row = $(this).parents('tr')
 	var row_data = custom_pagination_table.row(row).data()
 	var date = new Date(row_data['ring_time']);
@@ -788,8 +789,9 @@ $(document).on('click','.file-download', function(e){
 	if (date.setHours(0,0,0,0) != new Date().setHours(0,0,0,0)){
 		parent_path = `${parent_path}/${file_date}`
 	}
-	$('#'+row_data['session_uuid']).attr('href',`/recordings-play/${file_date}-${file_time}_${row_data['customer_cid']}_${row_data['session_uuid']}.mp3/`)
-	$('#'+row_data['session_uuid']).attr('download',`${file_date}-${file_time}_${row_data['customer_cid']}_${row_data['session_uuid']}.mp3`)
+	$('#'+row_data['session_uuid']).attr('href',row_data['recording_url'])
+	$('#'+row_data['session_uuid']).attr('download',row_data['recording_url'])
+	$('#'+row_data['session_uuid']).attr('target',"_blank")
 	$('#'+row_data['session_uuid'])[0].click()
 	return
 	$.ajax({

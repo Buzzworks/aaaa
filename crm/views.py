@@ -32,7 +32,7 @@ import copy
 
 from .models import (Status, Contact, Phonebook, CrmField,
 	Contact, ContactInfo, CampaignInfo, TempContactInfo, LeadListPriority, DownloadReports, TrashContact, PhoneBookUpload, AlternateContact,ScheduleMasterContact)
-from callcenter.models import (Campaign,User, CallDetail, CSS,Disposition, DataUploadLog,PhonebookBucketCampaign, StickyAgent, UserVariable)
+from callcenter.models import (AdminLogEntry,Campaign,User, CallDetail, CSS,Disposition, DataUploadLog,PhonebookBucketCampaign, StickyAgent, UserVariable)
 from flexydial.constants import (Status, CONTACT_STATUS, FIELD_CHOICES, ORDER_BY, SEARCH_TYPE)
 
 from .serializers import (PhoneBookSerializer, CrmFieldSerializer, SetContactSerializer,
@@ -790,7 +790,7 @@ class ContactInfoApiView(LoginRequiredMixin, APIView):
 	def get(self, request, **kwargs):
 		add_crm_field = True
 		# campaign_list = Campaign.objects.values("name", "id")
-		campaign_list = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)))).distinct().values("name", "id")
+		campaign_list = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id))).distinct().values("name", "id")
 		phonebook = list(Phonebook.objects.values(
 		"id", "name", "campaign", "status"))
 		disposition = list(Disposition.objects.values("id","name"))
@@ -855,9 +855,7 @@ class ContactInfoApiView(LoginRequiredMixin, APIView):
 			if filter_by_phonebook:
 				contacts = contacts.filter(phonebook__id__in=filter_by_phonebook)
 			if filter_by_user:
-				# contacts = contacts.filter(user__in=filter_by_user)
-				user_in_hirarchy=user_hierarchy_func(request.user,filter_by_user)
-				contacts = contacts.filter(user__in=user_in_hirarchy)
+				contacts = contacts.filter(user__in=filter_by_user)
 			if numeric:
 				contacts = contacts.filter(numeric=numeric)
 			if disposition:
@@ -1131,6 +1129,17 @@ class LeadListChurnAPI(LoginRequiredMixin, APIView):
 			return JsonResponse({'final_count':final_count},status=200)
 		else:
 			if contact and churn_list:
+
+				model='phonebook'
+				action_type="2"     #in constants it's updated
+				event_type="UPDATED"
+				name=Phonebook.objects.get(id=pk).name
+				if request.user.is_superuser:
+					role='admin'
+				else:
+					role=request.user.user_role
+				msg=request.user.username+' with role '+role+'  has '+" churned "+name+" in "+model+' model'
+
 				for dispo in churn_list:
 					if dispo not in ['Drop','Abandonedcall','NC','Invalid Number','AutoFeedback','CBR']:
 						if users:
@@ -1139,6 +1148,10 @@ class LeadListChurnAPI(LoginRequiredMixin, APIView):
 							contact_query = Q(disposition=dispo, status="Dialed")
 						contact_count = contact.filter(contact_query).count()
 						contact.filter(contact_query).update(status='NotDialed', churncount=F('churncount')+1,modified_date=datetime.now())
+
+						admin_log_obj=AdminLogEntry(created_by=request.user,change_message=msg,action_name=action_type,event_type=event_type)
+						admin_log_obj.save()
+
 					else:
 						if users:
 							contact_query = Q(status=dispo, last_connected_user__in=users)
@@ -1146,6 +1159,10 @@ class LeadListChurnAPI(LoginRequiredMixin, APIView):
 							contact_query = Q(status=dispo)
 						contact_count = contact.filter(contact_query).count()
 						contact.filter(status=dispo).update(status='NotDialed', churncount=F('churncount')+1,modified_date=datetime.now())
+
+						admin_log_obj=AdminLogEntry(created_by=request.user,change_message=msg,action_name=action_type,event_type=event_type)
+						admin_log_obj.save()
+
 					final_count = final_count + contact_count
 				if final_count > 0:
 					PhonebookBucketCampaign.objects.filter(id=campaign_obj.id).update(is_contact=True)

@@ -699,6 +699,7 @@ class CampaignLiveDataView(LoginRequiredMixin, APIView):
 	def get(self, request):
 		page = int(request.GET.get('page' ,1))
 		paginate_by = int(request.GET.get('paginate_by', 10))
+
 		filter_by_camp = request.GET.get('campaign',None)
 		r_campaigns = pickle.loads(settings.R_SERVER.get("campaign_status") or pickle.dumps({}))
 		lc_data = []            #live campaign data
@@ -709,8 +710,10 @@ class CampaignLiveDataView(LoginRequiredMixin, APIView):
 					)).filter(status="Active").distinct().values("id","name")
 		if filter_by_camp:
 			active_campaign = active_campaign.filter(name__icontains=filter_by_camp)
+
 		queryset = get_paginated_object(active_campaign, page, paginate_by)
 		pagination_dict = data_for_vue_pagination(queryset)
+		
 		for campaign in queryset:
 			campaign_dict = {}
 			phonebooks = Phonebook.objects.filter(campaign=campaign['id'])
@@ -1537,6 +1540,7 @@ class DialTrunkModifyApiView(APIView):
 	def put(self, request, pk, format=None):
 		object_data = get_object(pk, "callcenter", "DialTrunk")
 		serializer = self.serializer_class(object_data, data=request.data)
+		print(serializer)
 		if serializer.is_valid():
 			updated_obj = serializer.save()
 			if DiaTrunkGroup.objects.filter(trunks__trunk_id=pk).exists():
@@ -2430,12 +2434,13 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 		admin = False
 		report_visible_cols = get_report_visible_column("1",request.user)
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
-			admin = True
+			admin = True 
 		if admin or request.user.is_superuser:
 			camp = Campaign.objects.all().prefetch_related(
 					'users', 'group', 'disposition').distinct()
 			campaign_list = camp.values("id", "name")
 			camp_id = list(camp.values_list("id",flat=True))
+			camp_names = list(camp.values_list("name",flat=True))
 			user_list = User.objects.all().exclude(
 					user_role__access_level="Admin").prefetch_related(
 					'group', 'reporting_to', 'user_role').values("id", "username")
@@ -2443,11 +2448,14 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 			dispo_keys = list(disposition.values_list('dispo_keys',flat=True))
 			dispo_keys = set([item for sublist in dispo_keys for item in sublist])
 		else:
-			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
+			# camp = Campaign.objects.filter(Q(created_by__id=request.user.id))
+			camp = Campaign.objects.filter(Q(created_by__id=request.user.id)
+				|Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).prefetch_related(
 					'users', 'group', 'disposition').distinct()
 			campaign_list = camp.values("id", "name")
 			camp_id = list(camp.values_list("id",flat=True))
+			camp_names = list(camp.values_list("name",flat=True))
 			c_user  = []
 			c_group = []
 			for campaign in camp:
@@ -2468,7 +2476,6 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 			final_camp_users = total_camp_users | users
 			final_camp_users = final_camp_users.exclude(user_role__access_level="Admin").exclude(is_superuser=True)
 			user_list = final_camp_users.values("id", "username")
-
 			dispo = camp.values_list("disposition__id", flat=True)
 			disposition = Disposition.objects.filter(id__in=dispo)
 			dispo_keys = list(disposition.values_list('dispo_keys',flat=True))
@@ -2482,22 +2489,19 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 		'bill_sec','ivr_duration','call_duration','feedback_time','call_length','hangup_source','internal_tc_number','external_tc_number','progressive_time','preview_time','predictive_wait_time','inbound_wait_time','blended_wait_time'],
 		'cdrfeedback':['primary_dispo','feedback','relationtag']}
 
+		#Showing Crm Fields In Column Visibility Start
 		crm_camp_fields = []
-		# crm_sec_name = {}
-		crm_camp_details = list(CrmField.objects.filter(campaign__id__in=camp_id).values_list('crm_fields',flat=True))
-		for i in crm_camp_details:
-			for j in range(len(i)):
-				# crm_sec_name[i[j]['section_name']] = {}
-				for k in i[j]['section_fields']:
-					crm_camp_fields.append(k['db_field'])
-					# crm_sec_name[i[j]['section_name']][k['db_field']]=""
-		if crm_camp_fields:
-			all_fields['crm_fields'] = crm_camp_fields
+		from crm.utility import get_crm_fields
+		for crm_fields in camp_names:
+			crm_camp_fields.extend(get_crm_fields(crm_fields))
+		# if crm_camp_fields:
+		all_fields['crm_fields'] = list(set(crm_camp_fields))
+		#Showing Crm Fields In Column Visibility End
+		
 		if request.user.is_superuser:
 			context['users'] = list(user_list)
 		else:
 			context['users'] = user_in_hirarchy_level(request.user.id)
-		# context['crm_sec_name'] = crm_sec_name
 		context['disposition'] = disposition.values("id", "name")
 		context['dispo_keys'] = dispo_keys
 		context['all_fields'] = all_fields
@@ -2561,13 +2565,9 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 		else:
 			query_string = Q(user_id__in=all_users)|Q(user=None)
 		if selected_user and selected_campaign:
-			# query_string = Q(campaign_name__in=list(selected_campaign), user_id__in=list(all_users))
-			user_list_in_hirarchy = user_hierarchy_func(request.user.id,list(all_users))
-			query_string = Q(campaign_name__in=list(selected_campaign), user_id__in=user_list_in_hirarchy)
+			query_string = Q(campaign_name__in=list(selected_campaign), user_id__in=list(all_users))
 		elif selected_user:
 			query_string = Q(user_id__in=all_users)
-			# user_list_in_hirarchy = user_hierarchy_func(request.user.id,list(all_users))
-			# query_string = Q(user_id__in=user_list_in_hirarchy)
 		elif selected_campaign:
 			query_string = Q(campaign_name__in=selected_campaign)
 			if not (request.user.is_superuser):
@@ -2671,7 +2671,7 @@ class CallRecordingView(LoginRequiredMixin, generics.ListAPIView):
 			filters['all_users'] = all_users
 			filters['selected_campaign'] = selected_campaign
 			# filters['selected_user'] = selected_user
-			filters['selected_user'] = user_hierarchy_func(request.user.id,selected_user)
+			filters['selected_user'] = selected_user
 			filters['unique_id'] = unique_id
 			filters['selected_records'] = request.POST.get("selected_records",'').split(',')
 			DownloadReports.objects.create(report='Call Recordings',filters=filters, user=request.user.id, serializers=self.serializer_class, col_list=col_list, status=True)
@@ -2813,7 +2813,7 @@ class PendingCallbackCallView(LoginRequiredMixin, generics.ListAPIView):
 		context["campaign_list"] =campaign_list
 		context['all_fields'] =  ('campaign', 'phonebook', 'user','full_name','numeric', 'status', 'callback_title',
 				'callback_type', 'schedule_date', 'disposition', 'comment')
-		# context["user_list"] = user_in_hirarchy_level(request.user.id)
+		# context["user_list"] = user_hierarchy_func(request.user.id)
 		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context['report_visible_cols'] = report_visible_cols
 		context = {**context, **kwargs['permissions']}
@@ -2903,7 +2903,7 @@ class PendingAbandonedCallView(LoginRequiredMixin, generics.ListAPIView):
 			user_list = final_camp_users.values("username",extension=F('properties__extension'))
 		context["campaign_list"] =campaign_list
 		context['all_fields'] =  ('campaign', 'username','full_name','numeric', 'call_date', 'status',)
-		# context["user_list"] = user_in_hirarchy_level(request.user.id)
+		# context["user_list"] = user_hierarchy_func(request.user.id)
 		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context['report_visible_cols'] = report_visible_cols
 		context = {**context, **kwargs['permissions']}
@@ -2970,8 +2970,8 @@ class CallRecordingFeedbackView(LoginRequiredMixin, generics.ListAPIView):
 			admin = True
 		if request.user.is_superuser:
 			user_list = list(User.objects.all().exclude(user_role__access_level='Agent').values("id", "username"))
-			# context["user_list"] = user_in_hirarchy_level(request.user.id)
-			context["user_list"] = user_in_hirarchy_level(request.user.id)
+			# context["user_list"] = user_hierarchy_func(request.user.id)
+			context["user_list"] = user_hierarchy_func(request.user.id)
 			agent_list = User.objects.all().exclude(
 					user_role__access_level="Admin").exclude(is_superuser=True).values("id", "username")
 		else:
@@ -3118,7 +3118,7 @@ class AgentActivityReportView(LoginRequiredMixin, ListAPIView):
 		'media_time','hold_time','spoke_time','preview_time','progressive_time','pause_progressive_time',
 		'predictive_time','predictive_wait_time','inbound_time','inbound_wait_time','blended_time',
 		'blended_wait_time','transfer_time','feedback_time','break_type','break_time']
-		context["user_list"] = list(user_list)
+		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context['report_visible_cols'] = report_visible_cols
 		context = {**context, **kwargs['permissions']}
 		return Response(context)
@@ -3542,7 +3542,7 @@ class CampainwisePerformanceReportView(LoginRequiredMixin,APIView):
 		context['all_fields'] =  ('campaign','dialer_idle_time','pause_progressive_time','progressive_time','preview_time',
 				'predictive_wait_time','inbound_wait_time','blended_wait_time','ring_duration','hold_time','media_time','bill_sec','call_duration','feedback_time','break_time',
 				'dialer_login_time','total_login_time','total_calls')
-		# context["user_list"] = user_in_hirarchy_level(request.user.id)
+		# context["user_list"] = user_hierarchy_func(request.user.id)
 		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context['report_visible_cols'] = report_visible_cols
 		context = {**context, **kwargs['permissions']}
@@ -3712,7 +3712,7 @@ class AgentMISReportView(LoginRequiredMixin, generics.ListAPIView, pagination.Pa
 		'NC','Invalid Number',"RedialCount", "AlternateDial", "PrimaryDial", "NF(No Feedback)"]
 		all_fields = tmp_list + list(all_fields)
 		context["all_fields"] = all_fields
-		# context["user_list"] = user_in_hirarchy_level(request.user.id)
+		# context["user_list"] = user_hierarchy_func(request.user.id)
 		context["user_list"] = user_in_hirarchy_level(request.user.id)
 		context['report_visible_cols'] = report_visible_cols
 		context = {**context, **kwargs['permissions']}
