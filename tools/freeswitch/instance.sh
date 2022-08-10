@@ -66,6 +66,9 @@ then
 fi
 
 
+
+EOT
+if [ "${ENV}" != "DEV" ]; then
 cat <<EOT > /etc/default/flexydial-app
 FREESWITCH_HOST=${TELEPHONY_HOST}
 FLEXYDIAL_DB_NAME=flexydial
@@ -78,8 +81,8 @@ CRM_DB_USER=flexydial
 CRM_DB_PASS=flexydial
 CRM_DB_HOST=${DB_HOST}
 REDIS_HOST=${REDIS_HOST}
+REDIS_PORT=6379
 EOT
-if [ "${ENV}" != "DEV" ]; then
 docker login -u vedakatta -p ${DOCKER_TOKEN}
 
 docker pull vedakatta/flexydial-app
@@ -139,6 +142,24 @@ WantedBy=multi-user.target
 EOT
 
 else
+
+cat <<EOT > /etc/default/flexydial-app
+FREESWITCH_HOST=${TELEPHONY_HOST}
+FLEXYDIAL_DB_NAME=flexydial
+FLEXYDIAL_DB_USER=flexydial
+FLEXYDIAL_DB_PASS=flexydial
+FLEXYDIAL_DB_HOST=${DB_HOST}
+FLEXYDIAL_DB_PORT=5432
+CRM_DB_NAME=crm
+CRM_DB_USER=flexydial
+CRM_DB_PASS=flexydial
+CRM_DB_HOST=${DB_HOST}
+REDIS_HOST=${REDIS_HOST}
+REDIS_PORT=6379
+DEBUG=TRUE
+DEVELOPMENT=TRUE
+EOT
+
 cat <<EOT > /etc/systemd/system/flexydial-cdrd-docker.service
 [Unit]
 Description=FlexyDial CDR Container
