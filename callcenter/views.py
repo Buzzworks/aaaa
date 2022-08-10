@@ -6189,12 +6189,15 @@ class UniqueCallsPerMonth(LoginRequiredMixin, APIView):
 		source = request.POST.get('disposition','')
 		column_name = request.POST.get('column_name',None)
 		search_by = request.POST.get('search_by',None)
+		campaign = request.POST.get('campaign','')
 		filter_dict={}
 		# filter_dict = {'user':user}
 		if column_name and search_by:
 			filter_dict[column_name] = search_by
 		if source:
 			filter_dict['customer_raw_data__pl__source'] = source
+		if campaign:
+			filter_dict['campaign'] = campaign
 		queryset=Contact.objects.values("numeric","campaign","customer_raw_data","id").filter(last_dialed_date__lte=dt.datetime.today(), last_dialed_date__gt=dt.datetime.today()-dt.timedelta(days=30)).filter(**filter_dict,last_connected_user=user.extension).order_by('-created_date')
 		paginate_obj = get_paginated_object(queryset, page, paginate_by)
 		agent_uniquecallpermonth = UniqueSerializer(paginate_obj,many=True).data

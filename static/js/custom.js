@@ -3030,6 +3030,7 @@ function UniqueCallPerMonth(filter_dict={}){
     filter_dict['paginate_by'] = $('#page_length').val()
     filter_dict['column_name'] = $('input[name="cpmu_column_name"]:checked').val()
     filter_dict['search_by'] = $('#cpmu_search_by').val().trim()
+    filter_dict['campaign'] = campaign_name
     $.ajax({
         type:'post',
         headers:{ 'X-CSRFToken':csrf_token },
