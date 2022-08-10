@@ -4538,19 +4538,28 @@ class BlendedApiView(LoginRequiredMixin, APIView):
 				set_agent_status(request.user.extension,AGENTS[request.user.extension])
 			return Response(status)
 
+@method_decorator(check_read_permission, name='get')
 class NdncListAPIView(LoginRequiredMixin, APIView):
 	"""
 	This view is used to show list of ndnc
 	"""
 	login_url = '/'
 	renderer_classes = [TemplateHTMLRenderer]
+	permission_classes = [AllowAny]
 	template_name = "ndnc/ndnc.html"
 
-	def get(self, request):
+	def get(self, request, **kwargs):
 		ndnc = NdncDeltaUpload.objects.all()
-		return Response({'request':request, 'can_read': True, 'can_create':True,
-				'ndnc_records': ndnc, 'can_delete':True, 'ndnc_list': list(ndnc.values_list("id", flat=True))})
-
+		context = {'request':request, 'can_read': True, 'can_create':True,
+				'ndnc_records': ndnc, 'can_delete':True, 'ndnc_list': list(ndnc.values_list("id", flat=True))}
+		context = {**context, **kwargs['permissions']}
+		if request.is_ajax():
+			data = render_to_string("ndnc/ndnc.html", context)
+			context = {}
+			context["data"] = data
+			return JsonResponse(context)
+		else:
+			return Response(context)
 	def post(self, request):
 		form = NdncDeltaUploadSerializer(data=request.data)
 		if form.is_valid():
@@ -6641,7 +6650,7 @@ class BillingView(LoginRequiredMixin,APIView):
 
 	def get(self, request, *args, **kwargs):
 		context = {}
-		context['all_fields'] =  ['source', 'buzzworks_id', 'user_id', 'location', 'ip_address','days', 'days_band']
+		context['all_fields'] =  ['source', 'buzzworks_id', 'user_id', 'location', 'ip_address','days', 'status','date', 'days_band']
 		context['months'] =  MONTHS
 		context['years'] = [date.today().year - index for index in range(10)]
 		report_visible_cols = get_report_visible_column("11",request.user)
@@ -6691,6 +6700,8 @@ class BillingView(LoginRequiredMixin,APIView):
 						"buzzworks_id":user.extension,
 						"user_id":user.username,
 						"days":count,
+						"status":user.is_active,
+						"date":user.created,
 						"days_band":'>=15' if count >=15 else '< 15'
 						})
 		return JsonResponse({'total_records': queryset.paginator.count, 'total_pages': queryset.paginator.num_pages,
@@ -6698,6 +6709,7 @@ class BillingView(LoginRequiredMixin,APIView):
 				'start_index':queryset.start_index(), 'end_index':queryset.end_index(),
 				'table_data':result})
 
+@method_decorator(check_read_permission, name='get')
 class AdminLogAPIView(LoginRequiredMixin, APIView):
 	"""
 	This view is to change password
@@ -6708,10 +6720,21 @@ class AdminLogAPIView(LoginRequiredMixin, APIView):
 	permission_classes = [AllowAny]
 	paginator = DatatablesPageNumberPagination
 	serializer_class = AdminActivityReportSerializer
-	def get(self, request):
+	
+	def get(self, request,**kwargs):
 		all_fields = ['created_by','created','change_message']
 		report_visible_cols = get_report_visible_column("12",request.user)
-		return Response({'request':request, 'all_fields':all_fields, 'report_visible_cols':report_visible_cols})
+		context = {'request':request, 'all_fields':all_fields, 'report_visible_cols':report_visible_cols}
+
+		context = {**context, **kwargs['permissions']}
+		if request.is_ajax():
+			
+			data = render_to_string("reports/admin-log.html", context)
+			context = {}
+			context["data"] = data
+			return JsonResponse(context)
+		else:
+			return Response(context)
 	def post(self,request):
 		download_report = request.POST.get("agent_reports_download", "")
 		if download_report:

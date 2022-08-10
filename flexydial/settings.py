@@ -29,7 +29,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '*^gyxflla@kwhnj6$o)n=ihi2-ntcy-)t7phnc^%p!9_a&al&!'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', default=False)
+DEBUG = False
 
 DEVELOPMENT = os.environ.get("DEVELOPMENT",False)
 LOGIN_URL = '/'
@@ -302,3 +302,36 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SECURE = True
 REDIS_KEY_EXPIRE_IN_SEC = os.environ.get('REDIS_KEY_EXPIRE_IN_SEC',32400)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format' : "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
+            'datefmt' : "%d/%b/%Y %H:%M:%S"
+        },
+        'simple': {
+            'format': '%(levelname)s %(message)s'
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'mysite.log',
+            'formatter': 'verbose'
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers':['file'],
+            'propagate': True,
+            'level':'DEBUG',
+        },
+        'MYAPP': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+        },
+    }
+}
