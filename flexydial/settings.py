@@ -99,7 +99,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': os.environ.get('FLEXYDIAL_DB_NAME','flexydial'),
         'USER': os.environ.get('FLEXYDIAL_DB_USER','flexydial'),
-        'PASSWORD': os.environ.get('FLEXYDIAL_DB_PASS','flexydial'),
+        'PASSWORD': os.environ.get('FLEXYDIAL_DB_PASS',''),
         'HOST': os.environ.get('FLEXYDIAL_DB_HOST','127.0.0.1'),
         'PORT': os.environ.get('FLEXYDIAL_DB_PORT',5432),
     },
@@ -107,7 +107,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': os.environ.get('CRM_DB_NAME','crm'),
         'USER': os.environ.get('CRM_DB_USER','flexydial'),
-        'PASSWORD': os.environ.get('CRM_DB_PASS','flexydial'),
+        'PASSWORD': os.environ.get('CRM_DB_PASS',''),
         'HOST': os.environ.get('CRM_DB_HOST','127.0.0.1'),
         'PORT': os.environ.get('CRM_DB_PORT',5432),
     },
@@ -127,7 +127,7 @@ DB_CSTRING = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://%s:%s/1" % ( os.environ.get('REDIS_HOST'),os.environ.get('REDIS_PORT')),
+        "LOCATION": "redis://%s:%s/1" % ( os.environ.get('REDIS_HOST','127.0.0.1'),os.environ.get('REDIS_PORT',6379)),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient"
         },
