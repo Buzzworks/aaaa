@@ -6678,6 +6678,7 @@ class BillingView(LoginRequiredMixin,APIView):
 		users = User.objects.all()
 		queryset = get_paginated_object(users, page, paginate_by)
 		users = users[queryset.start_index()-1:queryset.end_index()]
+		u=UserVariable.objects.filter(user_id=user).first()
 		if users.exists():
 			for user in users:
 				count = 0
@@ -6698,12 +6699,12 @@ class BillingView(LoginRequiredMixin,APIView):
 				result.append({
 						"source":settings.SOURCE,
 						"location":settings.LOCATION,
-						"ip_address":settings.IP_ADDRESS,
+						"ip_address":u.domain.ip_address,
 						"buzzworks_id":user.extension,
 						"user_id":user.username,
 						"days":count,
 						"status":user.is_active,
-						"date":user.created,
+						"date":user.updated,
 						"days_band":'>=15' if count >=15 else '< 15'
 						})
 		return JsonResponse({'total_records': queryset.paginator.count, 'total_pages': queryset.paginator.num_pages,
