@@ -969,6 +969,10 @@ class DiallerEventLog(models.Model):
 			return re.sub(r'(\\)', '', self.info).split('^')
 		else:
 			return ['']*6
+	@property
+	def recording_url(self):
+		if self.recording_file:
+			return self.recording_file.url
 			
 signals.post_save.connect(recording_file_move, sender=DiallerEventLog)
 

@@ -1954,17 +1954,23 @@ def download_call_detail_report(filters, user, col_list, serializer_class, downl
 		where = " WHERE ( callcenter_calldetail.created at time zone 'Asia/Kolkata' >= '" + str(start_date)+"' and callcenter_calldetail.created at time zone 'Asia/Kolkata' <= '" +str(end_date)+"') and "+ sql_query_where + ' order by callcenter_calldetail.created desc'
 		sub_dispo = "SELECT "
 
+		#Getting Crm Field Data In Download Reports Start
 		from flexydial.views import user_hierarchy_func
 		if not user.is_superuser:
 			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(user.id)+list(str(user.id)), users__isnull=False)).distinct()
 		else:
 			camp = Campaign.objects.all()
 		camp_names = list(camp.values_list("name",flat=True))
-		crm_camp_details = list(CrmField.objects.filter(campaign__name__in=camp_names).values_list('crm_fields',flat=True))
+		crm_sec_fields = {}
+		from crm.utility import get_crm_fields
+		for crm_fields in camp_names:
+			crm_sec_fields.update(get_crm_fields(crm_fields,True))
 		cdr_download_col = CDR_DOWNLOAD_COl
-		for i in crm_camp_details:
-			for j in range(len(i)):
-				cdr_download_col[i[j]['section_fields'][0]['db_field']] = "customer_raw_data -> '{}' ->> '{}' as {}".format(i[j]['db_section_name'],i[j]['section_fields'][0]['db_field'],i[j]['section_fields'][0]['field'])
+		for section,fields in crm_sec_fields.items():
+			for field in fields:
+				cdr_download_col[field] = "customer_raw_data -> '{}' ->> '{}' as {}".format(section,field,field)
+		#Getting Crm Field Data In Download Reports End
+		
 		for index,col_name in enumerate(col_list, start=1):
 			if col_name in cdr_download_col:
 				if col_name == 'uniqueid':
@@ -1979,7 +1985,7 @@ def download_call_detail_report(filters, user, col_list, serializer_class, downl
 			if index < len(col_list) and sub_dispo[-2:] != ", ":
 				sub_dispo += ", "			
 		db_settings = settings.DATABASES['default']
-		sub_dispo += "from callcenter_calldetail left join callcenter_diallereventlog on callcenter_diallereventlog.session_uuid = callcenter_calldetail.session_uuid left join callcenter_cdrfeedbck on callcenter_cdrfeedbck.calldetail_id=callcenter_calldetail.id left join callcenter_user usr on usr.id = callcenter_calldetail.user_id left join callcenter_user supr on supr.id = usr.reporting_to_id left join (select sms.session_uuid as session_uuid, string_agg(template.name, ', ') as name from callcenter_smslog sms left join callcenter_smstemplate template on sms.template_id = template.id group by sms.session_uuid) sms on sms.session_uuid = callcenter_calldetail.session_uuid left join ( SELECT * FROM dblink('dbname=crm port={port} host={host} user={user} password={password}','SELECT id, customer_raw_data,created_date FROM crm_contact') AS tb2 (id bigint, customer_raw_data jsonb,created_date timestamp with time zone)) AS tb2 ON tb2.id = callcenter_calldetail.contact_id ".format(port = db_settings['PORT'], host = db_settings['HOST'], user = db_settings['USER'], password=db_settings['PASSWORD']) + where
+		sub_dispo += " from callcenter_calldetail left join callcenter_diallereventlog on callcenter_diallereventlog.session_uuid = callcenter_calldetail.session_uuid left join callcenter_cdrfeedbck on callcenter_cdrfeedbck.calldetail_id=callcenter_calldetail.id left join callcenter_user usr on usr.id = callcenter_calldetail.user_id left join callcenter_user supr on supr.id = usr.reporting_to_id left join (select sms.session_uuid as session_uuid, string_agg(template.name, ', ') as name from callcenter_smslog sms left join callcenter_smstemplate template on sms.template_id = template.id group by sms.session_uuid) sms on sms.session_uuid = callcenter_calldetail.session_uuid left join ( SELECT * FROM dblink('dbname=crm port={port} host={host} user={user} password={password}','SELECT id, customer_raw_data,created_date FROM crm_contact') AS tb2 (id bigint, customer_raw_data jsonb,created_date timestamp with time zone)) AS tb2 ON tb2.id = callcenter_calldetail.contact_id ".format(port = db_settings['PORT'], host = db_settings['HOST'], user = db_settings['USER'], password=db_settings['PASSWORD']) + where
 		download_folder = settings.MEDIA_ROOT+"/download/"+datetime.now().strftime("%m.%d.%Y")+"/"+str(user.id)+"/"
 		if not os.path.exists(download_folder):
 			os.makedirs(download_folder)

@@ -11,7 +11,7 @@ echo SOCKET_HOST=enter_ip_of_app >> /etc/environment
 echo TELEPHONY_HOST=enter_ip_of_app >> /etc/environment
 echo APP_PATH= >> /etc/environment 
 example : echo APP_PATH=/home/buzzworks/flexydial >> /etc/environment
-echo ENV=DEV >> /etc/enviornment
+echo ENV=DEV >> /etc/environment
 ```
 
 ## Installation Steps/Hints:

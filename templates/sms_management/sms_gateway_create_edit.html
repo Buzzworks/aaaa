@@ -59,56 +59,6 @@
 						</div>
 					</div>
 				</div>
-				{% comment %} <div class="col-md-6">
-					<div class="form-group row">
-						<label for="extension" class="col-sm-4 col-form-label">Trigger On<span class="star camp_required">*</span> :</label>
-						<div class="col-sm-8">
-							<select class="form-control"  id="sms_trigger_on" name="sms_trigger_on" data-validation="required" data-validation-error-msg-container="#sms_trigger_error">
-								<option value="">Select Trigger Action</option>
-								{% for action in trigger_action %}
-									{% if action.0 == sms_gateway.sms_trigger_on %}
-										<option value="{{action.0}}" selected>{{ action.1 }}</option>
-									{% else %}
-										<option value="{{action.0}}">{{ action.1 }}</option>
-									{% endif %}
-									
-								{% endfor %}
-							</select>
-							<div id="sms_trigger_error"></div>
-						</div>
-					</div>
-				</div>										 {% endcomment %}
-				{% comment %} <div class="col-md-6 d-none" id="disposition_div">
-					<div class="form-group row">
-						<label for="" class="col-sm-4 col-form-label">Disposition :</label>
-						<div class="col-sm-8">
-							<select class="form-control" name="disposition" id="disposition" multiple>
-							{% for dispo in sms_gateway.disposition.all %}
-								<option value="{{ dispo.id }}" selected>{{ dispo.name }}</option>
-							{% endfor %}
-							{% for dispo in dispo_list %}
-									<option value="{{ dispo.id }}">{{ dispo.name }}</option>
-							{% endfor %}
-						</select>
-						</div>
-					</div>
-				</div> {% endcomment %}
-				{% comment %} <div class="col-md-6">
-					<div class="form-group row">
-						<label for="extension" class="col-sm-4 col-form-label">Template<span class="star camp_required">*</span> :</label>
-						<div class="col-sm-8">
-							<select class="form-control"  id="sms_template" name="template" data-validation="required" data-validation-error-msg-container="#template_error" multiple>
-								{% for template in sms_gateway.template.all %}
-									<option value="{{template.id}}"selected>{{ template.name }}</option>
-								{% endfor %}
-								{% for template in template_list %}
-									<option value="{{template.id}}">{{ template.name }}</option>
-								{% endfor %}
-							</select>
-							<div id="template_error"></div>
-						</div>
-					</div>
-				</div> {% endcomment %}
 				<div class="col-md-6">
 					<div class="form-group row">
 						<label for="" class="col-sm-4 col-form-label">Status :</label>
@@ -133,7 +83,7 @@
 						</div>
 					</div>
 				</div>
-				<div class="col-md-6">
+				<div class="col-md-6 d-none">
 					<div class="form-group row">
 						<label for="name" class="col-sm-4 col-form-label">Gateway API Key<span class="star"></span> :</label>
 						<div class="col-sm-8">
@@ -159,21 +109,7 @@
 				</div>
 			</div>
 			</div>
-			<div class="row">
-			<div class="col-md-6"> 	
-				<div class="form-group row">
-					 <label for="dynamic_api" class="col-7 col-sm-4 col-form-label">Dynamic API :</label>
-					 <div class="col-5 col-sm-7 form-inline">
-						 <div class="form-check">
-							 <label class="form-check-label">
-								 <input type="checkbox" class="form-check-input" name="dynamic_api" id="sms_dynamic_api" >
-								 <i class="input-helper"></i>
-							 </label>
-						 </div>
-					 </div>
-				 </div>
-			</div>
-			</div>
+
 			{% include "sms_management/smsgateway.html" %} 
 			<!-- <div class="row mt-4 d-none" id="whats_app_gateway_div">
 				<div class="col-md-6">
@@ -306,14 +242,13 @@
 	  $(".Add1").click(function() {
 		$('select').select2('destroy');
 		selected_values = []
-		$('.para-block').each(function(index,val){
+		$('.para-block-trigger').each(function(index,val){
 			selected_values.push($(this).find('.para').val())
 		});
-		
 		$(".formi1").eq(0).clone().show().insertAfter(".formi1:last");
 		$(".formi1:last").find('.alias_name').removeClass('d-none')
 		$(".formi1:last").find('.alias_check').addClass('d-none')
-		$(".formi1:last input").val('');
+		$(".formi1:last input").val(''); 
 		$('select').select2();
 	  });
 	  $('.all').on('click', ".cancel", function() {
@@ -364,28 +299,23 @@
 		var count = 0
 		for (var key in parameters){
 			var value = parameters[key];
-			console.log('outside loop',count,length)
 			$('.para-trigger').eq(count).val(key).change();	
 			if (key == "1"){
 				value.forEach(function(item, index, array){
 					$('.dispos').eq(count).removeClass('d-none')
 					for (var key2 in item){
-						console.log("for inside",count,length,item[key2])
 						$('.dispos').eq(count).val(key2);
 						$('.templates').eq(count).val(item[key2]);
 					}
 					if(index < array.length-1){
 						length +=1 
 						count +=1
-						console.log("for inside if",count,length)
-
 						$('.Add1').trigger('click')
 						$('.para-trigger').eq(count).val(key).change();
 					}
 				})
 			}else{
-				console.log("else",count,length,value)
-				$('.templates').eq(count).val(value);
+				$('.templates').eq(count).val(value).change();
 			}
 			count +=1
 			if (count < length){

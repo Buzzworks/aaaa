@@ -14,7 +14,14 @@
 		z-index: 1;
 	}
 </style>
-<div id="sms_trigger" class="all1">
+<div class="row" >
+	<div class="col-md-12"> 	
+		<div class="form-group row" style="border-top: 1px dashed #ccc;">
+			<hr>
+		</div>
+	</div>
+</div>
+<div id="sms_trigger" class="all1" >
 	<span class="Add1"><i class="fas fa-plus-circle text-success"></i></span>
 	<div class="col-lg-12 p-0"> 
 		<div class="formi1">
@@ -58,9 +65,25 @@
 						</div>
 					</div>
 				</div>
-		  		<span class="cancel" id="Cancel"><i class="fa fa-times-circle ml-1 ml-sm-2 text-danger"></i></span>
+				<span class="cancel" id="Cancel" style="margin-top:-0.3rem;"><i class="fa fa-times-circle ml-1 ml-sm-2 text-danger"></i></span>
 			</div>
 		</div>
+	</div>
+</div>
+
+<div class="row" style="border-top: 1px dashed #ccc;">
+	<div class="col-md-6"> 	
+		<div class="form-group row">
+			 <label for="dynamic_api" class="col-7 col-sm-4 col-form-label">Dynamic API :</label>
+			 <div class="col-5 col-sm-7 form-inline">
+				 <div class="form-check">
+					 <label class="form-check-label">
+						 <input type="checkbox" class="form-check-input" name="dynamic_api" id="sms_dynamic_api" >
+						 <i class="input-helper"></i>
+					 </label>
+				 </div>
+			 </div>
+		 </div>
 	</div>
 </div>
 <div id="api_divs" class="d-none all">
