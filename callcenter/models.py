@@ -857,7 +857,7 @@ class CallDetail(models.Model):
 	callmode = models.CharField(default='', max_length=50, null=True)
 	destination_extension = models.CharField(default='', max_length=50, null=True)
 	dialed_status = models.CharField(default='',choices=auto_dialed_status, max_length=50,db_index=True)
-	session_uuid = models.UUIDField(db_index=True,  null=True)
+	session_uuid = models.UUIDField(db_index=True,  null=True, unique=True)
 	a_leg_uuid = models.UUIDField(null=True)
 	b_leg_uuid = models.UUIDField(null=True)
 	predictive_time = models.TimeField(default=default_time, null=True, blank=True)
