@@ -10,7 +10,7 @@ from django.db import connections
 from callcenter.models import (Campaign,CallDetail,AgentActivity,User,
 	CdrFeedbck, CSS, CallBackContact, Abandonedcall,CurrentCallBack,
 	Notification,PhonebookBucketCampaign, DiallerEventLog,AdminLogEntry, Switch,LeadRecycle,BroadcastMessages,StickyAgent,)
-from crm.models import Contact,TempContactInfo,Phonebook,DownloadReports, PhoneBookUpload,MasterContact,ScheduleMasterContact
+from crm.models import Contact, LeadListPriority,TempContactInfo,Phonebook,DownloadReports, PhoneBookUpload,MasterContact,ScheduleMasterContact
 from django.db.models import Q, Count, F
 from callcenter.utility import (get_agent_status, get_all_keys_data, get_current_users, download_call_detail_report, download_agent_perforance_report, campaignwise_performance_report,
 	download_agent_mis, download_agent_activity_report, download_campaignmis_report, download_callbackcall_report,
