@@ -3159,6 +3159,7 @@ def download_billing_report(filters, user, col_list, download_report_id):
 		start_date = str(filters.get('years'))+'-'+str(filters.get('month'))+'-01'
 		download_type = filters.get('download_type',"")
 		csv_file.append(col_list)
+		u=UserVariable.objects.filter(user_id=user).first()
 		if queryset.exists():
 			for user in queryset:
 				days = 0
@@ -3186,9 +3187,13 @@ def download_billing_report(filters, user, col_list, download_report_id):
 				if 'location' in col_list:
 					row.append(settings.LOCATION)
 				if 'ip_address' in col_list:
-					row.append(settings.IP_ADDRESS)
+					row.append(u.domain.ip_address)
 				if 'days' in col_list:
 					row.append(days)
+				if 'status' in col_list:
+					row.append('Active' if user.is_active else "Inative")
+				if 'date' in col_list:
+					row.append("" if user.is_active else user.updated)
 				if 'days_band' in col_list:
 					days_band = '>=15' if days >=15 else '< 15'
 					row.append(days_band)
