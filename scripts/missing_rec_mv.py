@@ -1,5 +1,5 @@
 import os
-import pickle
+import sys
 from flexydial import settings
 from callcenter.models import DiallerEventLog
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -28,25 +28,30 @@ def recording_file_transfer():
 				if dialereventlog_emty_rec:
 					settings.R_SERVER.set("push_rec_status", True)
 					for dialereventlog in dialereventlog_emty_rec:
-						file_path=settings.RECORDING_ROOT+"/"+datetime.strptime(dialereventlog.ring_time,"%Y-%m-%d %H:%M:%S").strftime("%d-%m-%Y-%H-%M")+"_"+dialereventlog.customer_cid+"_"+dialereventlog.session_uuid+".mp3"
-						onlyfiles = [f for f in listdir(settings.RECORDING_ROOT+"/")]
-						ele = "_"+dialereventlog.customer_cid+"_"+dialereventlog.session_uuid+".mp3"
-						all_rec_files = "~".join(onlyfiles)
-						if os.path.isfile(file_path):
-							save_recordings(dialereventlog,file_path)
-						elif ele in all_rec_files:
-							ind = all_rec_files.index(ele)
-							start = ind - 16 #len("11-04-2022-17-45")
-							end = ind+len(ele)
-							file_path = settings.RECORDING_ROOT+"/"+all_rec_files[start:end]
-							save_recordings(dialereventlog,file_path)
-						else:
-							print('File not exists ::',file_path)
+						if dialereventlog.session_uuid:
+							file_path=settings.RECORDING_ROOT+"/"+datetime.strptime(str(dialereventlog.ring_time),"%Y-%m-%d %H:%M:%S").strftime("%d-%m-%Y-%H-%M")+"_"+str(dialereventlog.customer_cid)+"_"+str(dialereventlog.session_uuid)+".mp3"
+							onlyfiles = [f for f in listdir(settings.RECORDING_ROOT+"/")]
+							ele = "_"+str(dialereventlog.customer_cid)+"_"+str(dialereventlog.session_uuid)+".mp3"
+							all_rec_files = "~".join(onlyfiles)
+							if os.path.isfile(file_path):
+								save_recordings(dialereventlog,file_path)
+							elif ele in all_rec_files:
+								ind = all_rec_files.index(ele)
+								start = ind - 16 #len("11-04-2022-17-45")
+								end = ind+len(ele)
+								file_path = settings.RECORDING_ROOT+"/"+all_rec_files[start:end]
+								save_recordings(dialereventlog,file_path)
+							else:
+								print('File not exists ::',file_path)
 					settings.R_SERVER.set("push_rec_status", False)	
 				print("Recordings Moved to Bucket")
 		except Exception as e:
+
 			settings.R_SERVER.set("push_rec_status", False)	
 			print("Exception occures from recording_file_transfer",e)
+			exc_type, exc_obj, exc_tb = sys.exc_info()
+			fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+			print(exc_type, fname, exc_tb.tb_lineno)
 def save_recordings(dialereventlog,file_path):
 	# if (dialereventlog.connect_time or dialereventlog.dialed_status=='Connected'):
 	f = open(file_path, 'rb')
