@@ -66,7 +66,7 @@ def missing_recording_transfer():
 	global ENABLE
 	sched.add_jobstore(MemoryJobStore(), 'list')
 	execution_time = datetime.now() + timedelta(minutes=0.1)
-	sched.add_job(recording_file_transfer,'interval',seconds=300, start_date=execution_time,
+	sched.add_job(recording_file_transfer,'interval',seconds=3600, start_date=execution_time,
 						   id='autodial', jobstore='list')
 	if sched.state == 0:
 		sched.start()
