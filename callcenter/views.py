@@ -6203,7 +6203,7 @@ class UniqueCallsPerMonth(LoginRequiredMixin, APIView):
 		# filter_dict = {'user':user}
 		if column_name and search_by:
 			filter_dict[column_name] = search_by
-		if source:
+		if source and source != 'All Sources':
 			filter_dict['customer_raw_data__pl__source'] = source
 		if campaign:
 			filter_dict['campaign'] = campaign
