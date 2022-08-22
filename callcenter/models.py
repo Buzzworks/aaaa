@@ -908,7 +908,7 @@ class CallDetail(models.Model):
 		return self
 
 def get_upload_path(instance, filename):
-	date_time = datetime.strptime(instance.ring_time,"%Y-%m-%d %H:%M:%S")
+	date_time = datetime.strptime(str(instance.ring_time),"%Y-%m-%d %H:%M:%S")
 	year = date_time.strftime("%Y")
 	month = date_time.strftime("%m")
 	day = date_time.strftime("%d")

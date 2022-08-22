@@ -129,7 +129,7 @@ def recording_file_move(sender,**kwargs):
 		dialereventlog = kwargs["instance"]
 		if not dialereventlog.recording_file:
 			file_path=settings.RECORDING_ROOT+"/"+datetime.strptime(dialereventlog.ring_time,"%Y-%m-%d %H:%M:%S").strftime("%d-%m-%Y-%H-%M")+"_"+dialereventlog.customer_cid+"_"+dialereventlog.session_uuid+".mp3"
-			if os.path.isfile(file_path) and (dialereventlog.connect_time or dialereventlog.dialed_status=='Connected'):
+			if os.path.isfile(file_path):
 				f = open(file_path, 'rb')
 				dialereventlog.recording_file.save(os.path.basename(f.name), File(f), save=True)
 				dialereventlog.save()
