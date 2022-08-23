@@ -276,6 +276,7 @@ def add_user(domain,**kwargs):
 		SERVER.freeswitch.api("callcenter_config",
 				"agent set busy_delay_time %s %s" % (extension,
 					user.busy_delay_time))
+		SERVER.freeswitch.api("reload", "mod_callcenter")
 	except socket.error as e:
 		print ("RPC Error %s: Freeswitch RPC module may not be" \
 				"loaded or properly configured" % e)
