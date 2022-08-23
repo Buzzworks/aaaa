@@ -450,6 +450,7 @@ def create_calldetial_from_diallereventlog(d_obj, uniqueid=None):
 		del d_obj['info']
 		del d_obj['channel']
 		del d_obj['id']
+		del d_obj['recording_file']
 		d_obj["uniqueid"] = uniqueid
 		c_obj = CallDetail.objects.create(**d_obj)
 		c_obj.hangup_source = 'System'
