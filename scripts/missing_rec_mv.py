@@ -24,7 +24,7 @@ def recording_file_transfer():
 		try:
 			push_rec_status = settings.R_SERVER.get("push_rec_status")
 			if not push_rec_status or push_rec_status.decode('utf-8') == 'False':
-				dialereventlog_emty_rec = DiallerEventLog.objects.filter(recording_file="",created__date__gte='2022-08-01')
+				dialereventlog_emty_rec = DiallerEventLog.objects.filter(recording_file="",created__date__gte='2022-08-01',callserver=settings.FS_INTERNAL_IP)
 				if dialereventlog_emty_rec:
 					settings.R_SERVER.set("push_rec_status", True)
 					for dialereventlog in dialereventlog_emty_rec:
