@@ -647,6 +647,8 @@ $('#scSubmit').click(function() {
             agent_info_vue.camp_name = campaign_name
             agent_info_vue.is_portfolio = data["campaign"]["portifolio"]
             sms_templates.templates = data['sms_templates']
+            console.log(data['sms_templates'])
+            console.log(sms_templates.templates)
             if (data['email_gateway']){
                 email_templates.gateway_id = data['email_gateway']['gateway_id']
                 email_templates.templates = data['email_gateway']['email_templates']
@@ -704,7 +706,8 @@ $('#scSubmit').click(function() {
         },
         error: function(data) {
             $('.preloader').fadeOut('fast');
-            errorAlert('OOPS!!! Something Went Wrong','');
+            let err = data['responseJSON'] ? data['responseJSON']['error'] : data['error']
+            errorAlert('OOPS!!! Something Went Wrong',err);
             initial_dialler_state()
             $("#select_camp").prop('selectedIndex', 0);
             $('#scSubmit').prop('disabled', true);
@@ -3027,6 +3030,7 @@ function UniqueCallPerMonth(filter_dict={}){
     filter_dict['paginate_by'] = $('#page_length').val()
     filter_dict['column_name'] = $('input[name="cpmu_column_name"]:checked').val()
     filter_dict['search_by'] = $('#cpmu_search_by').val().trim()
+    filter_dict['campaign'] = campaign_name
     $.ajax({
         type:'post',
         headers:{ 'X-CSRFToken':csrf_token },

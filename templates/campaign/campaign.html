@@ -27,6 +27,9 @@
 					<div class="col-12">
 						{% include "search.html" %}    
 					</div>
+					<form>
+						{%csrf_token%} <!-- this csrf token using as we commented in search.html -->
+					</form>
 					<div class="col-12">
 						<table id="campaign-list-table" class="table display table-striped nowrap avatar-table" style="width:100%">
 							<thead>

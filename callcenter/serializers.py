@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from callcenter.models import *
-from flexydial.views import get_login_campaign, get_login_agent
-from crm.models import Contact, ContactInfo
+from flexydial.views import get_login_campaign, get_login_agent,user_hierarchy_func
+from crm.models import Contact, ContactInfo,CrmField
 from datetime import timedelta
 from .constants import four_digit_number, three_digits_list
 
@@ -601,6 +601,7 @@ class DiallerEventLogSerializer(serializers.ModelSerializer):
 	hangup_time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
 	is_feedback = serializers.SerializerMethodField()
 	ip_address = serializers.SerializerMethodField()
+	recording_url = serializers.SerializerMethodField()
 	class Meta:
 		model = DiallerEventLog
 		fields= '__all__'   
@@ -622,7 +623,16 @@ class DiallerEventLogSerializer(serializers.ModelSerializer):
 		if obj.campaign_name:
 			ip_address = list(Campaign.objects.filter(name=obj.campaign_name).values_list('switch__ip_address', flat=True))[0]
 		return ip_address
-
+	def get_recording_url(self,obj):
+		try:
+			if obj.recording_url:
+				print('recording_url',obj.recording_url)
+				return obj.recording_url
+			else:
+				return ''
+		except Exception as e:
+			print(e)
+			return ''
 class DiallerEventLogTimeSerializer(serializers.ModelSerializer):
 	""" sericlizzer for diallerevent log time format data serilizer"""
 	init_time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
@@ -648,9 +658,8 @@ class CallDetailReportSerializer(serializers.ModelSerializer):
 	call_length = serializers.SerializerMethodField()
 	cdrfeedback = CdrFeedbckReportSeializer(read_only=True)
 	full_name = serializers.SerializerMethodField()
-	customer_name = serializers.SerializerMethodField()
-	client_name = serializers.SerializerMethodField()
 	smslog = serializers.SerializerMethodField()
+	crm_fields = serializers.SerializerMethodField()
 	class Meta:
 		model = CallDetail
 		# fields= '__all__'
@@ -672,30 +681,8 @@ class CallDetailReportSerializer(serializers.ModelSerializer):
 			username = obj.user.first_name + " " + obj.user.last_name
 		return username
 
-	def get_customer_name(self,obj):
-		customer_name = ""
-		contact_inst  = Contact.objects.filter(id=obj.contact_id).first()
-		print(contact_inst)
-		if obj and contact_inst:
-			if contact_inst and contact_inst.customer_raw_data and 'customer_information' in contact_inst.customer_raw_data:
-				if 'customer_name' in contact_inst.customer_raw_data['customer_information']:
-					customer_name = contact_inst.customer_raw_data['customer_information']['customer_name']
-					print(customer_name)
-		return customer_name
-
-	def get_client_name(self,obj):
-		client_name = ""
-		contact_inst  = Contact.objects.filter(id=obj.contact_id).first()
-		if obj and contact_inst:
-			if contact_inst and contact_inst.customer_raw_data and 'customer_information' in contact_inst.customer_raw_data:
-				if 'client_name' in contact_inst.customer_raw_data['customer_information']:
-					client_name = contact_inst.customer_raw_data['customer_information']['client_name']
-		return client_name
-
 	def get_smslog(self,obj):
 		fields_dict = {}
-		message = []
-		sms_list= []
 		fields_dict['sms_sent'] = 'NO'
 		if obj.session_uuid:
 			sms_obj = SMSLog.objects.filter(session_uuid=obj.session_uuid)
@@ -709,7 +696,16 @@ class CallDetailReportSerializer(serializers.ModelSerializer):
 		if obj.user:
 			supervisor_name = obj.user.reporting_to.username if obj.user.reporting_to else ""
 		return supervisor_name
-		
+
+	#Showing Crm Fields Data In Table Start
+	def get_crm_fields(self,obj):
+		contact = Contact.objects.filter(id=obj.contact_id).first()
+		con_data={}
+		if contact:
+			for i in contact.customer_raw_data.values():
+				con_data.update(i)
+		return con_data
+	#Showing Crm Fields Data In Table Start
 class CallDetailReportFieldSerializer(serializers.ModelSerializer):
 	""" serlializer to the fields of calldetails report """
 	cdrfeedback = CdrFeedbckReportSeializer()
@@ -812,7 +808,7 @@ class GatewayPaginationSerializer(serializers.ModelSerializer):
 class SmsGatewaySerializer(serializers.ModelSerializer):
 	class Meta:
 		model = SMSGateway
-		fields = ('name','disposition','sms_trigger_on', 'status','template','gateway_url','key')
+		fields = ('name','disposition','sms_trigger_on', 'status','template','gateway_url','key','url_parameters','gateway_mode','trigger_params')
 
 class EmailGatewayPaginationSerializer(serializers.ModelSerializer):
 	""" This serializer for pagination of the emailgateway that is created """

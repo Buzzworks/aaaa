@@ -10,11 +10,11 @@ from django.db import connections
 from callcenter.models import (Campaign,CallDetail,AgentActivity,User,
 	CdrFeedbck, CSS, CallBackContact, Abandonedcall,CurrentCallBack,
 	Notification,PhonebookBucketCampaign, DiallerEventLog,AdminLogEntry, Switch,LeadRecycle,BroadcastMessages,StickyAgent,)
-from crm.models import Contact,TempContactInfo,Phonebook,DownloadReports, PhoneBookUpload,MasterContact,ScheduleMasterContact
+from crm.models import Contact, LeadListPriority,TempContactInfo,Phonebook,DownloadReports, PhoneBookUpload,MasterContact,ScheduleMasterContact
 from django.db.models import Q, Count, F
 from callcenter.utility import (get_agent_status, get_all_keys_data, get_current_users, download_call_detail_report, download_agent_perforance_report, campaignwise_performance_report,
 	download_agent_mis, download_agent_activity_report, download_campaignmis_report, download_callbackcall_report,
-	download_abandonedcall_report,set_download_progress_redis, download_call_recordings, download_contactinfo_report, download_phonebookinfo_report,
+	download_abandonedcall_report, set_agent_status,set_download_progress_redis, download_call_recordings, download_contactinfo_report, download_phonebookinfo_report,
 	download_billing_report, camp_list_users, DownloadCssQuery, download_call_recording_feedback_report,download_management_performance_report,download_alternate_contact_report, freeswicth_server,download_pendingcontacts_report,PasswordChangeAndLockedReminder)
 from dialer.dialersession import fs_administration_hangup
 from callcenter.schedulejobs import add_leadrecycle_db
@@ -450,6 +450,7 @@ def create_calldetial_from_diallereventlog(d_obj, uniqueid=None):
 		del d_obj['info']
 		del d_obj['channel']
 		del d_obj['id']
+		del d_obj['recording_file']
 		d_obj["uniqueid"] = uniqueid
 		c_obj = CallDetail.objects.create(**d_obj)
 		c_obj.hangup_source = 'System'

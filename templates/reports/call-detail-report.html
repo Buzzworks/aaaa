@@ -16,6 +16,9 @@
     .accordion .card .card-body i{
         font-size: 1rem;
     }
+    .dt-button-collection {
+        display:block  !important;
+    }
 </style>
 
 {% endblock extra-stylesheets %}
@@ -189,6 +192,9 @@
 										<th data-data="smslog.{{cd_field}}" data-field_name="{{cd_field}}"  class="text-capitalize ">{{ cd_field|table_header }}</th>
 									{% endfor %}
 									<th data-data="cdrfeedback.comment" data-field_name="comment" class="text-capitalize comment-field">Comment</th>
+                                    {% for key in all_fields.crm_fields%}
+                                        <th data-data="crm_fields.{{key}}" data-field_name="{{key}}"  class="text-capitalize dialler_cols">{{ key|table_header }}</th>
+                                    {% endfor %}
 								</tr>
 							</thead>
 						</table>
@@ -214,11 +220,12 @@
 			var url = "/CallReports/CallDetailReport/"
 			var dialerlog_table = $('#diallerlog-list-table')
             report_visible_cols = []
+            report_visible_cols={{report_visible_cols|safe}}
+            crm_fields = {{all_fields.crm_fields|safe}}
             {% if report_visible_cols %}
-                report_visible_cols={{report_visible_cols|safe}}
                 report_datatable(dialerlog_table,url,report_visible_cols)
             {% else %}
-                report_datatable(dialerlog_table,url)
+                report_datatable(dialerlog_table,url,'',crm_fields)
             {% endif %}
 			users = {{users|safe}}
 		{% else %}

@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
+from datetime import timedelta
 import os
 import socket
 import pickle, redis, re
@@ -28,7 +29,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '*^gyxflla@kwhnj6$o)n=ihi2-ntcy-)t7phnc^%p!9_a&al&!'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', default=False)
+DEBUG = False
 
 DEVELOPMENT = os.environ.get("DEVELOPMENT",False)
 LOGIN_URL = '/'
@@ -98,7 +99,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': os.environ.get('FLEXYDIAL_DB_NAME','flexydial'),
         'USER': os.environ.get('FLEXYDIAL_DB_USER','flexydial'),
-        'PASSWORD': os.environ.get('FLEXYDIAL_DB_PASS','flexydial'),
+        'PASSWORD': os.environ.get('FLEXYDIAL_DB_PASS',''),
         'HOST': os.environ.get('FLEXYDIAL_DB_HOST','127.0.0.1'),
         'PORT': os.environ.get('FLEXYDIAL_DB_PORT',5432),
     },
@@ -106,7 +107,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': os.environ.get('CRM_DB_NAME','crm'),
         'USER': os.environ.get('CRM_DB_USER','flexydial'),
-        'PASSWORD': os.environ.get('CRM_DB_PASS','flexydial'),
+        'PASSWORD': os.environ.get('CRM_DB_PASS',''),
         'HOST': os.environ.get('CRM_DB_HOST','127.0.0.1'),
         'PORT': os.environ.get('CRM_DB_PORT',5432),
     },
@@ -126,7 +127,7 @@ DB_CSTRING = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://%s:%s/1" % ( os.environ.get('REDIS_HOST'),os.environ.get('REDIS_PORT')),
+        "LOCATION": "redis://%s:%s/1" % ( os.environ.get('REDIS_HOST','127.0.0.1'),os.environ.get('REDIS_PORT',6379)),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient"
         },
@@ -239,14 +240,14 @@ INTERNAL_IPS = [IP_ADDRESS, "127.0.0.1"]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
-SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_IDLE_TIMEOUT = 240*60  # 4 hours
 SESSION_COOKIE_AGE = 540*60    # 9 hours
 # resetting the password url valid days
 PASSWORD_RESET_TIMEOUT_DAYS = 1
 
 WEB_SOCKET_HOST = os.environ.get('WEB_SOCKET_HOST',"")
-FREESWITCH_IP_ADDRESS = os.environ.get('FREESWITCH_HOST')
+FREESWITCH_IP_ADDRESS = os.environ.get('FREESWITCH_HOST',"")
 AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME',"")
 AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
 AWS_S3_OBJECT_PARAMETERS = os.environ.get('AWS_S3_OBJECT_PARAMETERS',{'CacheControl': 'max-age=86400'})
@@ -255,7 +256,12 @@ AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID',"")
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY',"")
 
 GS_BUCKET_NAME = os.environ.get("GS_BUCKET_NAME","")
-
+JSON_KEY = {}
+if JSON_KEY:
+    from google.oauth2 import service_account
+    GS_CREDENTIALS = service_account.Credentials.from_service_account_info(JSON_KEY)
+    GS_DEFAULT_ACL = None
+    GS_EXPIRATION = timedelta(seconds=86400)
 if AWS_STORAGE_BUCKET_NAME:
     DEFAULT_FILE_STORAGE = 'flexydial.storages.MediaStore'
 elif GS_BUCKET_NAME:
@@ -272,6 +278,7 @@ XML_UPDATE_KEY = os.environ.get("XML_UPDATE_KEY","")
 API_DEST_CAMP = os.environ.get('API_DEST_CAMP','')
 S3_GCLOUD_BUCKET_NAME = os.environ.get("S3_GCLOUD_BUCKET_NAME","")
 DATA_UPLOAD_MAX_NUMBER_FIELDS = os.environ.get('DATA_UPLOAD_MAX_NUMBER_FIELDS',1500)
+FS_INTERNAL_IP = os.environ.get('FS_INTERNAL_IP',FREESWITCH_IP_ADDRESS)
 
 SOURCE = 'FLEXY'
 LOCATION = 'Mumbai'
@@ -296,3 +303,36 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SECURE = True
 REDIS_KEY_EXPIRE_IN_SEC = os.environ.get('REDIS_KEY_EXPIRE_IN_SEC',32400)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format' : "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
+            'datefmt' : "%d/%b/%Y %H:%M:%S"
+        },
+        'simple': {
+            'format': '%(levelname)s %(message)s'
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'flexydial-app.log',
+            'formatter': 'verbose'
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers':['file'],
+            'propagate': True,
+            'level':'DEBUG',
+        },
+        'MYAPP': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+        },
+    },
+}

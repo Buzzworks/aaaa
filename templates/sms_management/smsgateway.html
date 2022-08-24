@@ -1,0 +1,140 @@
+{% load static %}
+
+<style>
+	#Cancel{
+		position: absolute;
+		float: right;
+		right: 5rem;
+		margin-top: -3.4rem;
+	}
+	.Add,.Add1{
+		position: absolute;
+		right: 4rem;
+		margin-top: -4px;
+		z-index: 1;
+	}
+</style>
+<div class="row" >
+	<div class="col-md-12"> 	
+		<div class="form-group row" style="border-top: 1px dashed #ccc;">
+			<hr>
+		</div>
+	</div>
+</div>
+<div id="sms_trigger" class="all1" >
+	<span class="Add1"><i class="fas fa-plus-circle text-success"></i></span>
+	<div class="col-lg-12 p-0"> 
+		<div class="formi1">
+			<div class="control-group input-group para-block-trigger">  
+				<div class="col-lg-5 p-0">
+					<div class="form-group row" id="sms_trigger_div">
+						<label for="extension" class="col-sm-4 col-form-label ">Trigger On<span class="star camp_required">*</span> :</label>
+						<div class="col-sm-6">
+							<select class="form-control para-trigger para1"  id="sms_trigger_on" name="sms_trigger_on" onchange="updatetrigger(this)" data-validation="required" data-validation-error-msg-container="#sms_trigger_error">
+								<option value="">Select Trigger Action</option>
+								{% for action in trigger_action %}
+										<option value="{{action.0}}">{{ action.1 }}</option>
+								{% endfor %}
+							</select>
+							<div id="sms_trigger_error"></div>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-5 d-none disposition_div">
+					<div class="form-group row">
+						<label for="" class="col-sm-4 col-form-label">Disposition :</label>
+						<div class="col-sm-8">
+							<select class="form-control dispos" name="disposition" id="disposition">
+							{% for dispo in dispo_list %}
+									<option value="{{ dispo.id }}">{{ dispo.name }}</option>
+							{% endfor %}
+						</select>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-5">
+					<div class="form-group row">
+						<label for="extension" class="col-sm-4 col-form-label">Template<span class="star camp_required">*</span> :</label>
+						<div class="col-sm-8">
+							<select class="form-control templates"  data-validation="required" data-validation-error-msg-container="#template_error" multiple>
+								{% for template in template_list %}
+									<option value="{{template.id}}">{{ template.name }}</option>
+								{% endfor %}
+							</select>
+							<div id="template_error"></div>
+						</div>
+					</div>
+				</div>
+				<span class="cancel" id="Cancel" style="margin-top:-0.3rem;"><i class="fa fa-times-circle ml-1 ml-sm-2 text-danger"></i></span>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="row" style="border-top: 1px dashed #ccc;">
+	<div class="col-md-6"> 	
+		<div class="form-group row">
+			 <label for="dynamic_api" class="col-7 col-sm-4 col-form-label">Dynamic API :</label>
+			 <div class="col-5 col-sm-7 form-inline">
+				 <div class="form-check">
+					 <label class="form-check-label">
+						 <input type="checkbox" class="form-check-input" name="dynamic_api" id="sms_dynamic_api" >
+						 <i class="input-helper"></i>
+					 </label>
+				 </div>
+			 </div>
+		 </div>
+	</div>
+</div>
+<div id="api_divs" class="d-none all">
+	<span class="Add"><i class="fas fa-plus-circle text-success"></i></span>
+	<div class="col-lg-12 p-0"> 
+		<div class="formi">
+		  <div class="control-group input-group para-block">  
+			  <div class="col-lg-5 p-0"> 
+				  <div class="form-group row" id="api_parameters_div">
+					  <label for="" class="col-sm-4 col-form-label">URL Parameters:</label>
+						  <div class="col-sm-6">
+							<select id="api_parameters" class="para" data-placeholder="Select Parameter" onchange="updatealias(this)">
+								<option value="">Select Parameter</option>
+								<option value="Destination">Numeric</option>
+								<option value="template">Template</option>
+								<option value="custom">Custom</option>
+							</select>
+						  </div>
+				  </div>
+			  </div>
+			  <div class="col-lg-5 alias_name" id="alias_name">
+					<div class="form-group row">
+						<label for="alias_name" class="col-sm-4 col-form-label">Alias Name:</label>
+					   <div class="col-sm-6">
+						<input type="text" class="form-control alias" id="api_parameter_alias_name" placeholder="Alias Name" name="api_parameter_alias_name">
+					   </div>  
+					</div>
+			  </div>
+			  <div class="row d-none alias_check" id="alias_check" >
+				  <div class="col-lg-5">
+					  <div class="form-group row">
+							  <label for="" class="col-sm-3 col-form-label">key:</label>
+						  <div class="col-sm-8">
+							  <input type="text" class="form-control alias_key" id="api_parameter_alias_key" placeholder="key" name="api_parameter_alias_key" onkeyup="ValidateKeyInput(this)">
+							  <span class="d-none text-danger">This key value already used!</span>
+						  </div> 
+					  </div> 
+				  </div>
+				<div class="col-lg-5"> 
+					<div class="form-group row">
+							<label for="" class="col-sm-3 col-form-label">value:</label>
+						<div class="col-sm-8">
+							<input type="text" class="form-control alias_value" id="api_parameter_alias_value" placeholder="value" name="api_parameter_alias_value">
+						</div>  
+					</div>
+				</div>
+			  </div> 
+		  </div>
+		  <span class="cancel" id="Cancel"><i class="fa fa-times-circle ml-1 ml-sm-2 text-danger"></i></span>
+		</div>
+	</div>
+</div>
+<!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.0.1/jquery.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/select2/4.0.0/js/select2.min.js"></script> -->

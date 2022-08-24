@@ -81,8 +81,8 @@ function selective_datatable(table) {
                         return data
                     } else {
                         if (row["downloaded_file_name"] != '') {
-                            return '<div class="text-right"><a target="_blank" class="btn btn-link text-info ml-2 file-download p-0" href="/api/download/'+row['id']+'/'+row['downloaded_file_name']+'/" download id="file-' + row['id'] + '" id="'+row['id']+'"><i class="fa fa-download sch-download"></i></a></div>'
-                            // return '<div class="text-right"><a class="btn btn-link text-info ml-2 file-download p-0" href="'+row['downloaded_file_path']+'" download id="file-' + row['id'] + '" id="'+row['id']+'"><i class="fa fa-download sch-download"></i></a></div>'
+                            // return '<div class="text-right"><a target="_blank" class="btn btn-link text-info ml-2 file-download p-0" href="/api/download/'+row['id']+'/'+row['downloaded_file_name']+'/" download id="file-' + row['id'] + '" id="'+row['id']+'"><i class="fa fa-download sch-download"></i></a></div>'
+                            return '<div class="text-right"><a class="btn btn-link text-info ml-2 file-download p-0" href="'+row['downloaded_file_path']+'" download id="file-' + row['id'] + '" id="'+row['id']+'"><i class="fa fa-download sch-download"></i></a></div>'
                         }
                     }
                     return ''
@@ -99,7 +99,7 @@ function selective_datatable(table) {
                     } else {
                         if (row["improper_file_name"] != '') {
                             // return '<a href="/media/upload/' + row["improper_file_name"] + '" download id="file-' + row['id'] + '">' + row['improper_file_name'] + '</a>'
-                            return '<a href="' + row["improper_file_name"] + '" download id="file-' + row['id'] + '">' + row['improper_file_name'] + '</a>'
+                            return '<a href="' + row["improper_file_path"] + '" download id="file-' + row['id'] + '">' + row['improper_file_name'] + '</a>'
                         }
                     }
                     return ''
@@ -6351,8 +6351,8 @@ $("#sms_campaign_select").change(function() {
 })
 $("#sms-template-submit-btn").click(function() {
     var sms_data= tinyMCE.get('scriptEditor').getContent();
-    if (tinyMCE.get('scriptEditor').getContent({format : 'text'}).length > 150){
-        $("#script-err-msg").removeClass("d-none").text("Msg length should be less than 150 characters")
+    if (tinyMCE.get('scriptEditor').getContent({format : 'text'}).length > 1000){
+        $("#script-err-msg").removeClass("d-none").text("Msg length should be less than 1000 characters")
         setTimeout(function(){ $("#script-err-msg").addClass("d-none") }, 3000);
         return false
     }
@@ -6540,12 +6540,54 @@ $("#sms-gateway-submit-btn").click(function(){
     if ($("#sms_gateway_id").val() != "") {
         url = `/SMSManagement/Sms-Gateway/edit/${$("#sms_gateway_id").val()}/`
     }
+
+    const obj = {};
+    $('.para-block').each(function(index,val){
+        parameter = $(this).find('.para').val();
+        if (parameter == "custom"){
+            if(obj[parameter] == undefined){
+                obj[parameter] = []
+            }
+            alias_obj= {}
+            alias_key = $(this).find('.alias_key').val();
+            value = $(this).find('.alias_value').val();
+            alias_obj[alias_key] = value
+            obj[parameter].push(alias_obj)
+        }else{
+            //obj[parameter] = $(this).find('.alias').val();
+            if (parameter){
+                                obj[parameter] = $(this).find('.alias').val();
+                            }
+        }
+    });
+    const trigger_obj = {};
+    $('.para-block-trigger').each(function(index,val){
+        trigger = $(this).find('.para-trigger').val();
+        if(trigger_obj[trigger] == undefined){
+            trigger_obj[trigger] = []
+        }
+        if (trigger == '1'){
+            triggers_data = {}
+            trigger_disp = $(this).find('.dispos').val();
+            trigger_template = $(this).find('.templates').val();
+            triggers_data[trigger_disp] = trigger_template
+            trigger_obj[trigger].push(triggers_data)
+        }else{
+            if(trigger){
+                trigger_obj[trigger] = $(this).find('.templates').val()
+
+                //trigger_obj[trigger].push($(this).find('.templates').val())
+            }
+        }
+    })
+
     if(form.isValid()) {
         $.ajax({
             type: 'post',
             headers: {"X-CSRFToken": csrf_token},
             url: url,
-            data: form.serialize(),
+            //data: form.serialize(),
+            data: form.serialize()+ "&url_parameters="+JSON.stringify(obj)+"&trigger_params="+JSON.stringify(trigger_obj),
             success: function (data) {
                 if($("#sms_gateway_id").val() !="") {
                     showSwal('success-message', 'SMS Gateway Successfully Updated', '/SMSManagement/gateway-settings/')
@@ -6604,16 +6646,6 @@ $("#email-gateway-submit-btn").click(function(){
     
 })
 
-$('[name="gateway_mode"]').change(function(){
-    if ($(this).val() == 0) {
-        $("#whats_app_gateway_div").addClass("d-none")
-        $("#sms_gateway_div").removeClass("d-none")
-    }
-    else{
-      $("#whats_app_gateway_div").removeClass("d-none")
-      $("#sms_gateway_div").addClass("d-none")
-    }
-})
 //Thirdparty Api Modules Js 
 
 $(document).on('click','#create-thirdparty-btn,#edit-thirdparty-btn ', function(){

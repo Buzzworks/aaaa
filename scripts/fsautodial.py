@@ -4,6 +4,7 @@ import sys,os
 import logging
 import math
 import socket
+import time
 import pycurl
 from io import BytesIO
 import uuid
@@ -88,7 +89,7 @@ def fs_voice_blaster(campaign):
 								# fs_cust_in_campaign =  trunk_status['chennals'][campaign.name]['c_total_chennals']
 								# allowted_channels = campaign.trunk.channel_count
 								# ftdm_down_count = allowted_channels - total_cust_in_campaign
-								free_channel = allowted_channels - ftdm_down_count
+								free_channel = allowted_channels - ftdm_down_count	
 								camp_settings = campaign.campaign_variable
 								camp_vbcampaign = campaign.vbcampaign.first()
 							except socket.error as e:
@@ -149,7 +150,6 @@ def fs_voice_blaster(campaign):
 														campaign_extension=camp_settings.extension,dial_string=trunk['dial_string']))
 									fs_originate_str = Template(fs_originate).safe_substitute(
 										dict(destination_number=cn_numeric))
-
 									logger.debug("Call Initiating: %s || TeleEngine: %s" % (cn_numeric,campaign.switch.ip_address))
 									SERVER.freeswitch.api("bgapi", fs_originate_str)
 									logger.debug("Call Initiated: %s" % cn_numeric)
@@ -158,6 +158,7 @@ def fs_voice_blaster(campaign):
 									# settings.R_SERVER.sadd(campaign_str, ori_uuid)
 									if camp_vbcampaign.vb_mode == 1:
 										pass
+									time.sleep(1/camp_settings.dial_ratio)
 								except socket.error as e:
 									logger.debug("Call Failed: %s || Reason: SocketFail --%s" % (cn_numeric,e))
 									settings.R_SERVER.hset("ad_campaign_status",campaign.name, True)

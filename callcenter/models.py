@@ -10,7 +10,7 @@ from django.db.models import signals, Q
 import pytz,os
 import re
 from django.conf  import settings
-from flexydial.constants import (Status, REPORTS_LIST,auto_dialed_status, PROTOCOL_CHOICES, TRUNK_TYPE, CALL_TYPE,
+from flexydial.constants import (Gateway_Mode, Status, REPORTS_LIST,auto_dialed_status, PROTOCOL_CHOICES, TRUNK_TYPE, CALL_TYPE,
 	CALLBACK_MODE, DIAL_RATIO_CHOICES, CAMPAIGN_STRATEGY_CHOICES, DNC_MODE, ACCESS_LEVEL, DISPO_FIELD_TYPE,
 	SCHEDULE_TYPE, SCHEDULE_DAYS, CONTACT_STATUS, UPLOAD_STATUS, VB_MODE, TEMPLATE_TYPE, TRIGGER_ACTIONS, SMS_STATUS, ACTION,
 	TYPE_OF_DID, STRATEGY_CHOICES, REPORT_NAME, COUNTRY_CODES,BROADCAST_MESSAGE_TYPE,PasswordChangeType,SHOW_DISPOS_TYPE)
@@ -21,7 +21,8 @@ from callcenter.signals import (
 	fs_del_user,
 	fs_campaign,
 	fs_user_campaign,
-	fs_switch_action
+	fs_switch_action,
+	recording_file_move
 	)
 timezone = list(pytz.common_timezones)
 USER_TIMEZONE = [(zone, zone) for zone in timezone]
@@ -295,7 +296,7 @@ class UserVariable(models.Model):
 			we wait this defined time before trying him again')
 	protocol      = models.CharField(default=PROTOCOL_CHOICES[0][0],
 			choices=PROTOCOL_CHOICES, max_length=30)
-	created_date = models.DateTimeField(auto_now_add=True)
+	created_date = models.DateTimeField(auto_now_add=True,db_index=True)
 	modified_date = models.DateTimeField(auto_now=True)
 	enabled = models.DateTimeField(null=True, blank=True, db_index=True)
 	w_req_callback = models.BooleanField(default=False,null=True, blank=True)
@@ -338,6 +339,7 @@ class AudioFile(models.Model):
 	name = models.CharField(max_length = 100, db_index=True, unique=True)
 	description = models.TextField(blank=True, null=True)
 	audio_file = models.FileField(upload_to='upload', blank=True)
+	audio_file_url = models.TextField(blank=True,null=True)
 	status = models.CharField(default='Active',choices=Status, max_length=10)
 	created_date = models.DateTimeField(auto_now_add=True)
 	modified_date = models.DateTimeField(auto_now=True)
@@ -351,6 +353,10 @@ class AudioFile(models.Model):
 	def audio_file_name(self):
 		if self.audio_file:
 			return os.path.basename(self.audio_file.name)
+	@property
+	def audio_url(self):
+		if self.audio_file:
+			return self.audio_file.url
 
 class Disposition(models.Model):
 	""" This table will store the dispostion infomation """
@@ -474,6 +480,9 @@ class SMSGateway(models.Model):
 	modified_date = models.DateTimeField(auto_now=True)
 	created_by = models.ForeignKey('User', related_name='gateway_created_by',on_delete=models.SET_NULL,
 		blank=True, null=True)
+	url_parameters = JSONField(default=dict)
+	gateway_mode = models.CharField(choices=Gateway_Mode,max_length = 50)	
+	trigger_params = JSONField(default=dict)
 	def __str__(self):
 		return self.name
 	class Meta:
@@ -554,7 +563,7 @@ class DiaTrunkGroup(models.Model):
 
 class Campaign(models.Model):
 	""" This table stores all the campaign related info """
-	name = models.CharField(max_length=100)
+	name = models.CharField(max_length=100,db_index=True)
 	slug = models.SlugField(max_length=100, unique=True)
 	description = models.TextField(blank=True, null=True)
 	users = models.ManyToManyField(User, related_name='campaign_users', null=True, blank=True)
@@ -603,6 +612,7 @@ class Campaign(models.Model):
 	inbound_threshold = models.IntegerField(default=0, db_index=True, blank=True)
 	sms_gateway = models.ForeignKey(SMSGateway,on_delete=models.SET_NULL,blank=True, null=True)
 	email_gateway = models.ForeignKey(EmailGateway,on_delete=models.SET_NULL, blank=True, null=True)
+	whatsapp_gateway = models.ForeignKey(SMSGateway,on_delete=models.SET_NULL,blank=True, null=True,related_name='whatsapp_campaign')
 	api_disposition = models.BooleanField(default=False,blank=True, null=True)
 	all_caller_id = JSONField(default=dict)
 
@@ -846,8 +856,8 @@ class CallDetail(models.Model):
 	callflow = models.CharField(default='', max_length=50, null=True)
 	callmode = models.CharField(default='', max_length=50, null=True)
 	destination_extension = models.CharField(default='', max_length=50, null=True)
-	dialed_status = models.CharField(default='',choices=auto_dialed_status, max_length=50)
-	session_uuid = models.UUIDField(db_index=True,  null=True)
+	dialed_status = models.CharField(default='',choices=auto_dialed_status, max_length=50,db_index=True)
+	session_uuid = models.UUIDField(db_index=True,  null=True, unique=True)
 	a_leg_uuid = models.UUIDField(null=True)
 	b_leg_uuid = models.UUIDField(null=True)
 	predictive_time = models.TimeField(default=default_time, null=True, blank=True)
@@ -876,10 +886,9 @@ class CallDetail(models.Model):
 	inbound_wait_time = models.TimeField(default=default_time, null=True, blank=True)
 	blended_time = models.TimeField(default=default_time, blank=True, null=True)
 	blended_wait_time = models.TimeField(default=default_time, blank=True, null=True)
-	uniqueid = models.CharField(default=None, max_length=30, null=True)
+	uniqueid = models.CharField(default=None, max_length=30, null=True,db_index=True)
 	created = models.DateTimeField(auto_now_add=True, db_index=True)
 	updated = models.DateTimeField(auto_now=True, db_index=True)
-
 	class Meta:
 		get_latest_by = 'created'
 		ordering = ['-created']
@@ -898,6 +907,13 @@ class CallDetail(models.Model):
 			return DiallerEventLog.objects.filter(session_uuid=self.session_uuid)[0]
 		return self
 
+def get_upload_path(instance, filename):
+	date_time = datetime.strptime(str(instance.ring_time),"%Y-%m-%d %H:%M:%S")
+	year = date_time.strftime("%Y")
+	month = date_time.strftime("%m")
+	day = date_time.strftime("%d")
+	return  'recordings/{0}/{1}/{2}/{3}/{4}/{5}'.format(str(instance.callserver),year,month,day,str(instance.callflow), filename)
+
 class DiallerEventLog(models.Model):
 	"""
 	This table is for storing the calldetail logs get from freeswitch \
@@ -913,7 +929,7 @@ class DiallerEventLog(models.Model):
 	session_uuid = models.UUIDField(db_index=True, editable=False, null=True)
 	a_leg_uuid = models.UUIDField(editable=False, null=True)
 	b_leg_uuid = models.UUIDField(editable=False, null=True)
-	init_time = models.DateTimeField(editable=False,null=True, blank=True, default=None)
+	init_time = models.DateTimeField(editable=False,null=True, blank=True, default=None,db_index=True)
 	ring_time = models.DateTimeField(default=None, editable=False,	null=True, blank=True)
 	ring_duration = models.TimeField(default=default_time, null=True, blank=True)
 	connect_time = models.DateTimeField(default=None, editable=False, null=True, blank=True)
@@ -938,6 +954,8 @@ class DiallerEventLog(models.Model):
 	created = models.DateTimeField(auto_now_add=True, db_index=True, editable=False)
 	updated = models.DateTimeField(auto_now=True, db_index=True, editable=False)
 	objects = models.Manager()
+	recording_file = models.FileField(upload_to=get_upload_path, blank=True, help_text='')
+	callserver = models.CharField(max_length=100, null=True, blank=True, verbose_name='Call Server IP')
 
 	class Meta:
 		get_latest_by = 'init_time'
@@ -951,7 +969,12 @@ class DiallerEventLog(models.Model):
 			return re.sub(r'(\\)', '', self.info).split('^')
 		else:
 			return ['']*6
-
+	@property
+	def recording_url(self):
+		if self.recording_file:
+			return self.recording_file.url
+			
+signals.post_save.connect(recording_file_move, sender=DiallerEventLog)
 
 
 class CdrFeedbck(models.Model):
@@ -959,7 +982,7 @@ class CdrFeedbck(models.Model):
 	This model is used to store feedback submitted on hangup
 	"""
 
-	primary_dispo = models.CharField(default='', max_length=250, null=True)
+	primary_dispo = models.CharField(default='', max_length=250, null=True,db_index=True)
 	feedback = JSONField()
 	relation_tag = JSONField()
 	calldetail = models.OneToOneField(CallDetail, related_name='cdrfeedback', on_delete=models.CASCADE, null=True,db_index=True)
@@ -1035,7 +1058,7 @@ class AgentActivity(models.Model):
 	""" This table stores the every agents activity performed while login onwards"""
 	user = models.ForeignKey(User, on_delete=models.SET_NULL,db_index=True, null=True)
 	event = models.CharField(max_length=255, blank=True, null=True)
-	event_time = models.DateTimeField(blank=True, null=True)
+	event_time = models.DateTimeField(blank=True, null=True,db_index=True)
 	tos = models.TimeField(default=default_time, blank=True, null=True)
 	app_time = models.TimeField(default=default_time, blank=True, null=True)
 	campaign_name = models.CharField(max_length=50, null=True, blank=True)
@@ -1049,9 +1072,9 @@ class AgentActivity(models.Model):
 	predictive_time = models.TimeField(default=default_time, blank=True, null=True)
 	predictive_wait_time = models.TimeField(default=default_time, blank=True, null=True)
 	feedback_time = models.TimeField(default=default_time, blank=True, null=True)
-	break_type = models.CharField(default='',max_length=50, null=True, blank=True)
+	break_type = models.CharField(default='',max_length=50, null=True, blank=True,db_index=True)
 	break_time = models.TimeField(default=default_time, blank=True, null=True)
-	created = models.DateTimeField(auto_now_add=True)
+	created = models.DateTimeField(auto_now_add=True,db_index=True)
 	hold_time = models.TimeField(default=default_time, blank=True, null=True)
 	transfer_time = models.TimeField(default=default_time, blank=True, null=True)
 	pause_progressive_time  = models.TimeField(default=default_time, blank=True, null=True,
@@ -1181,12 +1204,12 @@ class Notification(models.Model):
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
 			on_delete=models.CASCADE,null=True)
 	contact_id = models.BigIntegerField(blank=True, null=True, db_index=True)
-	campaign = models.CharField(max_length=100,null=True, blank=True)
+	campaign = models.CharField(max_length=100,null=True, blank=True, db_index=True)
 	user = models.CharField(max_length=100,null=True)
 	title=models.CharField(max_length=256,null=True)
 	message = models.TextField()
 	numeric = models.CharField(default='', max_length=50,null=True, db_index=True)
-	viewed  = models.BooleanField(default=False)
+	viewed  = models.BooleanField(default=False, db_index=True)
 	created_date = models.DateTimeField(auto_now_add=True)
 	modified_date = models.DateTimeField(auto_now=True)
 	notification_type = models.CharField(max_length=100, null=True, blank=True)
@@ -1260,7 +1283,8 @@ class SMSLog(models.Model):
 	reciever = models.BigIntegerField(blank=True, null=True, db_index=False)
 	status = models.CharField(default='Active', choices=Status, max_length=10)
 	session_uuid = models.UUIDField(db_index=True, editable=False, null=True)
-	status_message =  models.CharField(max_length=255, blank=True, null=True)
+	#status_message =  models.CharField(max_length=255, blank=True, null=True)
+	status_message =  models.TextField(blank=True, null=True)
 	created = models.DateTimeField(auto_now_add=True)
 
 

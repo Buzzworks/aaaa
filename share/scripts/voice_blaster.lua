@@ -32,17 +32,22 @@ assert(dbh:query(my_query, function(qrow)
 		end
       	end
 end))
-sql = "select audio_file from callcenter_audiofile where id in (select vb_audio_id from callcenter_voiceblaster where id in (select voiceblaster_id from callcenter_voiceblaster_campaign where campaign_id in (select id from callcenter_campaign where name='"..campaign.."')))"
+sql = "select audio_file,audio_file_url from callcenter_audiofile where id in (select vb_audio_id from callcenter_voiceblaster where id in (select voiceblaster_id from callcenter_voiceblaster_campaign where campaign_id in (select id from callcenter_campaign where name='"..campaign.."')))"
 assert(dbh:query(sql, function(qrow2)
-	audio_file=qrow2.audio_file
+	audio_file_url=qrow2.audio_file_url
+	audio_file = qrow2.audio_file
 end))
 
 
 function play_audio(ivr_nums)
-	if (ivr_nums ~= "") then
-        	digits = session:playAndGetDigits(1,1,3, 10000,"#", audio_dir2..audio_file, audio_dir.."Invalid_digit.mp3","["..ivr_nums.."]", "digits_received",10000);
+	if (audio_file_url ~= "") then
+		audio_play = audio_file_url
 	else
-		session:execute("playback",audio_dir2..audio_file)
+		audio_play = audio_dir2..audio_file
+	if (ivr_nums ~= "") then
+        	digits = session:playAndGetDigits(1,1,3, 10000,"#", audio_play, audio_dir.."Invalid_digit.mp3","["..ivr_nums.."]", "digits_received",10000);
+	else
+		session:execute("playback",audio_play)
 	end
 	session:execute("playback",audio_dir.."thankyou.mp3")
 	session:execute("hangup")

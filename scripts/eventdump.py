@@ -1,14 +1,19 @@
 """
 Dumping Events in DB or Logger
 """
+import json
 import time,os, sys
 from subprocess import PIPE, Popen, call
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction, connection, connections
 from datetime import datetime,date,timedelta
+
+import requests
 from flexydial import settings
 from flexydial.views import sendsmsparam
 from callcenter.models import (
+	SMSTemplate,
+	User,
 	UserVariable,
 	Campaign,
 	CallDetail,
@@ -138,9 +143,18 @@ def event_dump(kwargs):
 				user_obj = UserVariable.objects.get(extension=kwargs.get('user')).user
 				username = user_obj.username
 			except:
-				user_obj = None
+				user_obj = User.objects.filter(caller_id = kwargs.get('caller_id')).first()
+				if user_obj:
+					username = user_obj.username
+				else:
+					user_obj = None
 		else:
-			user_obj = None
+			print('2222')
+			user_obj = User.objects.filter(caller_id = kwargs.get('caller_id')).first()
+			if user_obj:
+				username = user_obj.username
+			else:
+				user_obj = None
 		primary_dispo='NF(No Feedback)'
 		list_causecode = ["USER_BUSY","NO_ANSWER","NO_USER_RESPONSE","NORMAL_CLEARING","NORMAL_TEMPORARY_FAILURE","CALL_REJECTED","ORIGINATOR_CANCEL"]			
 		models=['DiallerEventLog']
@@ -162,37 +176,56 @@ def event_dump(kwargs):
 								kwargs['dialed_status'] = 'Drop'
 			else:
 				models=['CallDetail','DiallerEventLog']
-				ivr_duration = kwargs.get('billsec', None) 
-				bill_sec = 0 
+				ivr_duration = kwargs.get('billsec', None)
+				bill_sec = 0
 				inbound_uuids = pickle.loads(settings.R_SERVER.get("inbound_status") or pickle.dumps(AGENTS))
 				if kwargs['session_uuid'] in inbound_uuids:
 					del inbound_uuids[kwargs['session_uuid']]
 					settings.R_SERVER.set("inbound_status", pickle.dumps(inbound_uuids))
 				if kwargs.get('dialed_status') == 'CBR':
 					CallBackContact.objects.create(numeric = kwargs.get('customer_cid'),campaign = kwargs.get('campaign'),disposition = kwargs.get('dialed_status'),callback_type = 'queue',schedule_time = datetime.now(),status = 'NotDialed',customer_raw_data={},contact_id=kwargs["contact_id"], callmode=kwargs.get('call_mode', ''))					
-				else: 
+				else:
 					message = "Dear Agent you have a Call Back Request from this number {}".format(kwargs.get('customer_cid'))
 					abandoned_obj = Abandonedcall.objects.create(campaign=kwargs.get('campaign'),caller_id=kwargs.get('caller_id'),numeric = kwargs.get('customer_cid'), status =kwargs.get('dialed_status'))
 					notification_obj = Notification.objects.create(campaign=kwargs.get('campaign'),title='Abandonedcall', 					
-						message=message,numeric = kwargs.get('customer_cid')) 				
-					if user_obj == None: 					
-						notification_obj.notification_type = "campaign_abandonedcall" 				
-					else: 					
+						message=message,numeric = kwargs.get('customer_cid'))
+					if user_obj == None:
+						notification_obj.notification_type = "campaign_abandonedcall"
+					else:
 						notification_obj.notification_type = "user_abandonedcall"
 						notification_obj.user=user_obj.username
-						abandoned_obj.user = kwargs.get('user')
+						abandoned_obj.user = user_obj.username
 						abandoned_obj.save()
-					notification_obj.save()				
+						contact = Contact.objects.filter(numeric=kwargs.get('customer_cid')).order_by('-id').first()
+						if contact:
+							campaign_obj_sms =  Campaign.objects.filter(name=contact.campaign).first()
+						if contact and campaign_obj_sms and campaign_obj_sms.sms_gateway :
+							trigger_params = campaign_obj_sms.sms_gateway.trigger_params
+							if trigger_params:
+								trigger_types = list(trigger_params.keys())
+								if '3' in trigger_types:
+									sms_template = SMSTemplate.objects.filter(id__in=trigger_params['3']).values('id','text')
+									numeric = kwargs.get('customer_cid','')
+									session_uuid = kwargs.get('session_uuid','')
+									try:
+										web_url = settings.WEB_URL
+										if not web_url:
+											sendsmsparam(campaign_obj_sms,numeric,session_uuid,sms_template)
+										else:
+											res = requests.post(f"{web_url}/api/send_sms/",data={"campaign_id":campaign_obj_sms.id,"numeric":numeric,"abd_trigger":"true","session_uuid":session_uuid,"templates":json.dumps(list(sms_template))},verify=False)
+											print("SENDSMS RES",res)
+									except Exception as e:
+										print("sendSMS exception",e)
+					notification_obj.save()
 		if wfh:
 			wfh_agents = {}
 			AGENTS = get_agent_status(username)
 			if username in AGENTS and AGENTS[username]['wfh'] or kwargs.get('wfh_call'):
 				models=['CallDetail','DiallerEventLog']
 			wfh_agents = pickle.loads(settings.R_SERVER.get("wfh_agents") or pickle.dumps(wfh_agents))
-			if wfh_agents:
-				if kwargs.get('session_uuid') in wfh_agents:
-					del wfh_agents[kwargs.get('session_uuid')]
-					settings.R_SERVER.set("wfh_agents",pickle.dumps(wfh_agents))
+			if wfh_agents and kwargs.get('session_uuid') in wfh_agents:
+				del wfh_agents[kwargs.get('session_uuid')]
+				settings.R_SERVER.set("wfh_agents",pickle.dumps(wfh_agents))
 		if kwargs.get('call_mode') == 'click-to-call' or kwargs.get('call_mode') == "voice-blaster":
 				models=['CallDetail','DiallerEventLog']
 				if kwargs.get('call_mode') == "voice-blaster" and kwargs.get('dialed_status')=="Connected":
@@ -233,6 +266,9 @@ def event_dump(kwargs):
 			cdr_save(model,kwargs,campaign_obj,user_obj,primary_dispo, campaign_name)
 	except Exception as e:
 		print("erro from event_dump : %s"%(e))
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 	finally:
 		transaction.commit()
 		connections["crm"].close()
@@ -267,6 +303,8 @@ def cdr_save(model,kwargs,campaign_obj,user_obj,primary_dispo, campaign_name):
 				hangup_cause_code=kwargs.get('hangup_cause_code'),
 				dialed_status=kwargs.get('dialed_status'),
 				)
+		if cdr.__class__.__name__== 'DiallerEventLog':
+			cdr.callserver=kwargs.get('callserver')
 		if cdr.__class__.__name__!='CallDetail':
 			cdr.transfer_history=kwargs.get('transfer_history'),
 			cdr.info=kwargs.get('info'),
