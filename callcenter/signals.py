@@ -62,16 +62,13 @@ def fs_switch_action(sender, **kwargs):
 	sched.add_job(usr_campaign_switch_rpc,'date', run_date=execution_time, name='calls',
 			jobstore='task', kwargs=kwargs)
 
-
-
 def fs_add_user(sender, **kwargs):
 	"""
 	this is the function defined for add user action in freeswitch.
 	"""	
-	add_user_rpc(**kwargs)
-	# execution_time = datetime.now() + timedelta(seconds=10)
-	# sched.add_job(add_user_rpc,'date', run_date=execution_time, name='calls',
-	# 		jobstore='task', kwargs=kwargs)
+	execution_time = datetime.now() + timedelta(seconds=10)
+	sched.add_job(add_user_rpc,'date', run_date=execution_time, name='calls',
+			jobstore='task', kwargs=kwargs)
 
 def fs_del_user(sender, **kwargs):
 	"""

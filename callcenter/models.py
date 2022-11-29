@@ -69,6 +69,7 @@ class DialTrunk(models.Model):
 	switch = models.ForeignKey(Switch, related_name='Switch',
 			null=True, on_delete=models.SET_NULL, blank=True)
 	did_range = models.CharField(max_length = 50, blank=True, null=True)
+	did_regex = models.CharField(max_length = 50, blank=True, null=True)
 	prefix = models.BooleanField(default=False,null=True, blank=True)
 	country_code = models.CharField( choices=COUNTRY_CODES, blank=True, null=True, max_length=10)
 	status = models.CharField(default='Active',choices=Status, max_length=10)
@@ -653,6 +654,19 @@ class Campaign(models.Model):
 	@property
 	def campaign_script(self):
 		return ", ".join(self.script.all().values_list("id", flat=True))
+
+	@property
+	def campign_prefix_did(self):
+		did_regex_value=self.trunk.did_regex
+		dic_regex_dict=dict(item.split(",") for item in did_regex_value.split())
+		key, value = list(dic_regex_dict.items())[0]
+
+		all_caller_id=str(self.all_caller_id[0])
+		if all_caller_id.startswith(key):
+			all_caller_id=all_caller_id.replace(key,value,1)
+			return all_caller_id
+		else:
+			return ""
 
 	@property
 	def campaign_variable(self):

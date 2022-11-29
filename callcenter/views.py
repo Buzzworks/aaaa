@@ -75,7 +75,7 @@ from .utility import (delete_all_unexpired_sessions_for_user, delete_session, ge
 		get_model_data, validate_uploaded_dnc,upload_dnc_nums,submit_feedback, customer_detials, convert_into_timedelta,
 		total_list_users,camp_list_users,user_hierarchy, user_hierarchy_object, update_contact_on_css, get_transform_key, update_contact_on_portifolio,
 		validate_third_party_token,get_temp_contact,get_contact_data, upload_template_sms,get_crm_fields_dict, channel_trunk_single_call, DownloadCssQuery,get_campaign_did, get_group_did,DownloadCssQuery,diff_time_in_seconds,
-		save_report_column_visibility, get_report_visible_column,save_email_log, get_used_did, get_used_did_by_pk,convert_into_timeformat, email_connection, check_non_admin_user, getDaemonsStatus,upload_holiday_dates,read_status,convert_timedelta_hrs,get_agent_status,set_agent_status,get_all_keys_data_df,get_all_keys_data)
+		save_report_column_visibility, get_report_visible_column,save_email_log, get_used_did, get_used_did_by_pk,convert_into_timeformat, email_connection, check_non_admin_user, getDaemonsStatus,upload_holiday_dates,read_status,convert_timedelta_hrs,get_agent_status,set_agent_status,get_all_keys_data_df,get_all_keys_data,get_gateways_status)
 
 from .decorators import (user_validation, group_validation,campaign_validation,
 		campaign_edit_validation, phone_validation, dispo_validation, relationtag_validation,
@@ -102,6 +102,7 @@ import subprocess
 from gtts import gTTS
 import csv
 from flexydial.forms import CaptchaForm
+from crm.utility import get_customizable_crm_fields
 def save_csv(file_name, list):
 	"""
 	Saving the list values into the csv file
@@ -544,7 +545,7 @@ class DashBoardApiView(LoginRequiredMixin, APIView):
 						"inbound_count":ic_count, "preview_count":pv_count, "progressive_count":pg_count,
 						"predictive_count":pd_count,"manual_count":mu_count, "a_camp_count": ac_camp_count,
 						"ll_data_count":ll_data_count,"noti_count":noti_count, 'web_socket_host':settings.WEB_SOCKET_HOST,
-						"break_count":brk_count,"down_count":down_count,"server_ip":settings.WEB_SOCKET_HOST, 'trunks_data':trunks_data}
+						"break_count":brk_count,"down_count":down_count,"server_ip":settings.WEB_SOCKET_HOST, "trunks_data":trunks_data, "gateway_status":get_gateways_status()}
 		context['can_switch'] = kwargs['permissions']['can_switch']
 		context['can_boot'] = kwargs['permissions']['can_boot']
 		services_data = read_status('all')
@@ -721,7 +722,9 @@ class CampaignLiveDataView(LoginRequiredMixin, APIView):
 			campaign_dict = Contact.objects.filter(campaign=campaign['name'], phonebook_id__in=phonebook_ids).aggregate(ll_total_data=Count('id'),
 					ll_dialed_count=Count('status',filter=Q(status__in=["Dialed", "NC", "Drop", "Invalid Number", "Queued-Callback", "Queued-Abandonedcall"])),
 					ll_notdialed_count=Count('status',filter=Q(status="NotDialed")),
-					ll_queuecall_count=Count('status',filter=Q(status="Queued"))
+					ll_queuecall_count=Count('status',filter=Q(status="Queued")),
+					ll_auto_feedback_count=Count('status',filter=Q(status="AutoFeedback")),
+					ll_auto_wrapup_count=Count('status',filter=Q(status="AutoWrapUp"))
 					)
 			campaign_dict["campaign"] = campaign['name']
 			phonebook_data = phonebooks.aggregate(total_ll_count = Count('id'),
@@ -2640,7 +2643,7 @@ class CallRecordingView(LoginRequiredMixin, generics.ListAPIView):
 		context = {'request': request, 'campaign_list': campaign_list}
 		all_fields = {"diallereventlog":['campaign_name','user','full_name','phonebook','uniqueid','customer_cid',
 		'session_uuid','init_time','ring_time','connect_time','wait_time','ring_duration','hold_time',
-		'callflow','callmode','dialed_status','hangup_cause','hangup_cause_code','bill_sec','call_duration','hangup_time']}
+		'callflow','callmode','dialed_status','hangup_cause','hangup_cause_code','bill_sec','call_duration','hangup_time','recording_url']}
 		# context['users'] = list(user_list)
 		context['users'] = user_in_hirarchy_level(request.user.id)
 		context['can_qc_update']=can_qc_update
@@ -3854,6 +3857,23 @@ class AgentHomeApiView(LoginRequiredMixin, APIView):
 		context = {**context, **total_agentcalls}
 		return Response(context)
 
+class WebPSTNAgentCallAPIView(LoginRequiredMixin,APIView):
+	"""
+	This class based view is defined for WebPSTNAgentCall.
+	"""
+	def post(self,request):
+		campaign = Campaign.objects.get(pk=request.POST.get("campaign_id"))
+		call_type = request.POST.get("call_type")
+		status=twinkle_session(campaign.switch.ip_address,extension=request.user.extension,
+							campaign_name=campaign.slug,call_type=call_type)
+		extension = request.user.extension
+		if "error" in status:
+			return Response(status, status=500)
+		AGENTS = get_agent_status(extension)
+		AGENTS[extension]['dialerSession_switch'] = campaign.switch.ip_address
+		AGENTS[extension]['dialerSession_uuid'] = status['ori_uuid']
+		set_agent_status(extension,AGENTS[extension])
+		return Response({'status':status })
 
 class DiallerLogin(LoginRequiredMixin, APIView):
 	"""
@@ -3888,11 +3908,11 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 			return Response(status, status=500)
 		app_time = request.POST.get("app_time", "")
 		idle_time = request.POST.get("idle_time", "")
+		fs_ip = request.POST.get("fs_ip", "")
 		if app_time:
 			app_time = datetime.strptime(app_time, '%H:%M:%S').time()
 			time = datetime.strptime("0:0:0", '%H:%M:%S').time()
 			idle_time = datetime.strptime(idle_time, '%H:%M:%S').time()
-			agent_data = {"user"}
 			# track agent activities
 			activity_list = ['dialer_time', 'media_time', 'spoke_time', 'preview_time',
 			'predictive_time', 'feedback_time', 'break_time']
@@ -3947,8 +3967,11 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 			crm_fields = []
 			unique_fields=[]
 		crm_fieds_data = crm_field_value_schema(campaign.name)
-		status=twinkle_session(campaign.switch.ip_address,extension=request.user.extension,
-						campaign_name=campaign.slug,call_type=call_type)
+		status = {"ori_uuid" : uuid.uuid4(),"switch_ip": campaign.switch.ip_address}
+		if call_type != '2':
+			status=twinkle_session(fs_ip,extension=request.user.extension,
+							campaign_name=campaign.slug,call_type=call_type)
+			status['ori_uuid'] = request.POST.get('uuid',status['ori_uuid'])
 		total_camp_assigned_calls = 0
 		if campaign.portifolio:
 			total_camp_assigned_calls = Contact.objects.filter(user=request.user.username, campaign=campaign.name).count()
@@ -3981,7 +4004,7 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 			AGENTS[extension]['status'] = 'Ready'
 			AGENTS[extension]['state'] = 'Idle'
 			AGENTS[extension]['event_time'] = datetime.now().strftime('%H:%M:%S')
-			AGENTS[extension]['dialerSession_switch'] = campaign.switch.ip_address
+			AGENTS[extension]['dialerSession_switch'] = fs_ip if fs_ip else campaign.switch.ip_address
 			AGENTS[extension]['dialerSession_uuid'] = status['ori_uuid']
 			set_agent_status(extension,AGENTS[extension])
 		sms_template = []
@@ -3992,7 +4015,7 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 		disabled_whatsapp_tab = False
 		send_whatsapp_callrecieve = False
 		send_whatsapp_on_dispo = False
-		if campaign.sms_gateway:
+		if campaign.sms_gateway and campaign.sms_gateway.status == "Active":
 			# template = campaign.sms_gateway.template.filter(Q(campaign_id=campaign.id)|Q(template_type='0'))
 			#template=campaign.template_campaign.all()
 			# template=campaign.sms_gateway.template #which using for not selecting campaign from template
@@ -4005,7 +4028,7 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 					send_sms_on_dispo = True
 				if '2' in trigger_types:
 					disabled_sms_tab = True
-					sms_template = list(SMSTemplate.objects.filter(id__in=trigger_params['2']).values('id','text'))
+					sms_template = list(SMSTemplate.objects.filter(id__in=trigger_params['2'],status='Active').values('id','text'))
 				elif send_sms_on_dispo or send_sms_callrecieve:
 					sms_template = [{'id': 1, 'text': '<p>TemplateCustom</p>'}]
 				print(sms_template)
@@ -4030,11 +4053,45 @@ class DiallerLogin(LoginRequiredMixin, APIView):
 			email_gateway['email_type'] = campaign.email_gateway.email_trigger_on
 			email_gateway['email_dispositions'] = list(campaign.email_gateway.disposition.values_list('name',flat=True))
 		PhonebookBucketCampaign.objects.filter(id=campaign.id).update(agent_login_count=F('agent_login_count')+1)
+
+		new_sms_template=[]
+		for i in sms_template:
+			y=i['text']
+			l=y.replace("${UserId}",str(request.user))
+			i['text']=l
+			new_sms_template.append(i)
+		new_sms_template_1=[]
+		for j in new_sms_template:
+			y=j['text']
+			user_caller_id=request.user.caller_id if request.user.caller_id else ''
+			did_regex_value=campaign.trunk.did_regex
+			dic_regex_dict = {}
+			if did_regex_value:
+				dic_regex_dict=dict(item.split(",") for item in did_regex_value.split())
+			key = value = ''
+			if dic_regex_dict.items():
+				key, value = list(dic_regex_dict.items())[0]
+			if user_caller_id.startswith(key):
+				user_caller_id=user_caller_id.replace(key,value,1)#need to set at one occurance only at starting so 1.
+			l=y.replace("${user_caller_did}",user_caller_id)
+			j['text']=l
+			new_sms_template_1.append(j)
+		new_sms_template_2=[]
+		for k in new_sms_template_1:
+			y=k['text']
+			l=y.replace("${campaign_trunk_did}",campaign.campign_prefix_did)
+			#need to take starting value for campaign trunk id if it's single, multiple, range
+			m=l.replace("${user_first_name}",request.user.first_name if request.user.first_name else "")
+			j=m.replace("${user_last_name}",request.user.last_name if request.user.last_name else "")
+			n=j.replace("${user_email}",request.user.email if request.user.email else "")
+			k['text']=n
+			new_sms_template_2.append(k)
+
 		return Response({'call_type':call_type,'status':status,
 				'campaign':campaign_data, 'disposition':disposition,'relation_tag':relation_tag,
 				'crm_fields':crm_fields, 'campaign_caller_id': caller_id,'script':script,
 				'crm_fieds_data':crm_fieds_data, 'total_camp_assigned_calls':total_camp_assigned_calls,
-				'sms_templates':sms_template,'disabled_sms_tab':disabled_sms_tab,'send_sms_on_dispo':send_sms_on_dispo,'send_sms_callrecieve':send_sms_callrecieve,'disabled_whatsapp_tab':disabled_whatsapp_tab,'send_whatsapp_on_dispo':send_whatsapp_on_dispo,'send_whatsapp_callrecieve':send_whatsapp_callrecieve,'lead_user':lead_user,
+				'sms_templates':new_sms_template_2,'disabled_sms_tab':disabled_sms_tab,'send_sms_on_dispo':send_sms_on_dispo,'send_sms_callrecieve':send_sms_callrecieve,'disabled_whatsapp_tab':disabled_whatsapp_tab,'send_whatsapp_on_dispo':send_whatsapp_on_dispo,'send_whatsapp_callrecieve':send_whatsapp_callrecieve,'lead_user':lead_user,
 				'email_gateway':email_gateway, 'sip_udp_port':sip_udp_port, 'wss_port':wss_port, 'rpc_port':rpc_port,
 				'required_fields':required_field_list,'on_call_dispositions':on_call_dispositions,"not_on_call_dispostion":not_on_call_dispostion })
 
@@ -4166,6 +4223,12 @@ class HangupCall(LoginRequiredMixin, APIView):
 	"""
 	login_url = '/'
 	def post(self, request):
+		contact_id_update=request.POST.get('con_contact_id')
+		if contact_id_update=='0':
+			# this will execute in manual dial
+			pass
+		elif contact_id_update:
+			Contact.objects.filter(id=contact_id_update).update(status='AutoWrapUp')
 		hangup_type =''
 		hangup_status = {}
 		AGENTS = {}
@@ -4184,6 +4247,8 @@ class HangupCall(LoginRequiredMixin, APIView):
 		activity_dict["campaign_name"] = campaign
 		if hangup_type == "sip_agent":
 			activity_dict["event"] = "DIALER LOGOUT"
+		elif hangup_type == "agent_call_hangup":
+			activity_dict['event'] = "WebPSTN Call Hangup"
 		else:
 			activity_dict["event"] = "AGENT HANGUP"
 		activity_dict["event_time"] = datetime.now()
@@ -4269,10 +4334,10 @@ class PreviewUpdateContactStatus(APIView):
 				AGENTS[request.user.extension]['state'] = "Idle"
 				AGENTS[request.user.extension]['event_time'] = datetime.now().strftime('%H:%M:%S')
 		set_agent_status(request.user.extension,AGENTS[request.user.extension])
-		if dial_number and dial_number !="null" and update_status and contact_id:
-			temp_contact = TempContactInfo.objects.filter(numeric=dial_number, status='Locked', id=contact_id)
-			if temp_contact.exists():
-				temp_contact.update(status='NotDialed')
+		# if dial_number and dial_number !="null" and update_status and contact_id:
+		# 	temp_contact = TempContactInfo.objects.filter(numeric=dial_number, status='Locked', id=contact_id)
+		# 	if temp_contact.exists():
+		# 		temp_contact.update(status='NotDialed')
 		return JsonResponse({"contact_info": contact_info})
 
 class SkipCallContactStatus(APIView):
@@ -4917,6 +4982,10 @@ def inbound_agents_availability(request):
 		audio_moh_sound = None
 		c_max_wait_time = 25
 		no_agent_audio = False
+		user_raw_dial_string = ''
+		user_custom_dial_string = ''
+		agent_dailer_did = ""
+		user_call_type = ""
 		try:
 			AGENTS = get_all_keys_data()
 			caller_data=json.loads(request.body.decode('utf-8'))
@@ -4950,7 +5019,16 @@ def inbound_agents_availability(request):
 									trunk = campaign_obj.first().trunk
 							if trunk and trunk.status == 'Active':
 								ibc_popup = dial_method['ibc_popup']
-								user = user_extension
+								user_extension = user_obj.first().extension
+								user_call_type = user_obj.first().call_type
+								agent_dailer_did = user_obj.first().caller_id
+								if user_call_type == '2':
+									wfh_numeric = UserVariable.objects.get(user__username = user_obj.first().username).wfh_numeric
+									user_raw_dial_string = str(user_obj.first().trunk.dial_string)
+									if trunk.country_code:
+										wfh_numeric = trunk.country_code+str(wfh_numeric)
+
+									user_custom_dial_string = user_raw_dial_string.replace('${destination_number}',str(wfh_numeric))
 								if ibc_popup:
 									if AGENTS[user_extension]['status'] == 'Ready' and AGENTS[user_extension]['state'] not in ['InCall','Predictive Wait','Blended Wait','Inbound Wait']:
 										extensions.append(user_extension)
@@ -5043,7 +5121,7 @@ def inbound_agents_availability(request):
 			return JsonResponse({'extension':extensions,'dial_method':dial_method,'non_office_hrs':non_office_hrs,
 					'queue_call':queue_call,"campaign":campaign,'skill_routed_status':skill_routed_status,'skilled_obj':skill,
 					"StickyAgent":stickyagent,'skill_popup':skill_popup,'callback':callback,
-					'cust_status':status.get('cust_status',False),'no_agent_audio':status.get('no_agent_audio',False),'c_max_wait_time':status.get('c_max_wait_time',25),'audio_moh_sound':status.get('audio_moh_sound',None)})
+					'cust_status':status.get('cust_status',False),'no_agent_audio':status.get('no_agent_audio',False),'c_max_wait_time':status.get('c_max_wait_time',25),'audio_moh_sound':status.get('audio_moh_sound',None),'user_custom_dial_string':user_custom_dial_string,'user_call_type':user_call_type,'agent_dailer_did':agent_dailer_did})
 		except Exception as e:
 			print("inbound error",e)
 			exc_type, exc_obj, exc_tb = sys.exc_info()
@@ -5430,11 +5508,12 @@ class WebrtcSessionSetVar(APIView):
 	"""
 	def post(self, request):
 		AGENTS = {}
-		session_details = request.POST.get("variable_sip_from_host")
-		fs_set_variables(request.POST.get("variable_sip_from_host"),campaign=request.POST.get("campaign_name")
-				,dialed_uuid=request.POST.get("Unique-ID"),extension=request.user.extension,call_type='webrtc')
-		if request.POST.get('update_autodial_session',False):
-			autodial_session(request.POST.get("variable_sip_from_host"), extension=request.user.extension,uuid=request.POST.get("Unique-ID"), sip_error='false')
+		admin = request.POST.get('admin',"false")
+		if admin == "false":
+			fs_set_variables(request.POST.get("variable_sip_from_host"),campaign=request.POST.get("campaign_name")
+					,dialed_uuid=request.POST.get("Unique-ID"),extension=request.user.extension,call_type='webrtc')
+			if request.POST.get('update_autodial_session',False):
+				autodial_session(request.POST.get("variable_sip_from_host"), extension=request.user.extension,uuid=request.POST.get("Unique-ID"), sip_error='false')
 		AGENTS = get_agent_status(request.user.extension)
 		AGENTS[request.user.extension]['dialerSession_uuid'] = request.POST.get("Unique-ID")
 		set_agent_status(request.user.extension,AGENTS[request.user.extension])
@@ -5976,9 +6055,17 @@ class GetTotalAbandonedcalls(LoginRequiredMixin, APIView):
 		total_abandonedcalls = []
 		page = int(request.GET.get('page' ,1))
 		paginate_by = int(request.GET.get('paginate_by', 10))
+		abandoned_filter_date = request.GET.get('abandoned_filter_date',None)
+		abandoned_filter_date1 = request.GET.get('abandoned_filter_date1','')
 		user_obj = request.user
 		campaigns = [campaign_name['name'] for campaign_name in user_obj.active_campaign]
-		abandonedcall_obj = Abandonedcall.objects.filter(Q(user=user_obj.extension)|Q(campaign__in=campaigns,user=None))
+		abandonedcall_obj = Abandonedcall.objects.filter(Q(user=user_obj.extension)|Q(campaign__in=campaigns,user=None)).order_by('-created_date')
+		if abandoned_filter_date and abandoned_filter_date1:
+			abandonedcall_date = datetime.strptime(abandoned_filter_date,"%Y-%m-%d").date()
+			abandonedcall_date1 = datetime.strptime(abandoned_filter_date1,"%Y-%m-%d").date()
+			start_end_date_filter = Q(created_date__gte=abandonedcall_date)&Q(created_date__date__lte=abandonedcall_date1)
+			abandonedcall_obj = abandonedcall_obj.filter(start_end_date_filter)
+
 		paginate_obj = get_paginated_object(abandonedcall_obj, page, paginate_by)
 		total_abandonedcalls = AbandonedcallSerializer(paginate_obj, many=True).data
 		return Response({'total_records': paginate_obj.paginator.count,'total_pages': paginate_obj.paginator.num_pages,
@@ -5998,11 +6085,21 @@ class GetCampaignAbandonedcalls(LoginRequiredMixin, APIView):
 		campaign_abandonedcalls = []
 		page=int(request.POST.get('page',1))
 		paginate_by = int(request.POST.get('paginate_by',10))
+		abandoned_filter_date_camp = request.POST.get('abandoned_filter_date_camp',None)
+		abandoned_filter_date_camp1 = request.POST.get('abandoned_filter_date_camp1','')
 		user_obj = request.user
+		filter_dict = {'user':user_obj}
 		campaign = request.POST.get("campaign_name","")
 		campaign_mc_obj = Abandonedcall.objects.filter(campaign=campaign).filter(Q(user=user_obj.extension)|Q(user=None))
+		if abandoned_filter_date_camp and abandoned_filter_date_camp1:
+			abandonedcall_date_camp = datetime.strptime(abandoned_filter_date_camp,"%Y-%m-%d").date()
+			abandonedcall_date_camp1 = datetime.strptime(abandoned_filter_date_camp1,"%Y-%m-%d").date()
+			start_end_date_filter = Q(created_date__gte=abandonedcall_date_camp)&Q(created_date__date__lte=abandonedcall_date_camp1)
+			filter_dict['created_date__date'] = start_end_date_filter
+			campaign_mc_obj = campaign_mc_obj.filter(start_end_date_filter)
 		paginate_obj=get_paginated_object(campaign_mc_obj,page,paginate_by)
-		campaign_abandonedcalls=AbandonedcallSerializer(paginate_obj,many=True).data
+		if campaign_mc_obj:
+			campaign_abandonedcalls=AbandonedcallSerializer(paginate_obj,many=True).data
 		return JsonResponse({'total_records': paginate_obj.paginator.count,'total_pages': paginate_obj.paginator.num_pages,
 				'page': paginate_obj.number,'has_next': paginate_obj.has_next(),
 				'has_prev': paginate_obj.has_previous(),'start_index':paginate_obj.start_index(),
@@ -7162,15 +7259,24 @@ class SmsTemplateCreateEditApiView(LoginRequiredMixin, APIView):
 		if check_non_admin_user(request.user):
 			campaigns = campaigns.filter(Q(users=request.user)|Q(group__in=request.user.group.all())|Q(created_by=request.user)).distinct()
 		permission_dict = kwargs['permissions']
+		user_fields=["user_first_name","user_last_name","user_email"]
 		contact_fields = ['numeric', 'first_name', 'last_name', 'email']
+		crm_camp_fields = []
+		campaigns = list(Campaign.objects.values_list('name',flat=True))
+		for crm_fields in campaigns:
+			# crm_camp_fields.extend(get_crm_fields(crm_fields))
+			crm_camp_fields.extend(get_customizable_crm_fields(crm_fields))
+		additional_contact_fields=["UserId","campaign_trunk_did","user_caller_did"]
+		contact_fields = contact_fields + list(set(crm_camp_fields))
+		other_fields=additional_contact_fields + user_fields
 		template_type = TEMPLATE_TYPE
 		is_edit = True
 		if pk:
 			sms_template= get_object(pk, "callcenter", "SMSTemplate")
 			crm_fields = []
-			if sms_template.campaign:
-				crm_fields = get_customizable_crm_fields(sms_template.campaign.slug)
-			contact_fields = contact_fields + crm_fields
+			# if sms_template.campaign:
+			# 	crm_fields = get_customizable_crm_fields(sms_template.campaign.slug)
+			# contact_fields = contact_fields + crm_fields
 			if permission_dict['can_update']:
 				can_view = True
 		else:
@@ -7178,7 +7284,7 @@ class SmsTemplateCreateEditApiView(LoginRequiredMixin, APIView):
 				can_view = True
 			sms_template = ""
 		context = {"request": request,'campaign_list':campaigns,"sms_template_status": Status,
-				"sms_template": sms_template,'can_view':can_view,'contact_fields':contact_fields,'is_edit':is_edit,
+				"sms_template": sms_template,'can_view':can_view,'contact_fields':contact_fields,"other_fields":other_fields,'is_edit':is_edit,
 				"template_type":template_type}
 		context['can_switch'] = permission_dict['can_switch']
 		context['can_boot'] = permission_dict['can_boot']
@@ -7409,7 +7515,8 @@ class SendSMSApiView(APIView):
 							if str(dispo.id) in disp:
 								disp_template_ids.extend(disp[str(dispo.id)])
 						if disp_template_ids:
-							message = SMSTemplate.objects.filter(id__in=disp_template_ids).values('id','text')
+							message = SMSTemplate.objects.filter(id__in=disp_template_ids,status='Active').values('id','text')
+							print("dispo_templates :: ",message)
 						else:
 							return JsonResponse({'status':'SMS not configured to this Disposition'}, status=400)
 					else:
@@ -7419,7 +7526,9 @@ class SendSMSApiView(APIView):
 			message = json.loads(message)
 		if not message:
 			return JsonResponse({'status':'No templates available'}, status=400)
-		response=sendsmsparam(campaign,numeric, session_uuid, message,request.user.id)
+		user_obj=request.user
+		contact_id=request.POST.get('contact_id')
+		response=sendsmsparam(campaign,numeric, session_uuid, message,user_obj,primary_dispo,contact_id)
 		return JsonResponse({'status':response})
 
 @method_decorator(check_read_permission, name='get')

@@ -303,36 +303,29 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SECURE = True
 REDIS_KEY_EXPIRE_IN_SEC = os.environ.get('REDIS_KEY_EXPIRE_IN_SEC',32400)
+RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST",'localhost')
 
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'verbose': {
-            'format' : "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
-            'datefmt' : "%d/%b/%Y %H:%M:%S"
-        },
-        'simple': {
-            'format': '%(levelname)s %(message)s'
+        'default': {
+            'format': '[Flexydial-Log] %(levelname)s %(asctime)s %(module)s '
+                      '%(name)s.%(funcName)s:%(lineno)s: %(message)s'
         },
     },
     'handlers': {
-        'file': {
+        'console': {
             'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': 'flexydial-app.log',
-            'formatter': 'verbose'
-        },
+            'class': 'logging.StreamHandler',
+            'formatter': 'default',
+        }
     },
     'loggers': {
-        'django': {
-            'handlers':['file'],
-            'propagate': True,
-            'level':'DEBUG',
-        },
-        'MYAPP': {
-            'handlers': ['file'],
+        '': {
+            'handlers': ['console'],
             'level': 'DEBUG',
-        },
+            'propagate': True,
+        }
     },
 }

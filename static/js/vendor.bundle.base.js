@@ -9514,7 +9514,6 @@ function get_latest_notification() {
 
 }
 if(location.pathname.indexOf("agent") == -1 && location.pathname.indexOf("dashboard") ==-1){
-    console.log(193);
     setInterval(get_latest_notification, 10000);
 }
 

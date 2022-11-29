@@ -195,32 +195,32 @@ class TempContactInfoModelManager(models.Manager):
 			settings.R_SERVER.publish('lead-details',message=json.dumps({'campaign':objs[0].campaign}))	
 		super().bulk_create(objs,**kwargs)
 
-    	
+
 class TempContactInfo(models.Model):
 	"""
 	This model is for storing the customer contact data for dialler dialling purpose.
 	"""
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
 			on_delete=models.CASCADE,null=True)
-	contact = models.ForeignKey(Contact, editable=False,
+	contact = models.OneToOneField(Contact, editable=False,
 			on_delete=models.CASCADE,null=True)
-	campaign = models.CharField(max_length=100,null=True, blank=True) 
+	campaign = models.CharField(max_length=100,null=True, blank=True,db_index=True) 
 	phonebook = models.ForeignKey(Phonebook, related_name="tempcontacts", null=True,
 		on_delete=models.CASCADE, blank=True,db_index=True)
 	user = models.CharField(max_length=100,null=True)
 	numeric  = models.CharField(default='', max_length=50,null=True, db_index=True)
 	alt_numeric = HStoreField(default=dict)
-	priority = models.IntegerField(default=None, blank=True, null=True)
+	priority = models.IntegerField(default=None, blank=True, null=True, db_index=True)
 	uniqueid  = models.CharField(max_length =30, blank=True, null=True)
 	email	= models.EmailField(max_length=100, db_index=True, null=True, blank=True)
 	status  = models.CharField(default=CONTACT_STATUS[0][0],choices=CONTACT_STATUS,db_index=True,max_length=15)
 	previous_status = models.CharField(default=CONTACT_STATUS[0][0],choices=CONTACT_STATUS,db_index=True,max_length=15)
 	created_date = models.DateTimeField(auto_now_add=True,null=True,blank=True)
-	modified_date = models.DateTimeField(auto_now=True,null=True,blank=True)	
+	modified_date = models.DateTimeField(auto_now=True,null=True,blank=True, db_index=True)	
 	objects = TempContactInfoModelManager()
 	def __str__(self):
 		return str(self.numeric)
-	
+
 
 
 class TrashContact(models.Model):

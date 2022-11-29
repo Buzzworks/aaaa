@@ -155,6 +155,19 @@
 							
 
 
+							<div class="form-group row">
+								<label for="dial_string" class="col-sm-4 col-form-label">DID Regex<span></span> :</label>
+								<div class="col-sm-3 pr-0">
+									<input type="text" class="form-control" id="key_did" placeholder="key" data-toggle="tooltip">
+									<span id="did_regex_container"></span>
+								</div>
+								<label for="dial_string" class="col-sm-1 col-form-label">replace To</label>
+								<div class="col-sm-3 pl-0">
+									<input type="text" class="form-control" id="value_did" placeholder="value">
+									<span id="value_regex_container"></span>
+								</div>
+							</div>
+
 
 							<div class="form-group row">
 								<label for="channel_count" class="col-sm-4 col-form-label">Channel Count :</label>
@@ -250,6 +263,7 @@
 					</div>
 					<input type="hidden" name="created_by" value="{{user.id}}">
 					<input type="hidden" name="did_range" id="hidden_did_range">
+					<input type="hidden" name="did_regex" id="hidden_did_regex">
 				</form>
 			</div>
 		</div>
@@ -309,6 +323,20 @@
 									<span class="text-danger">Start Value should be less than end value</span>
 								</div>
 							</div>
+
+							<div class="form-group row">
+								<label for="dial_string" class="col-sm-4 col-form-label">DID Regex<span></span> :</label>
+								<div class="col-sm-3 pr-0">
+									<input type="text" class="form-control" id="update_key_did" placeholder="key" data-toggle="tooltip">
+									<span id="update_did_regex_container"></span>
+								</div>
+								<label for="dial_string" class="col-sm-1 col-form-label">Replace To</label>
+								<div class="col-sm-3 pl-0">
+									<input type="text" class="form-control" id="update_value_did" placeholder="value">
+									<span id="update_value_regex_container"></span>
+								</div>
+							</div>
+
 							<div class="form-group row">
 								<label for="channel_count" class="col-sm-4 col-form-label">Channel Count :</label>
 								<div class="col-sm-8">
@@ -410,6 +438,8 @@
 					</div>
 					<input type="hidden" name="created_by" value="{{user.id}}">
 					<input type="hidden" name="did_range" id="update_hidden_did_range">
+					<input type="hidden" name="did_regex" id="update_hidden_did_regex">
+
 				</form>
 			</div>
 		</div>

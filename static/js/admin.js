@@ -1218,6 +1218,12 @@ $(document).on('click', '.trunk-modify', function() {
                 $('#update_start_did').val(did_range[0])
                 $('#update_end_did').val(did_range[1])
             }
+
+            if(data.querysets['did_regex']) {
+                               var did_regex = data.querysets['did_regex'].split(",")
+                               $('#update_key_did').val(did_regex[0])
+                               $('#update_value_did').val(did_regex[1])}
+
             $('#update_channel_count').val(data.querysets['channel_count'])
             $("#update_trunk_type[value='"+data.querysets['trunk_type']+"']").prop('checked', true);
             $('#update_trunk_switch').val(data.querysets['switch']).change();
@@ -1267,14 +1273,19 @@ dialtrunk_update_form.children("div").steps({
     transitionEffect: "slideLeft",
     onFinished: function(event, currentIndex) {
         var pk = $('#update_trunk_pk').val()
-        var pk = $('#update_trunk_pk').val()
         var start=$("#update_start_did").val()
         var end=$("#update_end_did").val()
+        var key=$("#update_key_did").val()
+        var value=$("#update_value_did").val()
         var did_range =start+","+end
+        var did_regex =key+","+value
+
         valid_dids= true
         did_list =[]
         valid_dids= check_valid_dids(start,end)
         $("#update_hidden_did_range").val(did_range)
+        $("#update_hidden_did_regex").val(did_regex)
+
         if (dialtrunk_update_form.isValid() == true && parseInt(start) <= parseInt(end) && valid_dids == true) {
             console.log(dialtrunk_update_form.serialize())
             $.ajax({
@@ -1320,10 +1331,14 @@ dialtrunk_validation_form.children("div").steps({
         var pk = $('#trunk_pk').val()
         var start=$("#start_did").val()
         var end=$("#end_did").val()
+        var key=$("#key_did").val()
+        var value=$("#value_did").val()
         var did_range =start+","+end
+        var did_regex =key+","+value
         valid_dids= check_valid_dids(start,end)
 
         $("#hidden_did_range").val(did_range)
+        $("#hidden_did_regex").val(did_regex)
         if (dialtrunk_validation_form.isValid() == true && parseInt(start) <= parseInt(end) && valid_dids == true) {
             $.ajax({
                 type: 'post',

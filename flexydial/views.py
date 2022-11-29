@@ -671,17 +671,17 @@ def create_admin_log_entry(user, model, action_type, event_type,name=""):
 	AdminLogEntry.objects.create(**{'created_by_id':user.id, 'change_message':message,
 				'action_name':action_type,'event_type':event_type})
 
-def sendsmsparam(campaign, numeric, session_uuid, message,user_id=None):
+def sendsmsparam(campaign, numeric, session_uuid, message,user_obj,primary_dispo,contact_obj):
 	""" 
 	Sms sending related parameters or information 
 	"""
 	try:
 		data = {'url':'','msg':'','phone_numbers':[],'auth_key':'','sender_id':'','session_uuid':''}
 		response = ''
-		if campaign.sms_gateway:
+		if campaign.sms_gateway and campaign.sms_gateway.status == "Active":
 			data['url'] = campaign.sms_gateway.gateway_url
 			data['auth_key'] = campaign.sms_gateway.key
-			data['sender_id'] = user_id
+			data['sender_id'] = user_obj.id
 			data['phone_numbers'] = numeric
 			data['session_uuid'] = session_uuid
 			data['url_parameters']=str(campaign.sms_gateway.url_parameters) #need to convert to str as in loop dict is going to sendsms
@@ -691,7 +691,7 @@ def sendsmsparam(campaign, numeric, session_uuid, message,user_id=None):
 				print("inside for",sms)
 				data['msg'] = re.sub(remove_html,'',sms['text'])
 				print(data)
-				response = sendSMS(data, sms['id'])
+				response = sendSMS(data, sms['id'],primary_dispo,user_obj,campaign,contact_obj)
 		return response
 	except Exception as e:
 		exc_type, exc_obj, exc_tb = sys.exc_info()
@@ -699,7 +699,7 @@ def sendsmsparam(campaign, numeric, session_uuid, message,user_id=None):
 		print(exc_type, fname, exc_tb.tb_lineno)
 
 
-def sendSMS(data,template_id):
+def sendSMS(data,template_id,primary_dispo,user_obj,camp_obj,contact_obj):
 	""" Sending the sms """
 	url = data['url']
 	msg = data['msg']
@@ -712,6 +712,84 @@ def sendSMS(data,template_id):
 	url_parameters=data["url_parameters"]
 	url_parameters=eval(url_parameters)#use eval not use dict(not working)
 	gateway_Mode=data["gateway_mode"]
+
+	campaign_name=camp_obj
+	#if primary_dispo: #this primary dispo condition will come on dispo submit
+
+	contact_id=contact_obj
+	if contact_id=='':
+		contact_id=0
+	else:
+		contact_id=int(contact_id)
+	Contact_objs_duplicates=Contact.objects.filter(id=contact_id)
+	Contact_obj=Contact.objects.filter(numeric=reciever,campaign=campaign_name)
+	if len(contact_obj)!=0 and Contact_objs_duplicates.exists() and primary_dispo:#it will execute if it's in contact table contains duplicates and selecting one.
+		contact_objs_duplicates=Contact_objs_duplicates
+		Contact_objs_duplicates=Contact_objs_duplicates.first().customer_raw_data
+
+		all_crm_fields_dict={}
+		for y in Contact_objs_duplicates:
+			j=Contact_objs_duplicates[y]
+			for k, v in list(j.items()):
+				j["$"+"{"+y+":"+k+"}"]=j.pop(k)
+			all_crm_fields_dict.update(j)
+
+		user_caller_id=user_obj.caller_id
+		did_regex_value=campaign_name.trunk.did_regex
+		dic_regex_dict=dict(item.split(",") for item in did_regex_value.split())
+		key, value = list(dic_regex_dict.items())[0]
+
+		if user_caller_id.startswith(key):
+				user_caller_id=user_caller_id.replace(key,value,1)#need to set at one occurance only at starting so 1.
+
+		all_crm_fields_dict.update({"${UserId}":str(user_obj),"${user_first_name}":user_obj.first_name if user_obj.first_name else "","${user_last_name}":user_obj.last_name if user_obj.last_name else "","${user_email}":user_obj.email if user_obj.email else "","${user_caller_did}":user_caller_id,"${campaign_trunk_did}":campaign_name.campign_prefix_did,"${first_name}":contact_objs_duplicates.first().first_name,"${last_name}":contact_objs_duplicates.first().last_name,"${numeric}":contact_objs_duplicates.first().numeric,"${email}":contact_objs_duplicates.first().email})
+
+		for replace_string in all_crm_fields_dict:
+			if all_crm_fields_dict[replace_string]!=None:#this condition needed if it's uploded without crm data
+				msg=msg.replace(replace_string,all_crm_fields_dict[replace_string],999)
+	elif len(contact_obj)==0 and Contact_obj.exists() and primary_dispo:
+		contact_obj=Contact_obj
+		Contact_obj=Contact_obj.first().customer_raw_data
+		if contact_obj.first().phonebook_id:
+			#will execute if its unique of numeric in contact table
+			all_crm_fields_dict={}
+			for y in Contact_obj:
+				j=Contact_obj[y]
+				for k, v in list(j.items()):
+					j["$"+"{"+y+":"+k+"}"]=j.pop(k)
+				all_crm_fields_dict.update(j)
+
+			user_caller_id=user_obj.caller_id
+			did_regex_value=campaign_name.trunk.did_regex
+			dic_regex_dict=dict(item.split(",") for item in did_regex_value.split())
+			key, value = list(dic_regex_dict.items())[0]
+
+			if user_caller_id.startswith(key):
+				user_caller_id=user_caller_id.replace(key,value,1)#need to set at one occurance only at starting so 1.
+
+			all_crm_fields_dict.update({"${UserId}":str(user_obj),"${user_first_name}":user_obj.first_name if user_obj.first_name else "","${user_last_name}":user_obj.last_name if user_obj.last_name else "","${user_email}":user_obj.email if user_obj.email else "","${user_caller_did}":user_caller_id,"${campaign_trunk_did}":campaign_name.campign_prefix_did,"${first_name}":contact_obj.first().first_name,"${last_name}":contact_obj.first().last_name,"${numeric}":contact_obj.first().numeric,"${email}":contact_obj.first().email})
+			for replace_string in all_crm_fields_dict:
+				if all_crm_fields_dict[replace_string]!=None:#this condition needed if it's uploded without crm data
+					msg=msg.replace(replace_string,all_crm_fields_dict[replace_string],999)
+		else:
+			#will execute completely new number
+			user_caller_id=user_obj.caller_id
+			did_regex_value=campaign_name.trunk.did_regex
+			dic_regex_dict=dict(item.split(",") for item in did_regex_value.split())
+			key, value = list(dic_regex_dict.items())[0]
+
+			if user_caller_id.startswith(key):
+				user_caller_id=user_caller_id.replace(key,value,1)#need to set at one occurance only at starting so 1.
+
+			all_crm_fields_dict={"${UserId}":str(user_obj),"${user_first_name}":user_obj.first_name if user_obj.first_name else "","${user_last_name}":user_obj.last_name if user_obj.last_name else "","${user_email}":user_obj.email if user_obj.email else "","${user_caller_did}":user_caller_id,"${campaign_trunk_did}":campaign_name.campign_prefix_did,"${first_name}":contact_obj.first().first_name,"${last_name}":contact_obj.first().last_name,"${numeric}":contact_obj.first().numeric,"${email}":contact_obj.first().email}
+
+			for replace_string in all_crm_fields_dict:
+				if all_crm_fields_dict[replace_string]!=None:#this condition needed if it's uploded without crm data
+					msg=msg.replace(replace_string,all_crm_fields_dict[replace_string],999)
+
+	else:
+		pass
+		#this else will be executed while sms is done through on call only.
 
 	if gateway_Mode=='0':#'0' is sms, not True, False
 		url_params_destination=url_parameters.pop('Destination','dest')#default set as key of dest if not given any url params
@@ -749,7 +827,7 @@ def sendSMS(data,template_id):
 			msg = 'Successfully Sent'
 			status = 'Active'
 
-		print("status message ",response.text.encode("utf-8"))
+		#print("status message ",response.text.encode("utf-8"))
 		SMSLog.objects.create(sms_text=data['msg'], sent_by_id=data["sender_id"], reciever=data["phone_numbers"], status=status,
 			status_message=response.text.encode("utf-8"),session_uuid=data['session_uuid'], template_id=template_id)
 		return str(response.text)

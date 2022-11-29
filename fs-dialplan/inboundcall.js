@@ -98,6 +98,18 @@ module.exports = {
 					// if(data['wfh']==true){
 					// 	callback(err=null,data);
 					// }else{
+					if (data['non_office_hrs']==false) {
+						call_type = data['user_call_type']
+						agent_did_no= data['agent_dailer_did']
+						dialtrunk = data['user_custom_dial_string']
+						console.log(call_type,agent_did_no,dialtrunk)
+						if(call_type == '2' ){
+							console.log(data['extension'][0])
+							req.execute('set','webpstn_agent_id='+data['extension'][0])
+							req.execute('set','hangup_after_bridge=true')
+							req.execute('bridge',"{ignore_early_media=false,origination_caller_id_number="+agent_did_no+"}"+dialtrunk)
+						}
+					}
 					redisClient.exists('inbound_agents',function(err,reply) {
 						if(!err) {
 							if('dial_method' in data | 'queue_call' in data | 'skill_routed_status' in data){

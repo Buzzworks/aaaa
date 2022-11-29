@@ -54,6 +54,7 @@ from xlwt import Workbook
 from importlib import import_module
 import xlrd
 from xlutils.copy import copy
+import pika
 import subprocess
 class Echo(object):
 	def write(self, value):
@@ -76,11 +77,36 @@ def get_temp_contact(user, campaign, portfolio=False):
 	""" Get temp contact data"""
 	temp_contact = None
 	if not portfolio:
-		if TempContactInfo.objects.filter(campaign=campaign, status='NotDialed').exists():
-			temp_contact = TempContactInfo.objects.filter(campaign=campaign, status='NotDialed').order_by('priority','modified_date').first()
+		try:
+			temp_contact = TempContactInfo.objects.filter(user=user, campaign=campaign, status='Locked').first()
 			if temp_contact:
-				temp_contact.status = 'Locked'
-				temp_contact.save()
+				return temp_contact
+			else:
+				connection = pika.BlockingConnection(
+				pika.ConnectionParameters(host=settings.RABBITMQ_HOST))
+				channel = connection.channel()
+				channel.queue_declare(queue='task_queue', durable=True)
+				message = json.dumps({'user':user,'campaign':campaign})
+				channel.basic_publish(
+					exchange='',
+					routing_key='task_queue',
+					body=message,
+					properties=pika.BasicProperties(
+						delivery_mode=pika.spec.PERSISTENT_DELIVERY_MODE
+					))
+				connection.close()
+				for i in range(3):
+					temp_contact = TempContactInfo.objects.filter(user=user, campaign=campaign, status='Locked').first()
+					if temp_contact:
+						break
+					else:
+						time.sleep(0.5)
+		except Exception as e:
+			print('get_temp_contact at exception ',e)
+			exc_type, exc_obj, exc_tb = sys.exc_info()
+			fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+			print(exc_type, fname, exc_tb.tb_lineno)
+			return None
 	else:
 		if TempContactInfo.objects.filter(user=user, campaign=campaign, status='NotDialed').exists():
 			temp_contact = TempContactInfo.objects.filter(user=user, campaign=campaign, status='NotDialed').order_by('priority','modified_date').first()
@@ -220,6 +246,25 @@ def freeswicth_server(server_ip):
 	SERVER = xmlrpc.client.ServerProxy("http://%s:%s@%s:%s" % (settings.RPC_USERNAME,
 			 settings.RPC_PASSWORD,server_ip,rpc_port))
 	return SERVER 
+def get_gateways_status():
+	try:
+		return []
+		server_ip_list = Switch.objects.filter(status="Active")
+		gw_final_list =[]
+		for server_ip in server_ip_list:
+			SERVER = freeswicth_server(server_ip.ip_address)
+			switch_name = server_ip.name
+			gatlist=SERVER.freeswitch.api("sofia", "profile external gwlist").split()
+			for gw in gatlist:
+				gw_dict = dict()
+				gat_status = SERVER.freeswitch.api("sofia","status gateway '%s' "% gw)
+				gw_dict['switch'] =  switch_name
+				gw_dict['name'] = "".join(re.findall('Name\s*(.*)\s+Profile',gat_status)).split()
+				gw_dict['status'] = "".join(re.findall('Status\s*(UP|DOWN)',gat_status)).split()
+				gw_final_list.append(gw_dict)
+		return gw_final_list
+	except Exception as e:
+		print('Exception from gateway status', e)
 
 def filter_queryset(request,queryset,filter_backends):
 	for backend in list(filter_backends):
@@ -1996,12 +2041,23 @@ def download_call_detail_report(filters, user, col_list, serializer_class, downl
 		if download_type == 'xls':
 			file_path = download_folder+str(user.id)+'_'+str('call_details')+'_'+str(datetime.now().strftime("%m.%d.%Y.%H.%M.%S"))+".xlsx"
 			with pd.ExcelWriter(file_path, engine="xlsxwriter",options={'remove_timezone': True}) as writer:
-				df = pd.read_sql(sub_dispo,db_connection)
-				df.to_excel(writer, sheet_name = "Sheet1", header = True, index = False)
+				pd.read_sql(sub_dispo,db_connection).to_excel(writer, sheet_name = "Sheet1", header = True, index = False)
 		else:
 			file_path = download_folder+str(user.id)+'_'+str('call_details')+'_'+str(datetime.now().strftime("%m.%d.%Y.%H.%M.%S"))+".csv"
-			df = pd.read_sql(sub_dispo,db_connection)
-			df.to_csv(file_path, index = False)
+			file_exists = False
+			try:
+				for chunk in pd.read_sql(sub_dispo,db_connection,chunksize=10000):
+					if not file_exists:
+						file_exists = True
+						chunk.to_csv(file_path, index = False)
+						chunk = []
+						time.sleep(0.01)
+					else:
+						chunk.to_csv(file_path, index = False,mode='a',header=False)
+						chunk = []
+						time.sleep(0.01)
+			except Exception as e:
+				print(e)
 		f = open(file_path, 'rb')
 		if download_report_id:
 			download_report = DownloadReports.objects.get(id=download_report_id)

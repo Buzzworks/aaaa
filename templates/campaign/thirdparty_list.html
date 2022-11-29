@@ -21,6 +21,7 @@
 	<div class="card-body">
 		<legend>ThirdParty CRM</legend>
 		<div class="">
+			<form> {%csrf_token%} </form>
 			{% include "search.html" %}  
 			<table id="thirdparty-list-table" class="table display table-striped nowrap avatar-table" style="width:100%">
 				<thead>

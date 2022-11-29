@@ -24,7 +24,7 @@ class Command(BaseCommand):
 						del d_obj['info']
 						del d_obj['channel']
 						del d_obj['id']
-						d_obj["uniqueid"] = uniqueid
+						d_obj["uniqueid"] = d_obj.uniqueid
 						c_obj = CallDetail.objects.create(**d_obj)
 						c_obj.hangup_source = 'System'
 						c_obj.created = d_obj['created']

@@ -166,6 +166,7 @@
 							<thead>
 								<tr id="column_name">
 									<th class="select-checkbox"></th>
+									<th data-data="recording_url" data-field_name=""  class="recording_url_avail"></th>
 									{% for field in all_fields.diallereventlog %}
 										{% if field == 'bill_sec' %}
 											<th data-data="{{field}}" data-field_name="{{field}}" class="talk_time_col text-capitalize">talk time</th>
@@ -173,6 +174,9 @@
 											<th data-data="{{field}}" data-field_name="{{field}}" class="text-capitalize timestamp-field">{{ field|table_header }}</th>
 										{% elif field == 'id' %}
 											<th data-data="{{field}}" class="text-capitalize">{{ field|table_header }}</th>
+
+										{% elif field == 'recording_url'%}
+
 										{% else %}
 											<th data-data="{{field}}" data-field_name="{{field}}" class="text-capitalize">{{ field|table_header }}</th>
 										{% endif %}

@@ -204,6 +204,7 @@ campaignAbandonedcalls_table = $('#campaign-abandonedcall-list').DataTable({
 	scrollX:true,
 	"destroy": true,
 	"bPaginate": false,
+	"ordering":true,"order":[[5,'desc']],
 	"searching": false,
 	"processing": true,
 	"info": false,
@@ -255,6 +256,8 @@ totalAbandonedCalls_table = $('#abandonedcall-list').DataTable({
 	"searching": false,
 	"processing": true,
 	"info": false,
+	"ordering":true,
+	"order":[[5,'desc']],
 	columns:[
 	{
 		"title": "Phone Number",
@@ -286,7 +289,6 @@ totalAbandonedCalls_table = $('#abandonedcall-list').DataTable({
 	{
 		"title": "Action",
 		render : function(data, type, row, meta){
-			console.log(row, "row")
 			if (campaign_name && campaign_name == row["campaign"]) {
 				return "<button class='btn btn-sm btn-inverse-success py-1 px-2 mc-call-btn' title='Call'>"+
 				"<i class='fa fa-phone fa-rotate-90'></i></button>"
@@ -441,7 +443,13 @@ $(document).on('click','.td-call-number',function(){
 					})
 					setTimeout( function(){
 						callmode = 'manual'
-						do_manual_call(td_call_data['customer_cid'],td_call_data['contact_id'])
+						dial_number = td_call_data['customer_cid']
+						contact_id = td_call_data['contact_id']
+						if(call_type!="2"){
+								do_manual_call(dial_number,contact_id)
+						}else{
+								WebPSTNAgentCallDial()
+						}
 						swal.close();
 						$('#crm-home').click()
 					},3000)
@@ -469,7 +477,13 @@ $(document).on('click','.td-call-number',function(){
 					setTimeout(
 					function(){
 						callmode = 'manual'
-						do_manual_call(mont_call_data.customer_cid,mont_call_data.cdrfeedback.contact_id)
+						dial_number = mont_call_data.customer_cid
+						contact_id = mont_call_data.cdrfeedback.contact_id
+						if(call_type!="2"){
+								do_manual_call(dial_number,contact_id)
+						}else{
+								WebPSTNAgentCallDial()
+						}
 						swal.close();
 						$('#crm-home').click()
 					},3000)
@@ -497,7 +511,13 @@ $(document).on('click','.td-call-number',function(){
 					setTimeout(
 					function(){
 						callmode = 'manual'
-						do_manual_call(mont_uniquecall_data.numeric,mont_uniquecall_data.contact_id)
+						dial_number = mont_uniquecall_data.numeric
+						contact_id = mont_uniquecall_data.contact_id
+						if(call_type!="2"){
+								do_manual_call(dial_number,contact_id)
+						}else{
+								WebPSTNAgentCallDial()
+						}
 						swal.close();
 						$('#crm-home').click()
 					},3000)

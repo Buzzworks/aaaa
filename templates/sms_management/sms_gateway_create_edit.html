@@ -313,6 +313,9 @@
 						$('.Add1').trigger('click')
 						$('.para-trigger').eq(count).val(key).change();
 					}
+					if(index == array.length-1){
+						$('select').select2();
+					}
 				})
 			}else{
 				$('.templates').eq(count).val(value).change();

@@ -86,6 +86,9 @@ def create_tempcontact_data_with_pandas(contacts, status, keep_user_none=False):
 
 	except Exception as e:
 		print("Exception occures from create_tempcontact_data",e)
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 	finally:
 		transaction.commit()
 		connections["crm"].close()
@@ -145,6 +148,9 @@ def fetch_callback_contact(campaign,fetch_count):
 		return fetch_count
 	except Exception as e:
 		print("Exception occures from fetch_callback_contact",e)
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 	finally:
 		transaction.commit()
 		connections["crm"].close()
@@ -354,6 +360,9 @@ def phonebook_data_bucket():
 	except Exception as e:
 		settings.R_SERVER.hset("pb_campaign_status",campaign['id'], True)
 		print("Exception occures from phonebook_data_bucket",e)
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 	finally:
 		transaction.commit()
 		connections["crm"].close()
@@ -402,6 +411,9 @@ def create_logout_entry(extension):
 									action_name='4',event_type='LOGOUT', login_duration=login_duration_time)
 	except Exception as e:
 		print("create_logout_entry :", e)
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 	finally:
 		transaction.commit()
 		connections["crm"].close()
@@ -438,6 +450,9 @@ def session_expire_check():
 			locked_tmp_data.update(status="NotDialed")
 	except Exception as e:
 		print("Exception occures from session_expire_check",e)
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 	finally:
 		transaction.commit()
 		connections["crm"].close()
@@ -451,6 +466,7 @@ def create_calldetial_from_diallereventlog(d_obj, uniqueid=None):
 		del d_obj['channel']
 		del d_obj['id']
 		del d_obj['recording_file']
+		del d_obj['callserver']
 		d_obj["uniqueid"] = uniqueid
 		c_obj = CallDetail.objects.create(**d_obj)
 		c_obj.hangup_source = 'System'
@@ -464,6 +480,9 @@ def create_calldetial_from_diallereventlog(d_obj, uniqueid=None):
 				cdr_feedback.save()
 	except Exception as e:
 		print('Exception from create_calldetial_from_diallereventlog', e)
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 	finally:
 		transaction.commit()
 		connections["crm"].close()
@@ -506,6 +525,9 @@ def update_queued_contact():
 				contact.save()
 	except Exception as e:
 		print("update_queued_contact :", e)
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 	finally:
 		transaction.commit()
 		connections["crm"].close()
@@ -529,6 +551,9 @@ def create_calldetial_missing_contact():
 			create_calldetial_from_diallereventlog(d_obj,uniqueid)
 	except Exception as e:
 		print('Exception in create_calldetial_missing_contact', e)
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 	finally:
 		transaction.commit()
 		connections["crm"].close()
@@ -548,8 +573,6 @@ def phonebook_upload():
 				PHONEBOOK_STATUS = pickle.loads(settings.R_SERVER.get("phonebook") or pickle.dumps(PHONEBOOK_STATUS))
 				PHONEBOOK_STATUS[str(phn_inst.phone_inst.id)] = 0
 				settings.R_SERVER.set("phonebook", pickle.dumps(PHONEBOOK_STATUS))
-				# filename = phn_inst.phonebook_file.name
-				# filename, file_extension = os.path.splitext(filename)
 				is_xls = False
 				if phn_inst.phonebook_file.name.endswith('.csv'):
 					data = pd.read_csv(phn_inst.phonebook_file, na_filter=False, encoding = "unicode_escape", escapechar='\\',
@@ -566,6 +589,9 @@ def phonebook_upload():
 				aps_phonebook_upload(data=data, phone_inst=phn_inst.phone_inst, duplicate_check=phn_inst.duplicate_check, action_type=phn_inst.action_type, search_type=phn_inst.search_type, column_names=phn_inst.column_names, file_extension=file_extension)
 	except Exception as e:
 		print("phonebook_upload error ", e)
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 	finally:
 		transaction.commit()
 		connections['default'].close()
@@ -592,9 +618,13 @@ def kill_unused_fs_channel():
 			elif not channel_df.empty:
 				kill_uuid = channel_df.values
 			for uuid in kill_uuid:
-				SERVER.freeswitch.api("uuid_kill",uuid)
+				print('uuidkill',uuid)
+				#SERVER.freeswitch.api("uuid_kill",uuid)
 	except Exception as e:
 		print('Exception from kill_unused_fs_channel', e)
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 	finally:
 		transaction.commit()
 		connections["default"].close()
@@ -608,6 +638,9 @@ def set_pb_campaign_status():
 		print('all campaign set to true in redis for progressive')
 	except Exception as e:
 		print('exception set_pb_campaign_status',e)
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 	finally:
 		transaction.commit()
 		connections["default"].close()
@@ -671,6 +704,9 @@ def update_leadrecycle_datetime():
 			leads.update(ldr_period_update=datetime.date(datetime.now()))
 	except Exception as e:
 		print(e)
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 	finally:
 		transaction.commit()
 		connections['default'].close()
@@ -685,6 +721,9 @@ def dump_database(host_name, db_name, user_name, db_password, backup_path='/var/
 		return 
 	except Exception as e:
 		print(e)
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 
 def dump_contact(file_path):
 	""" dumping the contact into the folder for backup"""
@@ -701,6 +740,9 @@ def delete_all_downloads():
 			report.delete()
 	except Exception as e:
 		print(e,"delete_all_downloads error")
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 
 def delete_lead_priority_after_period():
 	""" deleting the lead priority after the specific time """
@@ -722,6 +764,9 @@ def delete_lead_priority_after_period():
 					LeadListPriority.objects.filter(campaign_id=campaign.id,created_date__date__lte=last_date.date()).delete()
 	except Exception as e:
 		print(e,"delete_lead_priority_after_period error")
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 		
 def restart_all_services():
 	""" restarting all the services """
@@ -746,6 +791,9 @@ def restart_all_services():
 				print("Error Re-starting freeswitch !...........")
 	except Exception as e:
 		print(e,"restart_all_services error")
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 
 def reset_Redisdata():
 	""" resetting the redis data keys"""
@@ -762,9 +810,13 @@ def reset_Redisdata():
 		for camp in campaign:
 			settings.R_SERVER.hset("ad_campaign_status",camp['name'], True)
 			settings.R_SERVER.hset("pb_campaign_status",camp['id'], True)
+			settings.R_SERVER.hset("prog_campaign_status",camp['name'], True)
 		PhonebookBucketCampaign.objects.filter().update(agent_login_count=0)
 	except Exception as e:
 		print('Error in reset_Redisdata',e)
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 
 def sagregate_recording_file():
 	""" segregatting the recording files into the folder"""
@@ -816,6 +868,9 @@ def sticky_agent_delete():
 		# app.logger.info("Starting database backup at: " + backup_date)
 	except Exception as e:
 		print(e)
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 	finally:
 		transaction.commit()
 		connections["default"].close()
@@ -930,6 +985,9 @@ def MasterContactAutodial():
 			print("no scheduled moving are there")
 	except Exception as e:
 		print("exception in code errors",str(e))
+		exc_type, exc_obj, exc_tb = sys.exc_info()
+		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+		print(exc_type, fname, exc_tb.tb_lineno)
 
 
 

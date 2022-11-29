@@ -407,12 +407,12 @@
 		$.validate({
 		  modules: 'security'
 		});
-		//var nodejs_port = '3232';
 		socket = io(server_ip , {
 			'reconnection': true,
 			'reconnectionDelay': 1000,
 			'reconnectionDelayMax': 5000,
-			'reconnectionAttempts': 5
+			'reconnectionAttempts': 5,
+			transports: ['websocket'],
 		});
 		socketevents()
 	})

@@ -199,18 +199,20 @@ def event_dump(kwargs):
 						contact = Contact.objects.filter(numeric=kwargs.get('customer_cid')).order_by('-id').first()
 						if contact:
 							campaign_obj_sms =  Campaign.objects.filter(name=contact.campaign).first()
-						if contact and campaign_obj_sms and campaign_obj_sms.sms_gateway :
+						if contact and campaign_obj_sms and campaign_obj_sms.sms_gateway and campaign_obj_sms.sms_gateway.status == "Active":
 							trigger_params = campaign_obj_sms.sms_gateway.trigger_params
 							if trigger_params:
 								trigger_types = list(trigger_params.keys())
 								if '3' in trigger_types:
-									sms_template = SMSTemplate.objects.filter(id__in=trigger_params['3']).values('id','text')
+									sms_template = SMSTemplate.objects.filter(id__in=trigger_params['3'],status="Active").values('id','text')
 									numeric = kwargs.get('customer_cid','')
 									session_uuid = kwargs.get('session_uuid','')
 									try:
 										web_url = settings.WEB_URL
-										if not web_url:
-											sendsmsparam(campaign_obj_sms,numeric,session_uuid,sms_template)
+										if not web_url: #contact_id, campaign_obj, user_obj, primary_disp='aban'.
+											primary_dispo='aban'
+											contact_obj=str(kwargs.get('customer_cid'))
+											sendsmsparam(campaign_obj_sms,numeric,session_uuid,sms_template,user_obj,primary_dispo,contact_obj)
 										else:
 											res = requests.post(f"{web_url}/api/send_sms/",data={"campaign_id":campaign_obj_sms.id,"numeric":numeric,"abd_trigger":"true","session_uuid":session_uuid,"templates":json.dumps(list(sms_template))},verify=False)
 											print("SENDSMS RES",res)

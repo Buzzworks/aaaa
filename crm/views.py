@@ -1432,9 +1432,7 @@ class ContactUploadDataApiView(APIView):
 								section_name = field["field_name"].split(':')[0].replace(' ','_').lower()
 								field_name = field["field_name"].split(':')[1].replace(' ','_').lower()
 								check_field = field["field_name"]
-						if key not in database_crm_fields:
-							api_crm_keys.append(key)
-						elif crm_field_list == []:
+						if key not in database_crm_fields or crm_field_list == []:
 							api_crm_keys.append(key)
 					else:
 						api_crm_keys.append(key)
@@ -1468,6 +1466,8 @@ class ContactUploadDataApiView(APIView):
 						data_dict, row = crm_field_datatype_validation(check_field, row, data_dict, field)
 						if section_name not in crm_field_dict:
 							crm_field_dict[section_name] = {}
+						if action == "update" and (repr(row.get(check_field, "")).replace("'", "") == "" or repr(row.get(check_field, "")).replace("'", "") == "None"):
+							continue
 						crm_field_dict[section_name][field_name] = repr(row.get(check_field, "")).replace("'", "")
 						if crm_field_dict[section_name][field_name] =='':
 							crm_field_dict[section_name][field_name] = None
@@ -1476,7 +1476,8 @@ class ContactUploadDataApiView(APIView):
 					for custom_fields in api_crm_keys:
 						if unique_field == custom_fields:
 							uniqueid = row.get(custom_fields,None)
-							 
+						if action == "update" and (row.get(custom_fields,"")=="" or repr(row.get(custom_fields, "")).replace("'", "") == "None"):
+							continue
 						sep_col_field = custom_fields.split(":")
 						if sep_col_field[0].lower() not in crm_field_dict and len(sep_col_field) == 2:
 							crm_field_dict[sep_col_field[0].lower()] ={}

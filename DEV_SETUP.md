@@ -77,3 +77,15 @@ sudo docker ps
 ```
 sudo docker logs <container-name> -f
 ```
+
+## Latest Updates related to Rabbitmq:
+- Rabbitmq setup
+```
+echo RABBITMQ_HOST=enter_rabbitmq_host_ip >> /etc/environment
+```
+```
+cd tools/rabbitmq/
+```
+```
+./docker-instance.sh # to create rabbitmq server and worker
+```

@@ -284,6 +284,7 @@ function report_datatable(table,url,col_list,crm_fields){
 
 // custom pagination table
 function customPaginationTable(table, col_list){
+
 	var id = '#' + table.attr('id');
 	ordering = false
 	checkbox_classname = ''
@@ -363,6 +364,21 @@ function customPaginationTable(table, col_list){
 					return html
 				}
 			},
+
+
+			{
+				"targets": "recording_url_avail",
+				"orderable": false,
+				render: function(data) {
+					if(data != ""){
+						return `<span class='state-dot' style='background-color: #04B76B;'></span>`
+					} else {
+						return `<span class='state-dot' style='background-color: #FF5E6D;'></span>`
+					}
+				}
+			},
+
+
 			{
 				"targets":'recording-field',
 				"orderable": false,

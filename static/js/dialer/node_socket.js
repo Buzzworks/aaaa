@@ -6,7 +6,11 @@ var third_party_api_disp = false
 var third_party_api_sub_dispo = false
 var admin_socket = '';
 var agent_hangup_status = false
-
+var dial_number = ""
+var contact_id = ""
+var call_data = {}
+var call_data_dial = {}
+var webpstn_ans = false
 // var nodejs_port = '3233';
 // admin_socket = io('https://'+server_ip + ':' + nodejs_port, {
 //     'reconnection': true,
@@ -63,7 +67,8 @@ function prepare_data_to_store() {
 function common_function_before_page_unload (event_name, event_created_by="") {
 	agent_activity_data = prepare_data_to_store()
 	agent_activity_data["event"] = event_name
-	if(!window_reload_stop){	
+	if(!window_reload_stop){
+		webPSTNCallHangup()	
 		$.ajax({
 			type:'post',
 			headers: {"X-CSRFToken":csrf_token},
@@ -199,9 +204,20 @@ function socketevents (){
 		socket.on("sip_hangup_client", function(data){
 			if (extension == data){
 				if (user_role =='Agent' || non_agent_user){
+					if(call_type == "2"){
+						if(webpstn_ans == false){
+							$('#call-loader').fadeOut('slow');
+							$('#btnDialHangup').prop('disabled', false);
+							errorAlert("Agent mobile not reachable or not answered..")
+						}
+						webpstn_ans = false
+						$('#agent_call_txt').text('')
+					}
 					if(agent_info_vue.state!=='OnBreak'){
 						// errorAlert("Sip Hangup occured");
-						sip_error = true
+						if(call_type != "2"){
+							sip_error = true
+						}
 						if ($.inArray(agent_info_vue.state,['InCall','Feedback']) == -1){
 							var agent_activity_data = {}
 							var camp = $("#select_camp option:selected").text()
@@ -214,14 +230,14 @@ function socketevents (){
 								data: agent_activity_data,
 								success: function(data){ }
 							})
-							if(call_type == "2"){
-								$('#btnLogMeOut').click();
-							}
+							// if(call_type == "2"){
+							// 	$('#btnLogMeOut').click();
+							// }
 						}
 						else {
-							if(call_type == "2"){
-								agent_hangup_status = true
-							}
+							// if(call_type == "2"){
+							// 	agent_hangup_status = true
+							// }
 							if (Object.keys(dummy_session_details) ==0){
 								dummy_session_details = {...session_details[extension]}
 							}
@@ -259,7 +275,18 @@ function socketevents (){
 		})
 		socket.on('wfh_answer_app',function(data){
 			if(extension == data){
-				$('.preloader').fadeOut('slow');
+				$('#call-loader').fadeOut('slow');
+				$('#agent_call_txt').text('')
+				webpstn_ans = true
+				console.log(callmode,call_data_dial)
+				call_data_dial['session_details'] = JSON.stringify(session_details[extension])
+				if(callmode == 'manual' || callmode == "alternate-dial" || callmode == "redial" || callmode == 'callback'){
+					do_manual_call(dial_number,contact_id)
+				}else if(callmode == "preview" || callmode == "progressive"){
+					ProgPreviewDial(call_data_dial)
+				}else{
+					CustomerCallDial(call_data_dial)
+				}
 			}
 		})
 		socket.on("OUTBOUND_CHANNEL_ANSWER", function(data){
@@ -350,6 +377,7 @@ function socketevents (){
 						add_three_way_conference_vue.three_way_list = []
 					}
 				})
+				webPSTNCallHangup()
 				if(($("#model-popup-div").data('bs.modal') || {})._isShown == true){
 					$("#transfer-btn").prop('disabled',true)
 					$('#attr-hangup-btn').addClass('call_hanguped')
@@ -519,6 +547,7 @@ function socketevents (){
 							url: '/api/webrtc_session_setvar/',
 							data: temp_dict,
 							success: function(data){
+								DialerLogin(temp_dict['variable_sip_from_host'])
 								}
 						})
 					}
@@ -529,7 +558,15 @@ function socketevents (){
 					temp_dict['variable_sip_from_host'] = data['variable_sip_from_host'];
 					// temp_dict['campaign_name'] = campaign_name
 					session_details[extension] = temp_dict
-									
+					temp_dict['admin'] = "true"
+					$.ajax({
+						type:'post',
+						headers: {"X-CSRFToken": csrf_token},
+						url: '/api/webrtc_session_setvar/',
+						data: temp_dict,
+						success: function(data){
+							}
+					})
 				}
 			}
 		});
@@ -565,6 +602,10 @@ function socketevents (){
 		socket.on("INBOUND_CHANNEL_BRIDGE", function(inbound_data){
 			var sip_extension = inbound_data["sip_extension"]
 			if (sip_extension == extension) {
+				if(call_type == "2"){
+					inboundCall_picked = true
+					$("#incoming_reject").click()
+				}
 				dispo_vue.on_call_dispo = true
 				close_agent_sidebar()
 				agent_hangup = false

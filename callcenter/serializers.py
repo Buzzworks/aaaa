@@ -349,7 +349,7 @@ class DialTrunkSerializer(serializers.ModelSerializer):
 	is_edit = serializers.SerializerMethodField()
 	class Meta:
 		model = DialTrunk
-		fields = ('name','dial_string','channel_count','trunk_type','switch','status','prefix','country_code', 'created_by','did_range','is_edit' )
+		fields = ('name','dial_string','channel_count','trunk_type','switch','status','prefix','country_code', 'created_by','did_range','did_regex','is_edit' )
 
 	def get_is_edit(self, obj):
 		agent_logged_in_campaign = get_login_campaign()
@@ -626,7 +626,6 @@ class DiallerEventLogSerializer(serializers.ModelSerializer):
 	def get_recording_url(self,obj):
 		try:
 			if obj.recording_url:
-				print('recording_url',obj.recording_url)
 				return obj.recording_url
 			else:
 				return ''

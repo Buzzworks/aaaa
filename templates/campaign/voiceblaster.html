@@ -20,6 +20,7 @@
 <div class="card">
 	<div class="card-body">
 		<legend>VoiceBlaster</legend>
+		<form> {%csrf_token%} </form>
 		<div class="">
 			{% include "search.html" %}  
 			<table id="voiceblaster-list-table" class="table display table-striped nowrap avatar-table" style="width:100%">

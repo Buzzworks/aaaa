@@ -915,6 +915,7 @@ function showcustinfo(data){
     if(data.length != 0){
         crm_field_vue.update_crm = false
         cust_info = data;
+        var sms_val;
         sessionStorage.setItem("unique_id",cust_info["uniqueid"])
         $.each(crm_field_vue.basic_field_data,function(key,value){
             crm_field_vue.basic_field_data[key] = cust_info[key]
@@ -953,6 +954,15 @@ function showcustinfo(data){
                         }
                     })
                 }
+            })
+        }else{
+            $.each(crm_field_vue.temp_data,function(sec_key, sec_value){
+                $.each(sec_value,function(field_key, field_value){
+                    $.each(sms_templates.templates,function(key, value){
+                        var script_field = sec_key+':'+field_key
+                        $('#sms_text'+value.id).find('[data-id="'+script_field+'"]').text("")
+                    })
+                });
             })
         }
         if(sms_templates.send_sms_callrecieve){
@@ -1747,6 +1757,7 @@ var sms_templates = new Vue({
                         dispo_submit:sms_templates.send_sms_on_dispo,
                         primary_dispo:primary_dispo,
                         session_uuid:session_uuid,
+                        contact_id:sessionStorage.getItem("prev_selected_contact_id")
                     },
                     success: function(data) {
                         showSuccessToast(data['status'], 'top-center')

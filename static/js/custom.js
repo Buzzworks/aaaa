@@ -282,12 +282,12 @@ function create_agent_activity_data() {
 var socket = '';
 
 function node_connection(host) {
-    var nodejs_port = '3232';
     socket = io(host, {
         'reconnection': true,
         'reconnectionDelay': 2000,
         'reconnectionDelayMax': 5000,
-        'reconnectionAttempts': 10
+        'reconnectionAttempts': 10,
+        transports: ['websocket'],
     });
 }
 node_connection(server_ip);
@@ -390,7 +390,9 @@ $('#flexy_agent_profile li:nth-child(3),#flexy_agent_profile li:nth-child(4), .m
         if (tab_link == 'callbacks') {
             getTotalCallback();
         } else if (tab_link == 'abandonedcalls') {
-            getAbandonedCalls();
+            $("#date_filter_abandonedcalls_total").datepicker("update", '');
+            $("#enddate_filter_abandonedcalls_total").datepicker("update", '');
+            getAbandonedCalls({});
         }
         $("#contents-" + tab_link).removeClass('d-none');
         $('.page-title').text(tab_link)
@@ -603,11 +605,31 @@ $('#scSubmit').click(function() {
     $('#app_timer').countimer('stop');
     $(".modal").modal('hide');
     $('.preloader').fadeIn('fast');
+    if (call_type != "2"){
+        sip_identity = `sip:${extension}@${host}`
+        sip_host = `${host}`
+        websocket_proxy_url = `wss://${host}:7443`;
+        outbound_proxy_url = `udp://${host}:45060`;
+        sipInitialize();
+    }else{
+        DialerLogin()
+
+    }
+    // setTimeout(DialerLogin,5000)
+    
+});
+function DialerLogin(variable_sip_from_host = ""){
+    var app_time = sessionStorage.getItem("app_time");
+    var login_time = sessionStorage.getItem("login_time");
+    $('#idle_timer').countimer('stop');
+    var idle_time = sessionStorage.getItem("idle_time");
+    console.log(variable_sip_from_host)
+    // alert('tttttt')
     $.ajax({
         type: 'post',
         headers: { "X-CSRFToken": csrf_token },
         url: '/api/dailer_login/',
-        data: { "campaign_id": campaign_id, "app_time": app_time, "idle_time": idle_time },
+        data: { "campaign_id": campaign_id, "app_time": app_time, "idle_time": idle_time,'fs_ip': variable_sip_from_host, "uuid":session_details[extension]['Unique-ID'] },
         success: function(data) {
             if(agent_info_vue.isMobile()){
                 $('#mb_landing_page').addClass('d-none');
@@ -631,14 +653,15 @@ $('#scSubmit').click(function() {
                 $('.preloader').fadeOut('slow');
                 
             }else if(data['call_type'] == '2'){
+                session_details[extension] = {}
+                session_details[extension]['extension'] = extension
+                session_details[extension]['uuid'] = data['status']['ori_uuid']
+                session_details[extension]['variable_sip_from_host'] = data['status']['switch_ip']
+                $('.preloader').fadeOut('slow');
             } else {
-                sip_identity = `sip:${extension}@${host}`
-                websocket_proxy_url = `wss://${host}:`+data['wss_port'];
-                outbound_proxy_url = `udp://${host}:`+data['sip_udp_port'];
-                sipInitialize();
+                
             }
             reset_agent_login_dialer()
-            var rpc_port = data['rpc_port']
             dispo_vue.dispo_schema = data['not_on_call_dispostion'];
             dispo_vue.on_call_dispositions = data['on_call_dispositions']
             dispo_vue.not_on_call_dispostion = data["not_on_call_dispostion"]
@@ -720,7 +743,7 @@ $('#scSubmit').click(function() {
 
         }
     });
-});
+}
 function sipSessionHangup(){
     if(sipStack){
         sipStack.stop();
@@ -751,7 +774,7 @@ $('#btnLogMeOut').click(function() {
         $("#dummy-fb-time").append('<span id="fb_timer" class="pl-1"></span>')
         $('#fb_timer_div,#skip_btn_div, #pause_pro_div').addClass("d-none")
         var preview_number = ""
-        var contact_id =  sessionStorage.getItem('contact_id')
+        var con_contact_id =  sessionStorage.getItem('contact_id')
         if ($("#phone_number").text().trim() != "Empty") {
             preview_number = $("#phone_number").text().trim()
         }
@@ -764,7 +787,7 @@ $('#btnLogMeOut').click(function() {
             $('#mb_dialer_screen, #btnLogMeOut , .mb-page-header').addClass('d-none')
         }
         agent_info_vue.selected_status = 'NotReady'
-        if (session_details[extension]['Unique-ID'] || call_type == 'webrtc') {
+        if (session_details[extension]['Unique-ID'] || call_type == 'webrtc' || call_type == "2") {
             var logout_data = {
                 'uuid': session_details[extension]['Unique-ID'],
                 'switch': session_details[extension]['variable_sip_from_host'],
@@ -773,7 +796,7 @@ $('#btnLogMeOut').click(function() {
                 'campaign_name': campaign_name,
                 'preview_number': preview_number,
                 'call_type': call_type,
-                'contact_id':contact_id,
+                'con_contact_id':con_contact_id,
                 'page_reload':page_reload,
             }
             var agent_activity_data = create_agent_activity_data()
@@ -1153,6 +1176,7 @@ $("#btnNextCall").click(function() {
                             $('#show-callbacks-campaign,#show-callbacks-active,#MDPhonENumbeR').attr('disabled','disabled')
                             $('#dialpad-toggle').prop('disabled',true)
                             $("#fb_timer_div strong").text("Auto Call :")
+                            $("#btnNextCall").prop("disabled",true)
                             $("#livecall h3").removeClass().addClass("text-success").text("LIVE CALL").attr("title", "LIVE CALL");
                             // agent_info_vue.state = 'Progressive Dialling'
                             set_agentstate('Progressive Dialling')
@@ -1177,6 +1201,7 @@ $("#btnNextCall").click(function() {
                             $("#livecall h3").removeClass().addClass("text-success").text("LIVE CALL").attr("title", "LIVE CALL");
                             // agent_info_vue.state = 'Preview Dialling'
                             set_agentstate('Preview Dialling')
+                            $("#btnNextCall").prop("disabled",true)
                             $("#fb_timer").text('00:00:00');
                             $("#fb_timer").countimer('start');
                             $('#idle_timer').countimer('stop')
@@ -1243,7 +1268,7 @@ $("#btnNextCall").click(function() {
             }else if(sessionStorage.getItem("outbound") == "Preview"){
                callmode = 'preview'
             }
-            var call_data = {
+            call_data_dial = {
                 "dial_number": dial_number,
                 'campaign_name': campaign,
                 'user_name': user_name,
@@ -1253,80 +1278,110 @@ $("#btnNextCall").click(function() {
                 'outbound': sessionStorage.getItem("outbound"),
                 'callmode': callmode,
                 'lead_preview':lead_preview,
-                "campaign_id":campaign_id
+                "campaign_id":campaign_id,
+                "call_type":call_type,
             }
             var agent_activity_data = create_agent_activity_data()
-            $.extend(call_data, agent_activity_data)
-
-            $.ajax({
-                type: 'post',
-                headers: { "X-CSRFToken": csrf_token },
-                url: '/api/manual_dial/',
-                data: call_data,
-                success: function(data) {
-                    $("#wait_timer, #app_timer, #dialer_timer").text("0:0:0")
-                    $("#dialer_timer").countimer('start')
-                    manual = false
-                    if('dialed_uuid' in data){
-                        session_details[extension]['dialed_uuid'] = data['dialed_uuid']
-                    }
-                    if('dialed_number' in data){
-                        call_info_vue.dailed_numeric = data['dialed_number']
-                        sessionStorage.setItem('previous_number', data['dialed_number'])
-                        call_info_vue.callflow = 'Outbound'
-                    }
-                    if ("contact_info" in data) {
-                        showcustinfo(data['contact_info'])
-                        if (sms_templates.is_manual_sms){
-                            $('#sms_tab').removeClass('d-none')
-                        }
-                        if (email_templates.email_type == '2'){
-                            $('#email_tab').removeClass('d-none')
-                        }
-                        sessionStorage.setItem('contact_id', data["contact_info"]["id"])
-                    }
-                    ring_time = new Date($.now());
-                    $("#call-loader").fadeOut("fast")
-                    if (data['success']) {
-                        $("#ring_timer").countimer('start')
-                        HangupCss()
-                        $("#btnLogMeOut, #btnNextCall").prop("disabled", true)
-                        $("#btnParkCall").removeClass("d-none")
-                        if (sessionStorage.getItem('can_transfer') == "true"){
-                            $("#btnTransferCall").removeClass("d-none")
-                        }
-                        $("#profile-tab, #btnNextCall, #agent-callbacks-div button, #show-callbacks-active, #show-callbacks-campaign, #show-abandonedcalls-campaign, #show-campaign-lead-bucket, #show-campaign-assigned-calls, #show-camp-requeue-lead-bucket, #show-camp-assigned-dialed-calls, #show-camp-assigned-notdialed-calls").addClass("disabled")
-                        $("#btnNextCall").addClass("d-none")
-                        $("#livecall h3").removeClass().addClass("text-success").text("LIVE CALL").attr("title", "LIVE CALL");
-                        // agent_info_vue.state = 'InCall'
-                        set_agentstate('InCall')
-                    } else if ("msg" in data) {
-                        showInfoToast(data['msg'], 'top-center')
-                        $("#MDPhonENumbeR, #manual-dial-now, #dialpad-toggle, #flexy-agent-dialpad").prop("disabled", false);
-                        $("#btnNextCall").prop("disabled", false)
-                    } else {
-                        calldetail_id = data['calldetail_id']
-                        hangup_time = new Date($.now());
-                        showWarningToast(data['error'], 'top-center')
-                        if ($("#fb_timer_div").hasClass("d-none")) {
-                            $("#fb_timer_div").removeClass("d-none")
-                            $("#fb_timer_div strong").text("WrapUp Time :")
-                        }
-                        timer_on_hangup()
-                        $("#feedback_timer").countimer('start');
-                        hangup_cause_code_er = ''
-                        hangup_cause_er = 'NOT_FOUND'
-                        dialed_status_er = 'NOT_FOUND'
-                    }
-                },
-            })
+            $.extend(call_data_dial, agent_activity_data)
+            if(call_type!="2"){
+                CustomerCallDial(call_data_dial)
+            }else{
+                WebPSTNAgentCallDial()
+            }
         }
     } else {
         showWarningToast('Session details not avaliabe, Re-Login to dialler', 'top-center')
         $('#btnLogMeOut').click()
     }
 })
-
+function WebPSTNAgentCallDial(){
+    $('#call-loader').fadeIn('fast');
+    $('#agent_call_txt').text('Dialling agent mobile...')
+    var agent_dial={
+        "campaign_id":campaign_id,
+        "call_type":call_type,
+        "extension":extension,
+    }
+    $.ajax({
+        type:'post',
+        headers: { "X-CSRFToken": csrf_token },
+        url: '/api/webpstn_agent_dial/',
+        data: agent_dial,
+        success: function(data){
+            console.log(data)
+            // CustomerCallDial(call_data);
+        },
+        error: function(data){
+            $('#call-loader').fadeOut('fast');
+            let err = data['responseJSON'] ? data['responseJSON']['error'] : data['error']
+            errorAlert('OOPS!!! Something Went Wrong',err);
+        }
+    })
+}
+function CustomerCallDial(call_data_dial){
+    $.ajax({
+        type: 'post',
+        headers: { "X-CSRFToken": csrf_token },
+        url: '/api/manual_dial/',
+        data: call_data_dial,
+        success: function(data) {
+            $("#wait_timer, #app_timer, #dialer_timer").text("0:0:0")
+            $("#dialer_timer").countimer('start')
+            manual = false
+            if('dialed_uuid' in data){
+                session_details[extension]['dialed_uuid'] = data['dialed_uuid']
+            }
+            if('dialed_number' in data){
+                call_info_vue.dailed_numeric = data['dialed_number']
+                sessionStorage.setItem('previous_number', data['dialed_number'])
+                call_info_vue.callflow = 'Outbound'
+            }
+            if ("contact_info" in data) {
+                showcustinfo(data['contact_info'])
+                if (sms_templates.is_manual_sms){
+                    $('#sms_tab').removeClass('d-none')
+                }
+                if (email_templates.email_type == '2'){
+                    $('#email_tab').removeClass('d-none')
+                }
+                sessionStorage.setItem('contact_id', data["contact_info"]["id"])
+            }
+            ring_time = new Date($.now());
+            $("#call-loader").fadeOut("fast")
+            if (data['success']) {
+                $("#ring_timer").countimer('start')
+                HangupCss()
+                $("#btnLogMeOut, #btnNextCall").prop("disabled", true)
+                $("#btnParkCall").removeClass("d-none")
+                if (sessionStorage.getItem('can_transfer') == "true"){
+                    $("#btnTransferCall").removeClass("d-none")
+                }
+                $("#profile-tab, #btnNextCall, #agent-callbacks-div button, #show-callbacks-active, #show-callbacks-campaign, #show-abandonedcalls-campaign, #show-campaign-lead-bucket, #show-campaign-assigned-calls, #show-camp-requeue-lead-bucket, #show-camp-assigned-dialed-calls, #show-camp-assigned-notdialed-calls").addClass("disabled")
+                $("#btnNextCall").addClass("d-none")
+                $("#livecall h3").removeClass().addClass("text-success").text("LIVE CALL").attr("title", "LIVE CALL");
+                // agent_info_vue.state = 'InCall'
+                set_agentstate('InCall')
+            } else if ("msg" in data) {
+                showInfoToast(data['msg'], 'top-center')
+                $("#MDPhonENumbeR, #manual-dial-now, #dialpad-toggle, #flexy-agent-dialpad").prop("disabled", false);
+                $("#btnNextCall").prop("disabled", false)
+            } else {
+                calldetail_id = data['calldetail_id']
+                hangup_time = new Date($.now());
+                showWarningToast(data['error'], 'top-center')
+                if ($("#fb_timer_div").hasClass("d-none")) {
+                    $("#fb_timer_div").removeClass("d-none")
+                    $("#fb_timer_div strong").text("WrapUp Time :")
+                }
+                timer_on_hangup()
+                $("#feedback_timer").countimer('start');
+                hangup_cause_code_er = ''
+                hangup_cause_er = 'NOT_FOUND'
+                dialed_status_er = 'NOT_FOUND'
+            }
+        },
+    })
+}
 function HangupCss() {
     $('#btnDialHangup').find("i").removeClass("fa fa-phone fa-rotate-90").addClass("fas fa-stop")
     $('#btnDialHangup').removeClass("btn-success d-none").addClass("btn-danger").prop({
@@ -1387,12 +1442,68 @@ function stopped_feedback_func() {
         $('#skip_btn_div, #pause_pro_div').addClass('d-none')
     }
 }
-
+function ProgPreviewDial(call_data_dial){
+    $.ajax({
+        type: 'post',
+        headers: { "X-CSRFToken": csrf_token },
+        url: '/api/manual_dial/',
+        data: call_data_dial,
+        success: function(data) {
+            if($(this).attr("title") == "Dial Previous Call") {
+                $(this).addClass("d-none")
+            }
+            $("#wait_timer, #dialer_timer").text("0:0:0")
+            $("#dialer_timer").countimer('start');
+            manual = false
+            $("#call-loader").fadeOut("fast")
+            ring_time = new Date($.now());
+            session_details[extension]['dialed_uuid'] = data['dialed_uuid']
+            if (data['success']) {
+                // agent_info_vue.state = 'InCall'
+                set_agentstate('InCall')
+                $("#ring_timer").countimer('start');
+                $("#btnNextCall").addClass("d-none")
+                HangupCss()
+                $("#btnParkCall").removeClass("d-none")
+                if (sessionStorage.getItem('can_transfer') == "true"){
+                    $("#btnTransferCall").removeClass("d-none")
+                }
+                $("#agent-callbacks-div button").addClass("disabled")
+                $("#btnLogMeOut, #btnNextCall").prop("disabled", true)
+            }
+            else if ("info" in data) {
+                showInfoToast(data["info"], 'top-center')
+                $("#skip_btn").trigger("click")
+                $("#MDPhonENumbeR, #manual-dial-now, #dialpad-toggle, #flexy-agent-dialpad, #btnNextCall").prop("disabled", false);
+                sessionStorage.removeItem("previous_number")
+            } else {
+                calldetail_id = data['calldetail_id']
+                var previous_number = sessionStorage.getItem('previous_number','')
+                if (previous_number) {
+                    sessionStorage.setItem('previous_contact_id', $('#btnDialHangup').attr("contact_id"))
+                    $("#btnPrevCall").removeClass("d-none")
+                }
+                hangup_time = new Date($.now());
+                showWarningToast(data['error'], 'top-center')
+                if ($("#fb_timer_div").hasClass("d-none")) {
+                    $("#fb_timer_div").removeClass("d-none")
+                    $("#fb_timer_div strong").text("WrapUp Time :")
+                }
+                timer_on_hangup()
+                $("#feedback_timer").countimer('start');
+                hangup_cause_code_er = ''
+                hangup_cause_er = 'NOT_FOUND'
+                dialed_status_er = 'NOT_FOUND'
+             }
+        },
+    })
+}
 // hangup and dial call btn
 $('#btnDialHangup').click(function() {
     // var campaign_name = $("#select_camp :selected").text()
     $("#call-loader").fadeIn("fast")
     var contact_id = sessionStorage.getItem('contact_id')
+    console.log($(this).attr("title"))
     if ($(this).attr("title") == "Dial" || $(this).attr("title") == "Dial Previous Call") {
         if (Isprogressive == true || IsPreview == true) {
             if (sms_templates.is_manual_sms){
@@ -1422,16 +1533,16 @@ $('#btnDialHangup').click(function() {
         }
         $("#btnDialHangup, #btnNextCall").attr("disabled", true)
         if( $(this).attr("title") == "Dial Previous Call") {
-            var dial_number = sessionStorage.getItem('previous_number')
+            dial_number = sessionStorage.getItem('previous_number')
         }
         else {
-            var dial_number = $("#phone_number").text().trim()
+            dial_number = $("#phone_number").text().trim()
             sessionStorage.setItem('previous_number',dial_number)
         }
 
         var details = JSON.stringify(session_details[extension])
         var caller_id = sessionStorage.getItem("caller_id")
-        var call_data = {
+        call_data_dial = {
             "dial_number": dial_number,
             'campaign_name': campaign_name,
             'user_name': user_name,
@@ -1446,7 +1557,7 @@ $('#btnDialHangup').click(function() {
         sessionStorage.setItem("progressive_time_val", sessionStorage.getItem('progressive_time'))
         sessionStorage.setItem("preview_time_val", sessionStorage.getItem('preview_time'))
         var agent_activity_data = create_agent_activity_data()
-        $.extend(call_data, agent_activity_data)
+        $.extend(call_data_dial, agent_activity_data)
         if (sessionStorage.getItem("outbound") == "Progressive") {
             $("#progressive_timer").countimer('stop');
             $("#progressive_timer").text("0:0:0")
@@ -1459,61 +1570,12 @@ $('#btnDialHangup').click(function() {
             $("#fb_timer").text("0:0:0")
             callmode = 'preview'
         }
-        call_data["callmode"] = callmode
-        $.ajax({
-            type: 'post',
-            headers: { "X-CSRFToken": csrf_token },
-            url: '/api/manual_dial/',
-            data: call_data,
-            success: function(data) {
-                if($(this).attr("title") == "Dial Previous Call") {
-                    $(this).addClass("d-none")
-                }
-                $("#wait_timer, #dialer_timer").text("0:0:0")
-                $("#dialer_timer").countimer('start');
-                manual = false
-                $("#call-loader").fadeOut("fast")
-                ring_time = new Date($.now());
-                session_details[extension]['dialed_uuid'] = data['dialed_uuid']
-                if (data['success']) {
-                    // agent_info_vue.state = 'InCall'
-                    set_agentstate('InCall')
-                    $("#ring_timer").countimer('start');
-                    $("#btnNextCall").addClass("d-none")
-                    HangupCss()
-                    $("#btnParkCall").removeClass("d-none")
-                    if (sessionStorage.getItem('can_transfer') == "true"){
-                        $("#btnTransferCall").removeClass("d-none")
-                    }
-                    $("#agent-callbacks-div button").addClass("disabled")
-                    $("#btnLogMeOut, #btnNextCall").prop("disabled", true)
-                }
-                else if ("info" in data) {
-                    showInfoToast(data["info"], 'top-center')
-                    $("#skip_btn").trigger("click")
-                    $("#MDPhonENumbeR, #manual-dial-now, #dialpad-toggle, #flexy-agent-dialpad, #btnNextCall").prop("disabled", false);
-                    sessionStorage.removeItem("previous_number")
-                } else {
-                    calldetail_id = data['calldetail_id']
-                    var previous_number = sessionStorage.getItem('previous_number','')
-                    if (previous_number) {
-                        sessionStorage.setItem('previous_contact_id', $('#btnDialHangup').attr("contact_id"))
-                        $("#btnPrevCall").removeClass("d-none")
-                    }
-                    hangup_time = new Date($.now());
-                    showWarningToast(data['error'], 'top-center')
-                    if ($("#fb_timer_div").hasClass("d-none")) {
-                        $("#fb_timer_div").removeClass("d-none")
-                        $("#fb_timer_div strong").text("WrapUp Time :")
-                    }
-                    timer_on_hangup()
-                    $("#feedback_timer").countimer('start');
-                    hangup_cause_code_er = ''
-                    hangup_cause_er = 'NOT_FOUND'
-                    dialed_status_er = 'NOT_FOUND'
-                 }
-            },
-        })
+        call_data_dial["callmode"] = callmode
+        if(call_type!= "2"){
+            ProgPreviewDial(call_data_dial)
+        }else{
+            WebPSTNAgentCallDial()
+        }
     }else {
         if(!$("#contents-agent-assigned-calls").hasClass("d-none")) {
             $("#contents-agent-assigned-calls").addClass("d-none")
@@ -1523,10 +1585,11 @@ $('#btnDialHangup').click(function() {
             sessionStorage.setItem('previous_contact_id', $(this).attr("contact_id"))
             $("#btnPrevCall").removeClass("d-none")
         }
-        var call_data = {
+        call_data = {
             'switch': session_details[extension]['variable_sip_from_host'],
             'campaign_name': $("#select_camp option:selected").text(),
-            'call_type': call_type
+            'call_type': call_type,
+            'contact_id':contact_id,
         }
         if($(this).attr("title") == "Transferhangup"){
             url = '/agent/api/internal_transfercall_hangup/'
@@ -1540,6 +1603,7 @@ $('#btnDialHangup').click(function() {
                 call_data['uuid']=session_details[extension]['dialed_uuid']
                 call_data['agent_uuid_id'] =session_details[extension]['Unique-ID']
             }
+            var agent_call_hangup = true
         }
 
         agent_hangup = true
@@ -1591,9 +1655,37 @@ $('#btnDialHangup').click(function() {
                 $("#call-loader").fadeOut("fast")
             }
         })
+        if(call_type == "2" && agent_call_hangup){
+            webPSTNCallHangup()
+        }
     }
 });
-
+function webPSTNCallHangup(){
+    if(session_details[extension]['Unique-ID']!= "" && call_type == "2"){
+        var logout_data = {
+            'uuid': session_details[extension]['Unique-ID'],
+            'switch': session_details[extension]['variable_sip_from_host'],
+            'hangup_type': 'agent_call_hangup',
+            'extension': extension,
+            'campaign_name': campaign_name,
+            'call_type': call_type,
+            'contact_id':contact_id,
+            'page_reload':page_reload,
+        }
+        $.ajax({
+            type: 'post',
+            headers: { "X-CSRFToken": csrf_token },
+            url: "/api/hangup_call/",
+            data: logout_data,
+            success: function(data) {
+                session_details[extension]["Unique-ID"] = ""
+            },
+            error: function(data){
+                console.log("webPSTNCallHangup",data)
+            }
+        });
+    }
+}
 // resume and pause auto dial
 var autodial_status = false
 $('#btnResumePause').click(function() {
@@ -1814,7 +1906,7 @@ function do_manual_call(dial_number, contact_id="") {
     $("#call-loader").fadeIn("fast")
     var caller_id = sessionStorage.getItem("caller_id")
     var details = JSON.stringify(session_details[extension])
-    var call_data = {
+    call_data_dial = {
         "dial_number": dial_number,
         'campaign_name': campaign_name,
         'user_name': user_name,
@@ -1831,12 +1923,12 @@ function do_manual_call(dial_number, contact_id="") {
     }
     sessionStorage.setItem("previous_number", dial_number)
     var agent_activity_data = create_agent_activity_data()
-    $.extend(call_data, agent_activity_data)
+    $.extend(call_data_dial, agent_activity_data)
     $.ajax({
         type: 'post',
         headers: { "X-CSRFToken": csrf_token },
         url: '/api/manual_dial/',
-        data: call_data,
+        data: call_data_dial,
         success: function(data) {
             $("#idle_timer, #app_timer, #dialer_timer").text("0:0:0")
             manual = false
@@ -1971,11 +2063,15 @@ function common_manual_call_function(dial_number, data) {
                 else {
                     callmode = 'manual'
                 }
-                var contact_id = ""
                 if(data['contact_info'].length > 0){
                     contact_id = data['contact_info'][0]['id']
                 }
-                do_manual_call(dial_number,contact_id)
+                if(call_type!="2"){
+                    do_manual_call(dial_number,contact_id)
+                }else{
+                    WebPSTNAgentCallDial()
+                }
+                
             }
         }
     })
@@ -1985,15 +2081,20 @@ function common_manual_call_function(dial_number, data) {
 
 $('#manual-dial-now').click(function() {
     $('#show_contact_list').removeClass('disabled');
-    var dial_number = $("#MDPhonENumbeR").val();
+    dial_number = $("#MDPhonENumbeR").val();
     if(dial_number){
         if (extension in session_details && Object.keys(session_details[extension]).length > 0){
             var data = {'dial_number':dial_number, 'campaign':campaign_name}
             $('.breadcrumb li').find('#crm-home').trigger('click');
             sessionStorage.setItem('previous_number', dial_number)
-            var contact_id = ""
+            contact_id = ""
             callmode = 'manual'
-            do_manual_call(dial_number,contact_id)
+            if(call_type!="2"){
+                do_manual_call(dial_number,contact_id)
+            }else{
+                WebPSTNAgentCallDial()
+            }
+            // do_manual_call(dial_number,contact_id)
             // common_manual_call_function(dial_number, data)
         } else {
             showWarningToast('Session details not avaliabe, Re-Login to dialler', 'top-center')
@@ -2033,8 +2134,8 @@ $('#contact_detail_modal').on('hidden.bs.modal', function () {
 $(document).on("click", ".contact-make-call", function() {
     if($(this).attr('campaign')==campaign_name){
         if (extension in session_details && Object.keys(session_details[extension]).length > 0) {
-            var dial_number = $(this).attr('phone_number')
-            var contact_id = $(this).attr("contact_id")
+            dial_number = $(this).attr('phone_number')
+            contact_id = $(this).attr("contact_id")
             console.log(dial_number, contact_id)
             $('#show_contact_list').addClass('disabled')
             if(is_abandoned_callback) {
@@ -2043,7 +2144,11 @@ $(document).on("click", ".contact-make-call", function() {
             else {
                 callmode = 'manual'
             }
-            do_manual_call(dial_number, contact_id)
+            if(call_type!="2"){
+                do_manual_call(dial_number,contact_id)
+            }else{
+                WebPSTNAgentCallDial()
+            }
             $('#crm-home').trigger("click")
             $('#dialer-tab').trigger("click")
         } else {
@@ -2434,29 +2539,41 @@ function submitDispo(dispo = {}){
                             sessionStorage.setItem('contact_id', data["contact_id"])
                         }
                         callmode = 'redial'
-                        var contact_id = sessionStorage.getItem('contact_id', '')
+                        contact_id = sessionStorage.getItem('contact_id', '')
                         if (contact_id == "undefined") {
                             contact_id = ""
                         }
-                        var dial_number = sessionStorage.getItem('previous_number', '')
-                        do_manual_call(dial_number, contact_id)
+                        dial_number = sessionStorage.getItem('previous_number', '')
+                        if(call_type!="2"){
+                            do_manual_call(dial_number,contact_id)
+                        }else{
+                            WebPSTNAgentCallDial()
+                        }
                     }else if(call_info_vue.alt_dial == true && !sip_error && socket.connected){
                         callmode = 'alternate-dial'
-                        var dial_number = call_info_vue.selected_alt_numeric
+                        dial_number = call_info_vue.selected_alt_numeric
                         if(call_info_vue.primary_dial){
                           callmode = 'manual'
                           dial_number = call_info_vue.numeric
                         }
                         call_info_vue.primary_dial = false
-                        var contact_id = sessionStorage.getItem('contact_id', '')
+                        contact_id = sessionStorage.getItem('contact_id', '')
                         if (contact_id == "undefined") {
                             contact_id = ""
                         }
                         sessionStorage.setItem('previous_number',dial_number)
-                        do_manual_call(dial_number, contact_id)
+                        if(call_type!="2"){
+                            do_manual_call(dial_number,contact_id)
+                        }else{
+                            WebPSTNAgentCallDial()
+                        }
                     }else{
                         sms_templates.customer_mo_no=''
                         email_templates.customer_email = ''
+                        dial_number = ""
+                        contact_id = ""
+                        call_data = {}
+                        call_data_dial = {}
                         $('#email_tab').addClass('d-none')
                         callmode = 'outbound'
                         sessionStorage.removeItem('contact_id')
@@ -2699,7 +2816,7 @@ function getCampaignTotalCallback(campaign) {
 
 
 getabandonedcalls_vue = new Vue({
-    el: '#getabandoned_vue',
+    el: '#getabandonedcalls_vue',
     delimiters: ['${', '}'],
     data: {
         total_records:0,
@@ -2713,16 +2830,33 @@ getabandonedcalls_vue = new Vue({
     methods:{
         changePage(value){
             $('#nextPage_number').val(value)
-            getAbandonedCalls()
+            var filter_dict = {}
+            $('#nextPage_number').val(value)
+            filter_dict['abandoned_filter_date'] = $('#date_filter_abandonedcalls_total input').val()
+            filter_dict['abandoned_filter_date1'] = $('#enddate_filter_abandonedcalls_total input').val()
+            filter_dict['campaign_name'] = campaign_name
+            getAbandonedCalls(filter_dict)
         }
     }
 
 })
-
-
-// this function is to get total abandoned calls for agent.
-function getAbandonedCalls() {
+$('.custom_paginate_by1').change(function () {
     var filter_dict = {}
+    if($(this).attr('id') == 'custom_total_abd_page1'){
+        filter_dict['abandoned_filter_date'] = $('#date_filter_abandonedcalls_total input').val()
+        filter_dict['abandoned_filter_date1'] = $('#enddate_filter_abandonedcalls_total input').val()
+        filter_dict['campaign_name'] = campaign_name
+        getAbandonedCalls(filter_dict)
+    }else if($(this).attr('id') == 'custom_camp_abd_page1'){
+        filter_dict['abandoned_filter_date_camp'] = $('#camp_date_filter_abandonedcalls_total input').val()
+        filter_dict['abandoned_filter_date_camp1'] = $('#camp_enddate_filter_abandonedcalls_total input').val()
+        filter_dict['campaign_name'] = campaign_name
+        getCampaignAbandonedcalls(filter_dict)
+    }
+            
+ });
+// this function is to get total abandoned calls for agent.
+function getAbandonedCalls(filter_dict = {}) {
     filter_dict['page'] = $('#nextPage_number').val()
     filter_dict['paginate_by'] = $('#page_length').val()
     $.ajax({
@@ -2761,14 +2895,16 @@ getcampaignabandonedcalls_vue = new Vue({
         changePage(value){
             var filter_dict = {}
             $('#nextPage_number').val(value)
-            getCampaignAbandonedcalls(campaign_name)
+            filter_dict['abandoned_filter_date_camp'] = $('#camp_date_filter_abandonedcalls_total input').val()
+            filter_dict['abandoned_filter_date_camp1'] = $('#camp_enddate_filter_abandonedcalls_total input').val()  
+            filter_dict['campaign_name'] = campaign_name          
+            getCampaignAbandonedcalls(filter_dict)
         }
     }
 
 })
 // this function is to get total abandoned calls of current login campaign
-function getCampaignAbandonedcalls(campaign='') {
-    filter_dict = {'campaign_name':campaign}
+function getCampaignAbandonedcalls(filter_dict = {}) {
     filter_dict['page'] = $('#nextPage_number').val()
     filter_dict['paginate_by'] = $('#page_length').val()
     $.ajax({
@@ -2876,7 +3012,11 @@ $('#show-abandonedcalls-campaign').click(function() {
         '<i class="fas fa-home"></i></a></li>')
     $('#nextPage_number').val('1')
     $('#page_length').val('10')
-    getCampaignAbandonedcalls(campaign_name)
+    filter_dict = {}
+    filter_dict['campaign_name'] = campaign_name
+    $("#camp_date_filter_abandonedcalls_total").datepicker("update", '');
+    $("#camp_enddate_filter_abandonedcalls_total").datepicker("update", '');
+    getCampaignAbandonedcalls(filter_dict)
 })
 // to show total contacts agent dialed today
 $('#show-agent-totalcall-today, #mb-show-agent-totalcall-today').click(function(){
@@ -3280,7 +3420,7 @@ $(document).on('click', '.filter_contact', function(){
         filter_dict['cpm_filter_date'] = $('#date_filter_monthly input').val()
         filter_dict['disposition'] = dispo_name
         CallPerMonth(filter_dict)
-    }else if ($(this).attr('id') == 'cpmu_filter_contact_unique') {
+    } else if ($(this).attr('id') == 'cpmu_filter_contact_unique') {
         dispo_name = $('#fetch_dispo_count_monthly_unique').find('.dispo_count_btn span').text()
         if(dispo_name == 'All Dispositions'){
             dispo_name = ''
@@ -3291,6 +3431,32 @@ $(document).on('click', '.filter_contact', function(){
         }
         filter_dict['disposition'] = dispo_name
         UniqueCallPerMonth(filter_dict)
+    } else if($(this).attr('id') == 'total_abd_filter_contact'){
+        filter_dict['abandoned_filter_date'] = $('#date_filter_abandonedcalls_total input').val()
+        filter_dict['abandoned_filter_date1'] = $('#enddate_filter_abandonedcalls_total input').val()
+        filter_dict['campaign_name'] = campaign_name
+        if (filter_dict['abandoned_filter_date'] == ''){
+            $("#end_timeError1").text("Start date field is empty");
+            $("#end_timeError1").show();
+            $("#end_timeError").hide();
+        }else if (filter_dict['abandoned_filter_date1'] == ''){
+            $("#end_timeError").text("End date field is empty");
+            $("#end_timeError").show();
+            $("#end_timeError1").hide();
+        }else if (filter_dict['abandoned_filter_date'] > filter_dict['abandoned_filter_date1']){
+            $("#end_timeError").text("End Date should be greater than Start date");
+            $("#end_timeError").show();
+            $("#end_timeError1").hide();
+        }else{
+            $("#end_timeError").hide();
+            $("#end_timeError1").hide();
+            getAbandonedCalls(filter_dict);
+        }
+    }else if ($(this).attr('id') == 'camp_total_abd_filter_contact'){
+            filter_dict['abandoned_filter_date_camp'] = $('#camp_date_filter_abandonedcalls_total input').val()
+            filter_dict['abandoned_filter_date_camp1'] = $('#camp_enddate_filter_abandonedcalls_total input').val()
+            filter_dict['campaign_name'] = campaign_name       
+            getCampaignAbandonedcalls(filter_dict)
     }
     if(agent_info_vue.isMobile()){
         $('.mb-filter-modal').modal('hide');
@@ -3527,7 +3693,13 @@ function makeCallbackcall(cb_numeric, cb_campaign, cb_user, cb_contact_id) {
                         swal.close();
                         is_callback = true;
                         callmode = "callback"
-                        do_manual_call(cb_numeric,cb_contact_id)
+                        dial_number = cb_numeric
+                        contact_id = cb_contact_id
+                        if(call_type!="2"){
+                            do_manual_call(dial_number,contact_id)
+                        }else{
+                            WebPSTNAgentCallDial()
+                        }
                         $('#notification_modal').modal('hide')
                         $('#crm-home').trigger("click")
                         $('#dialer-tab').trigger("click")
@@ -3555,7 +3727,14 @@ function makeCallbackcall(cb_numeric, cb_campaign, cb_user, cb_contact_id) {
                 var data = {'dial_number':cb_numeric, 'campaign':cb_campaign}
                 is_callback = true
                 swal.close();
-                do_manual_call(cb_numeric, data)
+                dial_number = cb_numeric
+                contact_id = 0
+                if(call_type!="2"){
+                    do_manual_call(dial_number,data)
+                }else{
+                    WebPSTNAgentCallDial()
+                }
+                // do_manual_call(cb_numeric, data)
             }
         }, 3000)
 }

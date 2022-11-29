@@ -258,6 +258,8 @@
 									<th data-data="ll_notdialed_count">Not Dialled</th>
 									<th data-data="ll_queuecall_count">Queued</th>
 									<th data-data="ll_dialed_count">Dialled</th>
+									<th data-data="ll_auto_feedback_count">AutoFeedBack</th>
+									<th data-data="ll_auto_wrapup_count">AutoWrapUp</th>
 									<th data-data="totalcalls_today">Total Calls Today</th>
 									<th data-data="queueLoginagents_count">Login Agents</th>
 								</tr>
@@ -393,6 +395,28 @@
 								<th data-data="name">Service Name</th>
 								<th data-data="since">Last Updated Date</th>
 								<th data-data="uptime">Up/Down Time</th>
+							</tr>
+						</thead>
+						<tbody class="text-center"></tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="row" style="padding-top: 30px;">
+		<div class="col-md-7 col-sm-12">
+			<div class="card">
+				<div class="card-body">
+					<h4 class="card-title"><i class="fas fa-signal"></i>Gateway Status</h4>
+					<table id="gateway_status_table" class="display table-striped nowrap" style="width: 100%" >
+						<thead class="text-center">
+							<tr>
+								<th data-data="switch">Switch</th>
+								<th data-data="name">Gateway</th>
+								<th data-data="status">Status</th>
+								{% if request.user.is_superuser %}
+								<th data-data="id" class="action_btn"></th>
+								{% endif %}
 							</tr>
 						</thead>
 						<tbody class="text-center"></tbody>
@@ -608,6 +632,7 @@ $(document).ready(function(){
 		$('#break_count').text(`{{break_count}}`)
 		trunk_status_table.rows.add({{trunks_data|safe}}).draw(false).columns.adjust()
 		services_status_table.rows.add({{services_data|safe}}).draw(false).columns.adjust()
+		gateway_status_table.rows.add({{gateway_status|safe}}).draw(false).columns.adjust()
 		// var nodejs_port = '3232';
 		// socket = io(server_ip  + ':' + nodejs_port, {
 		// 	'reconnection': true,

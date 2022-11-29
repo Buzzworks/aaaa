@@ -5,6 +5,8 @@ from callcenter.models import DiallerEventLog
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.jobstores.memory import MemoryJobStore
 from datetime import datetime, timedelta
+from django.db import connection, connections
+from django.db import transaction
 from django.core.files import File
 from os import listdir
 ENABLE = False
@@ -24,8 +26,9 @@ def recording_file_transfer():
 		try:
 			push_rec_status = settings.R_SERVER.get("push_rec_status")
 			if not push_rec_status or push_rec_status.decode('utf-8') == 'False':
-				dialereventlog_emty_rec = DiallerEventLog.objects.filter(recording_file="",created__date__gte='2022-08-01',callserver=settings.FS_INTERNAL_IP)
+				dialereventlog_emty_rec = DiallerEventLog.objects.filter(recording_file="",created__date__gte='2022-08-01',callserver=settings.FS_INTERNAL_IP).order_by('created')
 				if dialereventlog_emty_rec:
+					print('rec_mv_started')
 					settings.R_SERVER.set("push_rec_status", True)
 					for dialereventlog in dialereventlog_emty_rec:
 						if dialereventlog.session_uuid:
@@ -40,11 +43,14 @@ def recording_file_transfer():
 								start = ind - 16 #len("11-04-2022-17-45")
 								end = ind+len(ele)
 								file_path = settings.RECORDING_ROOT+"/"+all_rec_files[start:end]
+								print(file_path)
 								save_recordings(dialereventlog,file_path)
 							else:
 								print('File not exists ::',file_path)
 					settings.R_SERVER.set("push_rec_status", False)	
 				print("Recordings Moved to Bucket")
+			else:
+				print("Status is True")
 		except Exception as e:
 
 			settings.R_SERVER.set("push_rec_status", False)	
@@ -52,6 +58,9 @@ def recording_file_transfer():
 			exc_type, exc_obj, exc_tb = sys.exc_info()
 			fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
 			print(exc_type, fname, exc_tb.tb_lineno)
+		finally:
+			transaction.commit()
+			connections['default'].close()
 def save_recordings(dialereventlog,file_path):
 	# if (dialereventlog.connect_time or dialereventlog.dialed_status=='Connected'):
 	f = open(file_path, 'rb')
@@ -64,10 +73,11 @@ def missing_recording_transfer():
 	Start APSchedular for autodialing.
 	"""
 	global ENABLE
+	settings.R_SERVER.set("push_rec_status", False)
 	sched.add_jobstore(MemoryJobStore(), 'list')
 	execution_time = datetime.now() + timedelta(minutes=0.1)
 	sched.add_job(recording_file_transfer,'interval',seconds=3600, start_date=execution_time,
-						   id='autodial', jobstore='list')
+						   id='recording_file_transfer', jobstore='list')
 	if sched.state == 0:
 		sched.start()
 if __name__ == '__main__':

@@ -16,7 +16,8 @@
 	var io = require('socket.io')(socket_server);
 	socket_server.listen(3233,'0.0.0.0')
 	socket_server.timeout = 0;
-	
+	const redis_adapter = require("socket.io-redis")
+	io.adapter(redis_adapter({host : process.env.REDIS_URL, port : process.env.REDIS_PORT}))
 	var redis = require('redis');
 	leadlist_details_data = redis.createClient({host: process.env.REDIS_URL,port: process.env.REDIS_PORT});
 	leadlist_details_data.subscribe('lead-details');
@@ -380,6 +381,20 @@ inbound_server.on('CONNECT', function (req) {
 		})
 
 	 	req.on('CHANNEL_ANSWER', function (req) {
+			if ('variable_webpstn_agent_id' in req.body && req.body['variable_webpstn_agent_id']){
+				req.execute('set','disposition=Connected')
+				req.execute('set', 'cc_customer=${destination_number}');
+				req.execute('set', 'cc_export_vars=cc_customer,cc_uname,disposition');
+				req.execute("record_session",`/var/spool/freeswitch/default/${date_time}_${destination_number}_${dialed_uuid}.mp3`)
+				io.emit("INBOUND_CHANNEL_BRIDGE",{"sip_extension":req.body['variable_webpstn_agent_id'],
+										"customer_number":destination_number,"dialed_uuid":dialed_uuid,
+										"call_timestamp":req.body['Event-Date-Timestamp'],"campaign":req.body['variable_campaign']})
+				inbound.inboundcall_dis_alert(req.body['variable_webpstn_agent_id'],dialed_uuid,state='answer',function(err,data){
+					dict_data = {'dialed_uuid':dialed_uuid,'extension':data}
+					io.emit("inbound_notanswer_agents",dict_data)
+				})
+				return util.log("Inbound_webpstn_ans")
+			}
 		 		if (req.body['variable_ibc_popup']=='True' && req.body['variable_queue_call']=='False'){
 			 		answered_agent = req.body['variable_cc_agent']
 			 		if (answered_agent){
@@ -465,6 +480,11 @@ inbound_server.on('CONNECT', function (req) {
 		})
 
 		req.on('CHANNEL_HANGUP', function (req) {
+			if ('variable_webpstn_agent_id' in req.body && req.body['variable_webpstn_agent_id']){
+				io.emit("INBOUND_CHANNEL_HANGUP",{"sip_extension":req.body['variable_webpstn_agent_id'],"ibc_popup":req.body['variable_ibc_popup'],"queue_call":req.body['variable_queue_call']})
+				inbound.inboundcall_del_alert(dialed_uuid)
+				return util.log("INBOUND_CHANNEL_HANGUP")
+			}
 	 		dialed_uuid = req.body['Unique-ID']
 	 		if (req.body['variable_ibc_popup']=='True' | req.body['variable_queue_call']=='False'){
 	 			inbound.inboundcall_dis_alert(answered_agent='',dialed_uuid,state='hangup',function(err,data){
@@ -582,4 +602,3 @@ autodial_server.timeout = 0;
 }).call(this);
 
 // Emergency logout event from admin
-

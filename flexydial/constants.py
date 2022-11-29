@@ -197,6 +197,8 @@ CONTACT_STATUS = (
 	('Queued-Abandonedcall','Queued-Abandonedcall'),
 	('Queued-Callback','Queued-Callback'),
 	('Dialed-Queued','Dialed-Queued'),
+	('AutoFeedback','AutoFeedback'),
+	('AutoWrapUp','AutoWrapUp'),
 )
 ACTION = (
 	(1, 'Creation'),

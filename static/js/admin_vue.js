@@ -55,6 +55,8 @@ function get_updates() {
             trunk_status_table.rows.add(data['trunks_data']).draw(false).columns.adjust()
             services_status_table.clear()
             services_status_table.rows.add(data['services_data']).draw(false).columns.adjust()
+            gateway_status_table.clear();
+            gateway_status_table.rows.add(data['gateway_status']).draw(false).columns.adjust()
         }
     })
 }
@@ -520,7 +522,19 @@ $(document).ready(function() {
             }
         }]
     })
-
+    gateway_status_table = $('#gateway_status_table').DataTable({
+            scrollX:true,
+            overflowX:'auto',
+            searching: false,
+            lengthChange: false,
+            columnDefs: [{
+                "targets": "action_btn",
+                orderable: false,
+                render: function(data) {
+                    return `<i ></i>`;
+                }
+            }]
+    })
     $(document).on('click', '.reset_trunk_channels', function(){
         trunk_id = $(this).data('trunk_id')
         swal({

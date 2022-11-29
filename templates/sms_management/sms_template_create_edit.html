@@ -155,7 +155,18 @@
 			editorField_dict['text'] = editorField_dict['value'] = value
 			editorField_list.push(editorField_dict)
 		})
-		addScriptEditior(editorField_list,height=100)
+
+		other_fields = {{other_fields|safe}}
+		var otherField_list = []
+		$.each(other_fields, function(index,value){
+			var otherField_dict = {}
+			otherField_dict['text'] = otherField_dict['value'] = value
+			otherField_list.push(otherField_dict)
+		})
+
+
+		addScriptEditior(editorField_list,otherField_list,height=100)
+
 		{% if sms_template.template_type == '0' %}
 			$(".camp_required").addClass("d-none")
 	        $("#sms_campaign_select").removeAttr("data-validation")

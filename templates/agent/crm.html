@@ -7,6 +7,18 @@
 {% endblock agent-breadcrumb %}
 
 {% block agent-content %}
+{% block extra-stylesheets %}
+	<link rel="stylesheet" href="{% static 'melody/vendors/summernote/dist/summernote-bs4.css' %}">
+	<style type="text/css">
+#end_timeError{
+	color: rgb(138, 25, 25);
+}
+#end_timeError1{
+	color: rgb(138, 25, 25);
+}
+</style>
+
+{% endblock extra-stylesheets %}
 <script src="{% static 'js/socket.io.js' %}"></script>
 <div id="mb_dialer_screen" class="d-none d-sm-block">
 	<div class="d-sm-none">
@@ -756,9 +768,55 @@
 	<div id="contents-abandonedcalls" class="row d-none">
 		<div class="card col-md-12 p-3">
 			<h6 class="card-title mobile-tab-header"><a id="crm-home" class="p-2 mr-2 d-sm-none"><i class="fas fa-arrow-left"></i></a>Total AbandonedCalls</h6>
+			<div class="modal mb-filter-modal" id="total_abandoned_filter_modal" tabindex="-1" role="dialog" aria-labelledby="total_abandoned_filter_modal" aria-hidden="true">
+				<div class="modal-dialog modal-lg mb-4 mb-sm-0" role="document">
+					<div class="modal-content border-0">
+						<div class="modal-header p-3 border-0 d-sm-none">
+							<h5 class="modal-title" id="">Filter Your Search</h5>
+							<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+								<span aria-hidden="true">&times;</span>
+							</button>
+						</div>
+						<div class="modal-body p-3 p-sm-0">
+							<div class="row">
+								<div class="col-sm-2">
+									<div class="form-group mb-2">
+										<label>Start Date :</label>
+										<div id="date_filter_abandonedcalls_total" class="input-group date">
+											<input type="text" class="form-control form-control-sm" name="callback_total_date" placeholder="Start Date">
+											<span class="input-group-addon input-group-append border-left">
+												<span class="far fa-calendar input-group-text p-1"></span>
+											</span>
+										</div>
+										<span id="end_timeError1"></span>
+									</div>
+								</div>
+								<div class="col-sm-2">
+									<div class="form-group mb-2">
+										<label>End Date :</label>
+                                        <div id="enddate_filter_abandonedcalls_total" class="input-group date datepicker">
+											<input type="text" class="form-control form-control-sm" name="callback_total_date" placeholder="End Date">
+											<span class="input-group-addon input-group-append border-left">
+												<span class="far fa-calendar input-group-text p-1"></span>
+											</span>
+                                        </div>
+										<span id="end_timeError"></span>
+									</div>
+								</div>
+								<div class="col-sm-1 d-none d-sm-block">
+									<button type="button" class="btn btn-inverse-dark p-1 filter_contact mt-4" id="total_abd_filter_contact">
+										<i class="fas fa-filter"></i>
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+            </div>
+ 
 			<table id="abandonedcall-list" class="table display table-striped nowrap" style="width:100%">
 			</table>
-			<div id="getabandoned_vue" class="row pt-1">
+			<div id="getabandonedcalls_vue" class="row pt-1">
 				<div class="col-md-5">
 					<div class="custome_pagination_info">
 						Showing ${start_index} to ${end_index} of ${total_records} entries
@@ -803,6 +861,51 @@
 	<div id="contents-campain-abandonedcalls" class="row d-none">
 		<div class="card col-md-12 p-0 p-sm-3 pb-3">
 			<h6 class="card-title mobile-tab-header"><a id="crm-home" class="p-2 mr-2 d-sm-none"><i class="fas fa-arrow-left"></i></a>Campaign AbandonedCalls</h6>
+			<div class="modal mb-filter-modal" id="total_abandoned_filter_modal" tabindex="-1" role="dialog" aria-labelledby="total_abandoned_filter_modal" aria-hidden="true">
+				<div class="modal-dialog modal-lg mb-4 mb-sm-0" role="document">
+					<div class="modal-content border-0">
+						<div class="modal-header p-3 border-0 d-sm-none">
+							<h5 class="modal-title" id="">Filter Your Search</h5>
+							<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+								<span aria-hidden="true">&times;</span>
+							</button>
+						</div>
+						<div class="modal-body p-3 p-sm-0">
+							<div class="row">
+								<div class="col-sm-2">
+									<div class="form-group mb-2">
+										<label>Start Date :</label>
+										<div id="camp_date_filter_abandonedcalls_total" class="input-group date">
+											<input type="text" class="form-control form-control-sm" name="callback_total_date" placeholder="Start Date">
+											<span class="input-group-addon input-group-append border-left">
+												<span class="far fa-calendar input-group-text p-1"></span>
+											</span>
+										</div>
+										<span id="end_timeError1"></span>
+									</div>
+								</div>
+								<div class="col-sm-2">
+									<div class="form-group mb-2">
+										<label>End Date :</label>
+										<div id="camp_enddate_filter_abandonedcalls_total" class="input-group date datepicker">
+											<input type="text" class="form-control form-control-sm" name="callback_total_date" placeholder="End Date">
+											<span class="input-group-addon input-group-append border-left">
+												<span class="far fa-calendar input-group-text p-1"></span>
+											</span>
+										</div>
+										<span id="end_timeError"></span>
+									</div>
+								</div>
+								<div class="col-sm-1 d-none d-sm-block">
+									<button type="button" class="btn btn-inverse-dark p-1 filter_contact mt-4" id="camp_total_abd_filter_contact">
+										<i class="fas fa-filter"></i>
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
 			<table id="campaign-abandonedcall-list" class="table display table-striped nowrap" style="width:100%"></table>
 			<div id="getcampaignabandonedcalls_vue" class="row pt-1">
 				<div class="col-md-5">
@@ -1884,10 +1987,10 @@
 	var non_agent_user 		= {% if non_agent_user or request.user.is_superuser  %} true {% else %} false {% endif %}
 </script>
 {% if user.call_type == 'webrtc' %}
-<!--<script src="{% static 'webrtc/sip.js' %}"></script>
-<script src="{% static 'webrtc/sip_session.js' %}"></script>-->
-<script src="{% static 'webrtc/jssip.min.js' %}"></script>
-<script src="{% static 'webrtc/jssip_session.js' %}"></script>
+<script src="{% static 'webrtc/sip.js' %}"></script>
+<script src="{% static 'webrtc/sip_session.js' %}"></script>
+{% comment %} <script src="{% static 'webrtc/jssip.min.js' %}"></script>
+<script src="{% static 'webrtc/jssip_session.js' %}"></script> {% endcomment %}
 {% endif %}
 <script src="{% static 'js/audioplayer.js'%}"></script>
 <script src="{% static 'js/agent_datatable.js'%}"></script>
@@ -2013,6 +2116,56 @@
 			$('[data-toggle="popover"]').popover('hide');
 		}
 	})
-
+	$('#date_filter_abandonedcalls_total').datepicker({
+        format: 'yyyy-mm-dd',
+    }).on('changeDate', function(e){
+        var a = new Date()
+        var date = e.format();
+        var d = new Date(date + " 00:00:00");
+        d.setMonth(d.getMonth()+1);
+        if (d > a){
+            $('#enddate_filter_abandonedcalls_total').datepicker('destroy').datepicker({
+            startDate: date,
+            endDate: a,
+            format: 'yyyy-mm-dd',
+            autoclose: true,
+        });
+        }else{
+            $('#enddate_filter_abandonedcalls_total').datepicker('destroy').datepicker({
+            startDate: date,
+            endDate: d,
+            // endDate: d && a,
+            // maxDate: today ,
+            format: 'yyyy-mm-dd',
+            autoclose: true,
+        });
+        }
+    });
+	
+	$('#camp_date_filter_abandonedcalls_total').datepicker({
+				format: 'yyyy-mm-dd',
+			}).on('changeDate', function(e){
+				var a = new Date()
+				var date = e.format();
+				var d = new Date(date + " 00:00:00");
+				d.setMonth(d.getMonth()+1);
+				if (d > a){
+					$('#camp_enddate_filter_abandonedcalls_total').datepicker('destroy').datepicker({
+					startDate: date,
+					endDate: a,
+					format: 'yyyy-mm-dd',
+					autoclose: true,
+				});
+				}else{
+					$('#camp_enddate_filter_abandonedcalls_total').datepicker('destroy').datepicker({
+					startDate: date,
+					endDate: d,
+					// endDate: d && a,
+					// maxDate: today ,
+					format: 'yyyy-mm-dd',
+					autoclose: true,
+				});
+				}
+	});
 </script>
 {% endblock agent-extra-js %}

@@ -276,7 +276,6 @@ def add_user(domain,**kwargs):
 		SERVER.freeswitch.api("callcenter_config",
 				"agent set busy_delay_time %s %s" % (extension,
 					user.busy_delay_time))
-		SERVER.freeswitch.api("reload", "mod_callcenter")
 	except socket.error as e:
 		print ("RPC Error %s: Freeswitch RPC module may not be" \
 				"loaded or properly configured" % e)
@@ -317,7 +316,7 @@ def add_user_rpc(**kwargs):
 		print("===============================")
 	except Exception as e:
 		print("emailing  the report error ",e)
-
+@transaction.atomic
 def del_user_rpc(**kwargs):
 	""" This method is used to delete the freeswitch rpc users """
 	try:
@@ -334,9 +333,12 @@ def del_user_rpc(**kwargs):
 	except socket.error as v:
 		print ("RPC Error %s: Freeswitch RPC module may not be" \
 				"loaded or properly configured" % v[0])
+	except Exception as e:
+		print("error in del_user_rpc is",e)
 	finally:
-		transaction.commit()
-		connections['default'].close()
+		# transaction.commit() #commenting as for atomic
+		# connections['default'].close() #commenting as for atomic connections will close auto
+		print()
 
 def camp_add_user(SERVER,user):
 	""" This method used to add the campaign and users list  into freeswitch"""
@@ -453,7 +455,7 @@ def user_campaign_rpc(**kwargs):
 	finally:
 		transaction.commit()
 		connections['default'].close()
-
+@transaction.atomic
 def group_campaign_rpc(**kwargs):
 	""" this method create a group in campaign with freeswitch """
 	try:
@@ -478,10 +480,14 @@ def group_campaign_rpc(**kwargs):
 	except socket.error as v:
 		print ("RPC Error %s: Freeswitch RPC module may not be" \
 				"loaded or properly configured" % v[0])
+	except Exception as e:
+		print("error in group_campaign_rpc is",e)
 	finally:
-		transaction.commit()
-		connections['default'].close()
+		# transaction.commit() #commenting as for atomic
+		# connections['default'].close() #commenting as for atomic connections will close auto
+		print("")
 
+@transaction.atomic
 def del_campaign_rpc(**kwargs):
 	""" this method deletes the created campaign in the freeswitch """
 	try:
@@ -496,9 +502,12 @@ def del_campaign_rpc(**kwargs):
 	except socket.error as v:
 		print ("RPC Error %s: Freeswitch RPC module may not be" \
 				"loaded or properly configured" % v[0])
+	except Exception as e:
+		print("error in del_campaign_rpc is",e)
 	finally:
-		transaction.commit()
-		connections['default'].close()
+		# transaction.commit() #commenting as for atomic
+		# connections['default'].close() #commenting as for atomic connections will close auto
+		print("")
 
 def usr_campaign_switch_rpc(**kwargs):
 	""" this method will create the user campaign and switch config in freeswith """

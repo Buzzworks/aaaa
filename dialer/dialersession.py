@@ -213,6 +213,7 @@ def dial(*args,**kwargs):
 			hangup_time = datetime.now()
 			if kwargs['contact_id']:
 				TempContactInfo.objects.filter(id=kwargs['contact_id']).delete()
+				Contact.objects.filter(id=kwargs['contact_id']).update(status='AutoFeedback')
 				contacts = TempContactInfo.objects.filter(id=kwargs['contact_id'])
 				delete_lead_priority(campaign_obj, contacts)
 			if '+OK' in dial_status:
