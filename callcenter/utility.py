@@ -246,9 +246,14 @@ def freeswicth_server(server_ip):
 	SERVER = xmlrpc.client.ServerProxy("http://%s:%s@%s:%s" % (settings.RPC_USERNAME,
 			 settings.RPC_PASSWORD,server_ip,rpc_port))
 	return SERVER 
+
+def gateway_status_redis():
+	gateway_status=pickle.loads(settings.R_SERVER.get("gateway_status") or pickle.dumps({}))
+	return gateway_status
+
 def get_gateways_status():
 	try:
-		return []
+		# return []
 		server_ip_list = Switch.objects.filter(status="Active")
 		gw_final_list =[]
 		for server_ip in server_ip_list:
@@ -256,12 +261,14 @@ def get_gateways_status():
 			switch_name = server_ip.name
 			gatlist=SERVER.freeswitch.api("sofia", "profile external gwlist").split()
 			for gw in gatlist:
-				gw_dict = dict()
+				gateway_status={}
 				gat_status = SERVER.freeswitch.api("sofia","status gateway '%s' "% gw)
-				gw_dict['switch'] =  switch_name
-				gw_dict['name'] = "".join(re.findall('Name\s*(.*)\s+Profile',gat_status)).split()
-				gw_dict['status'] = "".join(re.findall('Status\s*(UP|DOWN)',gat_status)).split()
-				gw_final_list.append(gw_dict)
+				# gateway_status=pickle.loads(settings.R_SERVER.get("gateway_status") or pickle.dumps({}))
+				gateway_status['switch'] = switch_name
+				gateway_status['name'] = "".join(re.findall('Name\s*(.*)\s+Profile',gat_status)).split()
+				gateway_status['status'] = "".join(re.findall('Status\s*(UP|DOWN)',gat_status)).split()
+				gw_final_list.append(gateway_status)
+			settings.R_SERVER.set("gateway_status", pickle.dumps(gw_final_list))
 		return gw_final_list
 	except Exception as e:
 		print('Exception from gateway status', e)
