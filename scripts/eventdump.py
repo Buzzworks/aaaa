@@ -16,7 +16,7 @@ from callcenter.models import (
 	User,
 	UserVariable,
 	Campaign,
-	CallDetail,
+	CallDetail,DiallerEventLog,
 	CallBackContact,Notification,Abandonedcall,
 	StickyAgent,
 	CdrFeedbck,
@@ -268,6 +268,9 @@ def event_dump(kwargs):
 			cdr_save(model,kwargs,campaign_obj,user_obj,primary_dispo, campaign_name)
 	except Exception as e:
 		print("erro from event_dump : %s"%(e))
+		time.sleep(1)
+		if e.__class__.__name__ == 'InterfaceError' or e == 'connection already closed':
+			missing_report(kwargs,e)
 		exc_type, exc_obj, exc_tb = sys.exc_info()
 		fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
 		print(exc_type, fname, exc_tb.tb_lineno)
@@ -275,6 +278,85 @@ def event_dump(kwargs):
 		transaction.commit()
 		connections["crm"].close()
 		connections["default"].close()
+
+import csv
+import uuid
+import pandas as pd
+import os.path
+import datetime
+def missing_report(kwargs,e):
+	try:
+		download_folder = settings.MEDIA_ROOT+"/upload/"+"missingreports.csv" 
+		dic=kwargs             
+		s=uuid.UUID(dic['session_uuid']).hex
+		session_uuid=uuid.UUID(s)
+		session_id=dic['session_uuid']
+		if DiallerEventLog.objects.filter(session_uuid=session_uuid).exists(): 
+			file_exists = os.path.isfile(download_folder)
+			with open(download_folder, 'a') as f:
+				headers=['customer_cid','usertype','contact_id','campaign','user','phonebook','session_uuid','a_leg_uuid','b_leg_uuid','init_time','ring_time','connect_time','wait_time','hold_time','media_time',
+				'callflow','call_mode','destination_extension','transfer_history','call_duration','bill_sec','ivr_duration','hangup_time','hangup_cause','hangup_cause_code','channel','dialed_status','info','dtmf','caller_id','unique_id','wfh_call','callserver']
+				writer = csv.DictWriter(f, delimiter=',', lineterminator='\n',fieldnames=headers)
+				if not file_exists:
+					writer.writeheader()
+				else:
+					writer.writerow(dic)
+			call_detail_data = pd.read_csv(download_folder,na_filter=False)  
+			call_detail_data=call_detail_data.drop_duplicates()
+			campaign = Campaign.objects.filter(name=kwargs.get('campaign')).first()
+			user_obj = UserVariable.objects.filter(extension=kwargs.get('user')).first()
+			username = User.objects.filter(username=user_obj.user.username).first()
+			init_time=kwargs.get('init_time')
+			ring_time=kwargs.get('ring_time')
+			connect_time=kwargs.get('connect_time')
+			wait_time=kwargs.get('wait_time')
+			hold_time=kwargs.get('hold_time')
+			media_time=kwargs.get('media_time')
+			call_duration=kwargs.get('call_duration')
+			bill_sec=kwargs.get('bill_sec')
+			ivr_duration=kwargs.get('ivr_duration')
+			for index, row in call_detail_data.iterrows():	
+				dialler_event_dict = {}
+				dialler_event_dict["customer_cid"] = row["customer_cid"]
+				dialler_event_dict["contact_id"] = row["contact_id"]
+				dialler_event_dict["campaign"] = campaign
+				dialler_event_dict["user"] = username
+				dialler_event_dict["phonebook"] = row["phonebook"]
+				dialler_event_dict["session_uuid"] = row['session_uuid']
+				dialler_event_dict["a_leg_uuid"] = row["a_leg_uuid"]
+				dialler_event_dict["b_leg_uuid"] = row["b_leg_uuid"]
+				dialler_event_dict["init_time"] = format_time(init_time)
+				dialler_event_dict["ring_time"] = format_time(ring_time)
+				if row["connect_time"]:
+					dialler_event_dict["connect_time"] = format_time(connect_time)
+				if row["wait_time"]:
+					dialler_event_dict["wait_time"] = format_time(wait_time)
+				if row["hold_time"]:
+					dialler_event_dict["hold_time"] =format_time(hold_time)
+				if row["media_time"]:
+					dialler_event_dict["media_time"] = format_time(media_time)
+				dialler_event_dict["callflow"]=row["callflow"]
+				dialler_event_dict["callmode"]=row["call_mode"]
+				dialler_event_dict["destination_extension"]=row["destination_extension"]
+				dialler_event_dict["transfer_history"]=row["transfer_history"]
+				dialler_event_dict["bill_sec"] =  time.strftime('%H:%M:%S',time.gmtime(int(kwargs.get('bill_sec'))))
+				dialler_event_dict["call_duration"] = time.strftime('%H:%M:%S',time.gmtime(int(kwargs.get('call_duration'))))
+				dialler_event_dict["ivr_duration"] = time.strftime('%H:%M:%S',time.gmtime(int(kwargs.get('ivr_duration'))))
+				dialler_event_dict["hangup_time"] = row["hangup_time"]
+				dialler_event_dict["hangup_cause"] = row["hangup_cause"]
+				dialler_event_dict["hangup_cause_code"] = row["hangup_cause_code"]
+				dialler_event_dict["channel"] = row["channel"]
+				dialler_event_dict["dialed_status"] = row["dialed_status"]
+				dialler_event_dict["info"] = row["info"]
+				dialler_event_dict["uniqueid"] = row["unique_id"]
+				dialler_event_dict["callserver"] = row["callserver"]
+				DiallerEventLog.objects.create(**dialler_event_dict)
+				indexdrop = call_detail_data[ (call_detail_data['session_uuid'] == session_id)].index
+				call_detail_data.drop(indexdrop , inplace=True)
+				call_detail_data.to_csv(download_folder,index=False, mode='w')
+	except Exception as e:
+		print(e)	
+
 
 def cdr_save(model,kwargs,campaign_obj,user_obj,primary_dispo, campaign_name):
 	""" saving the reports into the database thats has been dumped"""
