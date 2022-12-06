@@ -15,7 +15,7 @@ source /etc/environment
 docker build -t flexydial-websocket . 
 # docker login -u vedakatta -p ${DOCKER_TOKEN}
 # docker pull vedakatta/flexydial-websocket
-cat <<EOT >> /etc/default/flexydial-websocket
+cat <<EOT > /etc/default/flexydial-websocket
 HOST_URL=${APP_HOST}
 REDIS_URL=${REDIS_HOST}
 REDIS_PORT=6379
