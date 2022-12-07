@@ -1438,10 +1438,7 @@ function stopped_feedback_func() {
         $('#submit_customer_info').click();
     }
     else if (sessionStorage.getItem("outbound") == "Progressive" && dial_flag == true ) {
-        
-        setTimeout(()=>{
-           $("#btnDialHangup").click() 
-       },1000)
+        $("#btnDialHangup").click() 
         $('#skip_btn_div, #pause_pro_div').addClass('d-none')
     }
 }
@@ -4748,3 +4745,4 @@ $('.form-control').bind('input', function() {
     }
     this.setSelectionRange(c, c);
 });
+
