@@ -946,7 +946,6 @@ $('#AgentDialPad button').click(function() {
 })
 //skip btn functionality
 $('#skip_btn').click(function(){
-    console.log("skipbtn==============")
     Isprogressive = IsPreview = false
     $("#profile-tab").removeClass("disabled")
     $("#wait_timer, #dialer_timer,#progressive_timer").countimer('stop');
@@ -1168,7 +1167,6 @@ $("#btnNextCall").click(function() {
                         $('#profile-tab, #show-callbacks-active, #show-callbacks-campaign, #show-abandonedcalls-campaign, #show-campaign-lead-bucket, #show-campaign-assigned-calls, #show-camp-requeue-lead-bucket, #show-camp-assigned-dialed-calls, #show-camp-assigned-notdialed-calls').addClass('disabled')
                         $("#btnLogMeOut").attr("disabled", true)
                         if (sessionStorage.getItem("outbound") == "Progressive") {
-                            console.log('11111111111111111111')
                             $('#fb_timer').click()
                             $("#fb_timer").remove()
                             $("#dummy-fb-time").append('<span id="fb_timer" class="pl-1"></span>')
@@ -4748,14 +4746,3 @@ $('.form-control').bind('input', function() {
     this.setSelectionRange(c, c);
 });
 
-
-$('.colorDefinition').on('DOMSubtreeModified',function(){
-  aa = $(this).text()
-    console.log(aa,'aaaaaaaaaaaaaa')
-})
-
-
-// $('#fb_timer').change(function(){
-//     aa = $(this).text()
-//     console.log(aa,'aaaaaaaaaaaaaa')
-// })
