@@ -3195,11 +3195,12 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		user_list = campaign_list =[]
 		admin = False
 		report_visible_cols = get_report_visible_column("3",request.user)
+		users_agentactivity = list(AgentActivity.objects.values_list("user__id",flat=True))
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
 		if request.user.is_superuser:
 			campaign_list = Campaign.objects.all().distinct().values("id", "name")
-			user_list = User.objects.all().exclude(
+			user_list = User.objects.filter(id__in=users_agentactivity).exclude(
 					user_role__access_level="Admin").exclude(is_superuser=True).values("id", "username")
 		else:
 			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
@@ -3210,11 +3211,11 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 				c_user.extend(list(campaign.users.all().values_list("id", flat=True)))
 				c_group.extend(list(campaign.group.all().values_list("id", flat=True)))
 			temp_id = c_user + c_group
-			c_group_user = User.objects.filter(group__id__in=c_group)
-			c_users = User.objects.filter(id__in=c_user)
+			c_group_user = User.objects.filter(group__id__in=c_group).filter(id__in=users_agentactivity)
+			c_users = User.objects.filter(id__in=c_user).filter(id__in=users_agentactivity)
 			total_camp_users = c_group_user | c_users
 			#reporting users
-			users = User.objects.filter(reporting_to = request.user)
+			users = User.objects.filter(id__in=users_agentactivity).filter(reporting_to = request.user)
 			if request.user.user_role.access_level == 'Manager':
 				supervisors = users.exclude(user_role__access_level="Agent")
 				team = User.objects.filter(reporting_to__in = supervisors)
@@ -3224,7 +3225,7 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 			user_list = final_camp_users.values("id", "username")
 		pause_breaks = tuple(PauseBreak.objects.values_list('name',flat=True))
 		context["report_visible_cols"] = report_visible_cols
-		context["campaign_list"] =campaign_list
+		context["campaign_list"] = campaign_list
 		context['all_fields'] =  ('username','full_name','supervisor_name','campaign','app_idle_time','dialer_idle_time','pause_progressive_time','progressive_time','preview_time',
 				'predictive_wait_time','inbound_wait_time','blended_wait_time','ring_duration','ring_duration_avg','hold_time','media_time','predictive_wait_time_avg','talk','talk_avg','bill_sec','bill_sec_avg','call_duration','feedback_time','feedback_time_avg','break_time','break_time_avg','app_login_time'
 				) + pause_breaks + ('dialer_login_time','total_login_time','first_login_time','last_logout_time','total_calls','total_unique_connected_calls')
@@ -3240,6 +3241,7 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		writer = {}
 		admin = False
 		download_report = request.POST.get("agent_reports_download", "")
+		users_agentactivity = list(AgentActivity.objects.values_list("user__id",flat=True))
 		if download_report:
 			context = {}
 			col_name = request.POST.get("column_name", "")
@@ -3260,20 +3262,20 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		all_users = all_users.split(',')
 		if selected_user:
 			# queryset = User.objects.filter(id__in=selected_user)
-			queryset = User.objects.filter(id__in=user_hierarchy_func(request.user.id,selected_user))
+			queryset = User.objects.filter(id__in=selected_user).filter(id__in=users_agentactivity).filter(id__in=user_hierarchy_func(request.user.id,selected_user))
 		else:
-			queryset = User.objects.filter(id__in=all_users)
+			queryset = User.objects.filter(id__in=users_agentactivity)
 		queryset = queryset.order_by("username")
 		start_date = request.POST.get("start_date", "")
-		end_date = request.POST.get("end_date", "")
+		# end_date = request.POST.get("end_date", "")
 		page = int(request.POST.get('page' ,1))
 		paginate_by = int(request.POST.get('paginate_by', 10))
 
 		users = get_paginated_object(queryset, page, paginate_by)
-		start_date = datetime.strptime(start_date,"%Y-%m-%d %H:%M").isoformat()
-		end_date = datetime.strptime(end_date,"%Y-%m-%d %H:%M").isoformat()
+		start_date = start_date[:10]                                   #datetime.strptime(start_date,"%Y-%m-%d %H:%M").isoformat()
+		# end_date = datetime.strptime(end_date,"%Y-%m-%d %H:%M").isoformat()
 
-		start_end_date_filter = Q(created__gte=start_date)&Q(created__lte=end_date)
+		start_end_date_filter = Q(created__date=start_date)
 		app_idle_time_filter = Q(campaign_name='')|Q(event='DIALER LOGIN')
 		dialler_idle_time_filter = ~Q(campaign_name="")&~Q(event__in=["DIALER LOGIN","LOGOUT"])
 		default_time = timedelta(seconds=0)

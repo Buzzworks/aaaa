@@ -169,6 +169,7 @@ def generate_report():
 			if i.report=='Call Details':
 				download_call_detail_report(filters=i.filters, user=i.user, col_list=i.col_list, serializer_class=i.serializers, download_report_id=i.id)
 			if i.report=='Agent Performance':
+				i.filters['end_date'] = i.filters['start_date']
 				download_agent_perforance_report(filters=i.filters, user=i.user, col_list=i.col_list,download_report_id=i.id)
 			if i.report=='Campaign Wise Performance':
 				campaignwise_performance_report(filters=i.filters, user=i.user, col_list=i.col_list,download_report_id=i.id)

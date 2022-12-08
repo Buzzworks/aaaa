@@ -148,6 +148,10 @@ def get_crm_fields_dict(campaign_name):
 					column_dict[section_key+':'+section_field["db_field"]] = section_field["field"]
 	return column_dict
 
+
+
+
+
 def total_list_users(server_ip):
 	"""
 	this is the function defined fto get the list of users  with the server_ip
@@ -2142,16 +2146,18 @@ def download_agent_perforance_report(filters, user, col_list, download_report_id
 		selected_campaign = filters.get("selected_campaign", [])
 		selected_user = filters.get("selected_user", [])
 		start_date = filters.get("start_date", "")
-		end_date = filters.get("end_date", "")
+		start_date = start_date[:10] 
+		# end_date = filters.get("end_date", "")
 		download_type = filters.get('download_type',"")
-		start_date = datetime.strptime(start_date,"%Y-%m-%d %H:%M").isoformat()
-		end_date = datetime.strptime(end_date,"%Y-%m-%d %H:%M").isoformat()
+		# start_date = datetime.strptime(start_date,"%Y-%m-%d %H:%M").isoformat()
+		# end_date = datetime.strptime(end_date,"%Y-%m-%d %H:%M").isoformat()
+		agentactivity_users = list(AgentActivity.objects.values_list("user__id",flat=True))
 		if selected_user:
 			queryset = User.objects.filter(id__in=selected_user)
 		else:
-			queryset = User.objects.filter(id__in=all_users)
+			queryset = User.objects.filter(id__in=agentactivity_users)
 		queryset = queryset.order_by("username")
-		# start_end_date_filter = Q(created__gte=start_date)&Q(created__lte=end_date)
+		start_end_date_filter = Q(created__date=start_date)
 		app_idle_time_filter = Q(campaign_name='')|Q(event='DIALER LOGIN')
 		dialler_idle_time_filter = ~Q(campaign_name="")&~Q(event__in=["DIALER LOGIN","LOGOUT"])
 		default_time = timedelta(seconds=0)
@@ -2159,7 +2165,7 @@ def download_agent_perforance_report(filters, user, col_list, download_report_id
 			col_list.remove("")
 		col_list.append('date')
 		csv_file.append(col_list)
-		date_range = pd.date_range(start_date,end_date)
+		# date_range = pd.date_range(start_date,end_date)
 		for date, user in itertools.product(date_range, queryset):
 			user = User.objects.filter(id=user.id).prefetch_related(Prefetch('calldetail_set',queryset=CallDetail.objects.filter(created__date=date.date()).filter(user=user)),Prefetch('agentactivity_set',queryset=AgentActivity.objects.filter(created__date=date.date()).filter(user=user))).first()
 			
@@ -2268,7 +2274,7 @@ def download_agent_perforance_report(filters, user, col_list, download_report_id
 				row.append(calldetail_cal.get(field,""))
 			csv_file.append(row)
 			count += 1
-			percentage = ((count)/(len(date_range)*queryset.count()))*100
+			percentage = ((count)/queryset.count()*100)
 			if download_report_id!=None:
 				set_download_progress_redis(download_report_id, round(percentage,2))
 		####### To save file ###########
