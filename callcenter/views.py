@@ -3262,7 +3262,7 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		all_users = all_users.split(',')
 		if selected_user:
 			# queryset = User.objects.filter(id__in=selected_user)
-			queryset = User.objects.filter(id__in=users_agentactivity).filter(id__in=user_hierarchy_func(request.user.id,selected_user))
+			queryset = User.objects.filter(id__in=selected_user).filter(id__in=users_agentactivity).filter(id__in=user_hierarchy_func(request.user.id,selected_user))
 		else:
 			queryset = User.objects.filter(id__in=users_agentactivity)
 		queryset = queryset.order_by("username")
