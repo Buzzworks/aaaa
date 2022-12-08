@@ -2158,8 +2158,8 @@ def download_agent_perforance_report(filters, user, col_list, download_report_id
 		col_list.append('date')
 		csv_file.append(col_list)
 		# date_range = pd.date_range(start_date,end_date)
-		for date, user in itertools.product(date_range, queryset):
-			user = User.objects.filter(id=user.id).prefetch_related(Prefetch('calldetail_set',queryset=CallDetail.objects.filter(created__date=date.date()).filter(user=user)),Prefetch('agentactivity_set',queryset=AgentActivity.objects.filter(created__date=date.date()).filter(user=user))).first()
+		for user in queryset:
+			user = User.objects.filter(id=user.id).prefetch_related(Prefetch('calldetail_set',queryset=CallDetail.objects.filter(created__date=start_date).filter(user=user)),Prefetch('agentactivity_set',queryset=AgentActivity.objects.filter(created__date=start_date).filter(user=user))).first()
 			
 			if selected_campaign:
 				calldetail = user.calldetail_set.filter(campaign_name__in=selected_campaign)
@@ -2168,7 +2168,7 @@ def download_agent_perforance_report(filters, user, col_list, download_report_id
 			else:
 				calldetail = user.calldetail_set
 				agentactivity = user.agentactivity_set
-			
+
 			calldetail_cal = calldetail.aggregate(media_time=Cast(Coalesce(Sum('media_time'),default_time),TimeField()),
 				ring_duration=Cast(Coalesce(Sum('ring_duration'),default_time),TimeField()),
 				hold_time=Cast(Coalesce(Sum('hold_time'),default_time),TimeField()),
@@ -2256,7 +2256,7 @@ def download_agent_perforance_report(filters, user, col_list, download_report_id
 			calldetail_cal['supervisor_name'] = '' 
 			if user.reporting_to:
 				calldetail_cal['supervisor_name'] = user.reporting_to.username
-			calldetail_cal['date'] = date.date()
+			calldetail_cal['date'] = start_date
 			if selected_campaign:
 				calldetail_cal['campaign'] = ','.join(selected_campaign)
 			else:
