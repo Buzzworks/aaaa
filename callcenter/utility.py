@@ -260,16 +260,17 @@ def get_gateways_status():
 			SERVER = freeswicth_server(server_ip.ip_address)
 			switch_name = server_ip.name
 			gatlist=SERVER.freeswitch.api("sofia", "profile external gwlist").split()
-			for gw in gatlist:
-				gateway_status={}
-				gat_status = SERVER.freeswitch.api("sofia","status gateway '%s' "% gw)
-				# gateway_status=pickle.loads(settings.R_SERVER.get("gateway_status") or pickle.dumps({}))
-				gateway_status['switch'] = switch_name
-				gateway_status['name'] = "".join(re.findall('Name\s*(.*)\s+Profile',gat_status)).split()
-				gateway_status['status'] = "".join(re.findall('Status\s*(UP|DOWN)',gat_status)).split()
-				gw_final_list.append(gateway_status)
+			gatlist_down=SERVER.freeswitch.api("sofia", "profile external gwlist down").split()
+			gatlist.extend(gatlist_down)
+			if gatlist:
+				for gw in gatlist:
+					gateway_status={}
+					gat_status = SERVER.freeswitch.api("sofia","status gateway '%s' "% gw)
+					gateway_status['switch'] = switch_name
+					gateway_status['name'] = "".join(re.findall('Name\s*(.*)\s+Profile',gat_status)).split()
+					gateway_status['status'] = "".join(re.findall('Status\s*(UP|DOWN)',gat_status)).split()
+					gw_final_list.append(gateway_status)
 			settings.R_SERVER.set("gateway_status", pickle.dumps(gw_final_list))
-		return gw_final_list
 	except Exception as e:
 		print('Exception from gateway status', e)
 
@@ -301,8 +302,8 @@ def get_current_users():
 
 def delete_session(session):
 	"""this method is used to get all user sessions form
-    django session
-    """
+	django session
+	"""
 	try:		
 		if settings.SESSION_ENGINE:
 			SessionStore = import_module(settings.SESSION_ENGINE).SessionStore
@@ -314,21 +315,21 @@ def delete_session(session):
 		print("ERROR:: delete_session function ",e)
 
 def all_unexpired_sessions_for_user(user):
-       """this method is used to get all user sessions form
-       django session
-       """
-       user_sessions = []
-       all_sessions  = Session.objects.filter(expire_date__gte=timezone.now())
-       for session in all_sessions:
-               session_data = session.get_decoded()
-               if user.pk == int(session_data.get('_auth_user_id',0)):
-                       user_sessions.append(session.pk)
-       return Session.objects.filter(pk__in=user_sessions)
+	   """this method is used to get all user sessions form
+	   django session
+	   """
+	   user_sessions = []
+	   all_sessions  = Session.objects.filter(expire_date__gte=timezone.now())
+	   for session in all_sessions:
+			   session_data = session.get_decoded()
+			   if user.pk == int(session_data.get('_auth_user_id',0)):
+					   user_sessions.append(session.pk)
+	   return Session.objects.filter(pk__in=user_sessions)
 
 def delete_all_unexpired_sessions_for_user(user, session_to_omit=None):
 	"""this method is used to delete user sessions from
-    django session
-    """
+	django session
+	"""
 	session_list = all_unexpired_sessions_for_user(user)
 	if session_to_omit is not None:
 		session_list.exclude(session_key=session_to_omit.session_key)
