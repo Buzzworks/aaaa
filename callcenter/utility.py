@@ -2143,7 +2143,8 @@ def download_agent_perforance_report(filters, user, col_list, download_report_id
 		download_type = filters.get('download_type',"")
 		# start_date = datetime.strptime(start_date,"%Y-%m-%d %H:%M").isoformat()
 		# end_date = datetime.strptime(end_date,"%Y-%m-%d %H:%M").isoformat()
-		agentactivity_users = list(AgentActivity.objects.values_list("user__id",flat=True))
+		# agentactivity_users = list(AgentActivity.objects.values_list("user__id",flat=True))
+		agentactivity_users = list(AgentActivity.objects.filter(created__date=start_date).values_list("user__id",flat=True))
 		if selected_user:
 			queryset = User.objects.filter(id__in=selected_user)
 		else:
@@ -2160,7 +2161,7 @@ def download_agent_perforance_report(filters, user, col_list, download_report_id
 		# date_range = pd.date_range(start_date,end_date)
 		for user in queryset:
 			user = User.objects.filter(id=user.id).prefetch_related(Prefetch('calldetail_set',queryset=CallDetail.objects.filter(created__date=start_date).filter(user=user)),Prefetch('agentactivity_set',queryset=AgentActivity.objects.filter(created__date=start_date).filter(user=user))).first()
-			
+ 			
 			if selected_campaign:
 				calldetail = user.calldetail_set.filter(campaign_name__in=selected_campaign)
 				agentactivity = user.agentactivity_set.filter(Q(campaign_name__in=selected_campaign)|Q(
