@@ -3195,7 +3195,7 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		user_list = campaign_list =[]
 		admin = False
 		report_visible_cols = get_report_visible_column("3",request.user)
-		users_agentactivity = list(AgentActivity.objects.values_list("user__id",flat=True))
+		users_agentactivity = list(AgentActivity.objects.filter(created__date=date.today()).values_list("user__id",flat=True))
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
 		if request.user.is_superuser:
@@ -3241,7 +3241,10 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		writer = {}
 		admin = False
 		download_report = request.POST.get("agent_reports_download", "")
-		users_agentactivity = list(AgentActivity.objects.values_list("user__id",flat=True))
+		# users_agentactivity = list(AgentActivity.objects.values_list("user__id",flat=True))
+		start_date = request.POST.get("start_date", "")
+		start_date = start_date[:10]
+		users_agentactivity = list(AgentActivity.objects.filter(created__date=start_date).values_list("user__id",flat=True))
 		if download_report:
 			context = {}
 			col_name = request.POST.get("column_name", "")
@@ -3261,20 +3264,15 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		all_users = request.POST.get("all_users",[])
 		all_users = all_users.split(',')
 		if selected_user:
-			# queryset = User.objects.filter(id__in=selected_user)
-			queryset = User.objects.filter(id__in=selected_user).filter(id__in=users_agentactivity).filter(id__in=user_hierarchy_func(request.user.id,selected_user))
+			required_users = list(set(user_hierarchy_func(request.user.id,selected_user) + users_agentactivity))
+			queryset = User.objects.filter(id__in=required_users)
 		else:
 			queryset = User.objects.filter(id__in=users_agentactivity)
 		queryset = queryset.order_by("username")
-		start_date = request.POST.get("start_date", "")
-		# end_date = request.POST.get("end_date", "")
 		page = int(request.POST.get('page' ,1))
 		paginate_by = int(request.POST.get('paginate_by', 10))
 
 		users = get_paginated_object(queryset, page, paginate_by)
-		start_date = start_date[:10]                                   #datetime.strptime(start_date,"%Y-%m-%d %H:%M").isoformat()
-		# end_date = datetime.strptime(end_date,"%Y-%m-%d %H:%M").isoformat()
-
 		start_end_date_filter = Q(created__date=start_date)
 		app_idle_time_filter = Q(campaign_name='')|Q(event='DIALER LOGIN')
 		dialler_idle_time_filter = ~Q(campaign_name="")&~Q(event__in=["DIALER LOGIN","LOGOUT"])
