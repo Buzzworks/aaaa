@@ -3264,8 +3264,7 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		all_users = request.POST.get("all_users",[])
 		all_users = all_users.split(',')
 		if selected_user:
-			required_users = list(set(user_hierarchy_func(request.user.id,selected_user) + users_agentactivity))
-			queryset = User.objects.filter(id__in=required_users)
+			queryset = User.objects.filter(id__in=selected_user)		
 		else:
 			queryset = User.objects.filter(id__in=users_agentactivity)
 		queryset = queryset.order_by("username")
@@ -3425,7 +3424,7 @@ class ManagementPerformanceReportView(LoginRequiredMixin,APIView):
 				users = users | team
 			final_camp_users = total_camp_users | users
 			final_camp_users = final_camp_users.exclude(user_role__access_level="Agent").exclude(is_superuser=True)
-			user_list = final_camp_users.values("id", "username")
+                        user_list = final_camp_users.values("id", "username")
 		context["report_visible_cols"] = report_visible_cols
 		context["campaign_list"] =campaign_list
 		context['all_fields'] =  ('username','full_name','first_login_time','last_logout_time','login_duration')
