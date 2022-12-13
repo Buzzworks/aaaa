@@ -970,6 +970,7 @@ class DiallerEventLog(models.Model):
 	objects = models.Manager()
 	recording_file = models.FileField(upload_to=get_upload_path, blank=True, help_text='')
 	callserver = models.CharField(max_length=100, null=True, blank=True, verbose_name='Call Server IP')
+	occurence_counter = models.IntegerField(default=0)
 
 	class Meta:
 		get_latest_by = 'init_time'
