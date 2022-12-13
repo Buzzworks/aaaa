@@ -3424,7 +3424,7 @@ class ManagementPerformanceReportView(LoginRequiredMixin,APIView):
 				users = users | team
 			final_camp_users = total_camp_users | users
 			final_camp_users = final_camp_users.exclude(user_role__access_level="Agent").exclude(is_superuser=True)
-                        user_list = final_camp_users.values("id", "username")
+			user_list = final_camp_users.values("id", "username")
 		context["report_visible_cols"] = report_visible_cols
 		context["campaign_list"] =campaign_list
 		context['all_fields'] =  ('username','full_name','first_login_time','last_logout_time','login_duration')
