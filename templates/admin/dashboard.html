@@ -403,6 +403,7 @@
 			</div>
 		</div>
 	</div>
+	{% if request.user.is_superuser or request.user.user_role.access_level == 'Admin' %}
 	<div class="row" style="padding-top: 30px;">
 		<div class="col-md-7 col-sm-12">
 			<div class="card">
@@ -425,6 +426,7 @@
 			</div>
 		</div>
 	</div>
+	{% endif %}
 	<div class="modal fade" id="live_call_model" tabindex="-1" role="dialog" aria-labelledby="live_call_model_title" style="display: none; padding-right: 17px;" aria-hidden="true" data-backdrop="static" data-keyboard="false">
 		<div class="modal-dialog" role="document">
 			<div class="modal-content">
