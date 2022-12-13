@@ -129,10 +129,39 @@ function progressive_timer(){
 	$("#fb_timer").click()
 	$("#fb_timer").remove()
 	$("#dummy-fb-time").append('<span id="fb_timer" class="pl-1"></span>')
+	
+	function myFin(minutes_,seconds_){
+		$('#fb_timer').text(minutes_ + ':' + seconds_);
+		var minutes = parseInt(minutes_, 0);
+		var seconds = parseInt(seconds_, 10);
+		var interval = setInterval(function() {
+			--seconds;
+			minutes = (seconds < 0) ? --minutes : minutes;
+			if (minutes < 0) clearInterval(interval);
+
+		    seconds = (seconds < 0) ? 59 : seconds;
+		    seconds = (seconds < 10) ? '0' + seconds : seconds;
+		    if(minutes == 0 && seconds == 1){
+		  	  $('#skip_btn').addClass('d-none')
+		    }
+		    else if(minutes == 0 && seconds == 0){
+		    	stopped_feedback_func()
+		    	clearInterval(interval)
+		    }
+		    $('#fb_timer').text(minutes + ':' + seconds);
+
+		  
+		}, 1000);
+	}
+
 	if(camp_progressive_time != "None") {
+
 		if(camp_progressive_time){
+			
 			// camp_progressive_time = moment.utc(camp_progressive_time*1000).format('HH:mm:ss');
 			camp_progressive_time = camp_progressive_time.split(":")
+			$('#skip_btn').removeClass('d-none')
+			myFin(camp_progressive_time[0],camp_progressive_time[1])
 			$("#fb_timer").countdowntimer({
 				// hours : camp_progressive_time[0],
 				minutes : camp_progressive_time[0],
@@ -140,9 +169,10 @@ function progressive_timer(){
 				size : "lg",
 				timeUp:stopped_feedback_func,
 				stopButton : "fb_timer",
-				pauseButton : "timer_pause_progressive"
+				pauseButton : "timer_pause_progressive",
 			});	
 		}else{
+			myFin(1,0)
 			$("#fb_timer").countdowntimer({
 				hours : 0,
 				minutes : 1,
@@ -151,8 +181,11 @@ function progressive_timer(){
 				stopButton : "fb_timer"
 			});
 		}
+
+
 	}
 	else{
+		myFin(1,0)
 		$("#fb_timer").countdowntimer({
 		hours : 0,
 		minutes : 1,

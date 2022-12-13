@@ -75,7 +75,7 @@ from .utility import (delete_all_unexpired_sessions_for_user, delete_session, ge
 		get_model_data, validate_uploaded_dnc,upload_dnc_nums,submit_feedback, customer_detials, convert_into_timedelta,
 		total_list_users,camp_list_users,user_hierarchy, user_hierarchy_object, update_contact_on_css, get_transform_key, update_contact_on_portifolio,
 		validate_third_party_token,get_temp_contact,get_contact_data, upload_template_sms,get_crm_fields_dict, channel_trunk_single_call, DownloadCssQuery,get_campaign_did, get_group_did,DownloadCssQuery,diff_time_in_seconds,
-		save_report_column_visibility, get_report_visible_column,save_email_log, get_used_did, get_used_did_by_pk,convert_into_timeformat, email_connection, check_non_admin_user, getDaemonsStatus,upload_holiday_dates,read_status,convert_timedelta_hrs,get_agent_status,set_agent_status,get_all_keys_data_df,get_all_keys_data,get_gateways_status)
+		save_report_column_visibility, get_report_visible_column,save_email_log, get_used_did, get_used_did_by_pk,convert_into_timeformat, email_connection, check_non_admin_user, getDaemonsStatus,upload_holiday_dates,read_status,convert_timedelta_hrs,get_agent_status,set_agent_status,get_all_keys_data_df,get_all_keys_data,get_gateways_status,gateway_status_redis)
 
 from .decorators import (user_validation, group_validation,campaign_validation,
 		campaign_edit_validation, phone_validation, dispo_validation, relationtag_validation,
@@ -545,7 +545,7 @@ class DashBoardApiView(LoginRequiredMixin, APIView):
 						"inbound_count":ic_count, "preview_count":pv_count, "progressive_count":pg_count,
 						"predictive_count":pd_count,"manual_count":mu_count, "a_camp_count": ac_camp_count,
 						"ll_data_count":ll_data_count,"noti_count":noti_count, 'web_socket_host':settings.WEB_SOCKET_HOST,
-						"break_count":brk_count,"down_count":down_count,"server_ip":settings.WEB_SOCKET_HOST, "trunks_data":trunks_data, "gateway_status":get_gateways_status()}
+						"break_count":brk_count,"down_count":down_count,"server_ip":settings.WEB_SOCKET_HOST, "trunks_data":trunks_data, "gateway_status":gateway_status_redis()}
 		context['can_switch'] = kwargs['permissions']['can_switch']
 		context['can_boot'] = kwargs['permissions']['can_boot']
 		services_data = read_status('all')
@@ -3264,7 +3264,7 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		all_users = request.POST.get("all_users",[])
 		all_users = all_users.split(',')
 		if selected_user:
-			queryset = User.objects.filter(id__in=selected_user)
+			queryset = User.objects.filter(id__in=selected_user)		
 		else:
 			queryset = User.objects.filter(id__in=users_agentactivity)
 		queryset = queryset.order_by("username")
