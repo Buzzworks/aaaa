@@ -152,7 +152,7 @@ def fetch_callback_contact(campaign,fetch_count):
 def generate_report():
 	""" Downloading the reports """
 
-	data = DownloadReports.objects.filter(is_start=False, status=True).distinct('user').order_by('user','start_date')
+	data = DownloadReports.objects.filter(is_start=False, status=True).distinct('user').order_by('user','start_date')[:3]
 	for i in data:
 
 		if not DownloadReports.objects.filter(is_start=True, user=i.user):
