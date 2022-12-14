@@ -24,12 +24,92 @@ from callcenter.signals import (
 	fs_switch_action,
 	recording_file_move
 	)
+#for multibucket
+from storages.backends.gcloud import GoogleCloudStorage
+from google.oauth2 import service_account
+from google.cloud import storage as gcp_storage
+from flexydial.settings import GS_BUCKET_NAME
+from django.utils.deconstruct import deconstructible
+#multibucket for aws
+from boto3 import Session as boto3_session
+from storages.backends.s3boto3 import S3Boto3Storage
+
 timezone = list(pytz.common_timezones)
 USER_TIMEZONE = [(zone, zone) for zone in timezone]
 
 default_time = datetime.strptime('00:00:00', '%H:%M:%S').time()
 
 # Create your models here.
+
+@deconstructible
+class GCPCustomBucketSelection(GoogleCloudStorage):
+	def __init__(self,*args,**kwargs):
+		if settings.GS_BUCKET_NAME:
+			kwargs['bucket_name'] = settings.GS_BUCKET_NAME
+		super(GCPCustomBucketSelection,self).__init__(*args,**kwargs)
+	def filename_path(self,name):
+		bucket_name =( name.split('/')[0]).strip(' ')
+		try:
+			BUCKETS_JSON_KEY = BucketCredentials.objects.get(bucket_name = bucket_name,storage_type = 'GCP').credentials_path
+			storage_credentials = service_account.Credentials.from_service_account_info(BUCKETS_JSON_KEY)
+			storage_client = gcp_storage.Client(project=BUCKETS_JSON_KEY['project_id'], credentials=storage_credentials)
+			bucket = storage_client.get_bucket(bucket_name)
+			blob = bucket.blob(name)
+			signed_url = blob.generate_signed_url(method='GET', expiration=settings.GS_EXPIRATION,  credentials=storage_credentials)
+			return signed_url
+		except Exception as e:
+			return 'ERROR'
+	
+	def url(self, name):
+		urll = self.filename_path(name)
+		if urll == 'ERROR':
+			urll = name.url
+		return urll
+
+@deconstructible
+class AWSCustomBucketSelection(S3Boto3Storage):
+	def __init__(self,*args,**kwargs):
+		if settings.AWS_STORAGE_BUCKET_NAME:
+			kwargs['bucket_name'] = settings.AWS_STORAGE_BUCKET_NAME
+		super(AWSCustomBucketSelection,self).__init__(*args,**kwargs)
+	def filename_path(self,name):
+		bucket_name =( name.split('/')[0]).strip(' ')
+		try:
+			BUCKETS_JSON_KEY = BucketCredentials.objects.get(bucket_name = bucket_name,storage_type = 'AWS').credentials_path
+			AWS_ACCESS_KEY_ID = BUCKETS_JSON_KEY['AWS_ACCESS_KEY_ID']
+			AWS_SECRET_ACCESS_KEY = BUCKETS_JSON_KEY['AWS_SECRET_ACCESS_KEY']
+			REGION_NAME = 'ap-northeast-1'
+			create_file_session = boto3_session(aws_access_key_id=AWS_ACCESS_KEY_ID,aws_secret_access_key=AWS_SECRET_ACCESS_KEY,region_name=REGION_NAME)
+			client = create_file_session.client('s3')
+			url = client.generate_presigned_url(ClientMethod='get_object',Params={'Bucket': bucket_name,'Key': name,},ExpiresIn=60)
+			return url
+		except Exception as e:
+			# self.AWS_ACCESS_KEY_ID = settings.AWS_ACCESS_KEY_ID
+			# self.AWS_SECRET_ACCESS_KEY = settings.AWS_SECRET_ACCESS_KEY
+			# self.REGION_NAME = 'ap-northeast-1'
+			# create_file_session = boto3_session(aws_access_key_id=self.AWS_ACCESS_KEY_ID,aws_secret_access_key=self.AWS_SECRET_ACCESS_KEY,region_name=self.REGION_NAME)
+			# client = create_file_session.client('s3')
+			# url = client.generate_presigned_url(ClientMethod='get_object',Params={'Bucket': self.bucket_name,'Key': name,},ExpiresIn=60)
+			# return url
+			print(e,'eeeeeeeeeeeeeeeeeee')
+
+			return 'ERROR'
+
+		
+	def url(self, name):
+		urll = self.filename_path(name)
+		if urll == 'ERROR':
+			urll = name.url
+		return urll
+
+if settings.AWS_STORAGE_BUCKET_NAME:
+	CustomBucketSelection = AWSCustomBucketSelection()
+elif settings.GS_BUCKET_NAME:
+	CustomBucketSelection = GCPCustomBucketSelection()
+else:
+	CustomBucketSelection = None
+
+
 class Switch(models.Model):
 	""" This table is used to store the switch information of freeswitch """
 	site = models.ForeignKey(Site, default=settings.SITE_ID, editable=False,
@@ -926,7 +1006,13 @@ def get_upload_path(instance, filename):
 	year = date_time.strftime("%Y")
 	month = date_time.strftime("%m")
 	day = date_time.strftime("%d")
-	return  'recordings/{0}/{1}/{2}/{3}/{4}/{5}'.format(str(instance.callserver),year,month,day,str(instance.callflow), filename)
+	if settings.GS_BUCKET_NAME:
+		main_path = '{6}/recordings/{0}/{1}/{2}/{3}/{4}/{5}'.format(str(instance.callserver),year,month,day,str(instance.callflow), filename,settings.GS_BUCKET_NAME)
+	elif settings.AWS_STORAGE_BUCKET_NAME:
+		main_path = '{6}/recordings/{0}/{1}/{2}/{3}/{4}/{5}'.format(str(instance.callserver),year,month,day,str(instance.callflow), filename,settings.AWS_STORAGE_BUCKET_NAME)
+	else:
+		main_path = 'recordings/{0}/{1}/{2}/{3}/{4}/{5}'.format(str(instance.callserver),year,month,day,str(instance.callflow), filename)
+	return main_path
 
 class DiallerEventLog(models.Model):
 	"""
@@ -968,7 +1054,7 @@ class DiallerEventLog(models.Model):
 	created = models.DateTimeField(auto_now_add=True, db_index=True, editable=False)
 	updated = models.DateTimeField(auto_now=True, db_index=True, editable=False)
 	objects = models.Manager()
-	recording_file = models.FileField(upload_to=get_upload_path, blank=True, help_text='')
+	recording_file = models.FileField(upload_to=get_upload_path, blank=True, help_text='',storage=CustomBucketSelection)
 	callserver = models.CharField(max_length=100, null=True, blank=True, verbose_name='Call Server IP')
 
 	class Meta:
@@ -983,10 +1069,10 @@ class DiallerEventLog(models.Model):
 			return re.sub(r'(\\)', '', self.info).split('^')
 		else:
 			return ['']*6
-	@property
-	def recording_url(self):
-		if self.recording_file:
-			return self.recording_file.url
+	# @property
+	# def recording_url(self):
+	# 	if self.recording_file:
+	# 		return self.recording_file.url
 			
 signals.post_save.connect(recording_file_move, sender=DiallerEventLog)
 
@@ -1492,3 +1578,8 @@ class ThirdPartyApiDisposition(models.Model):
 		return self.unique_id
 class SourceList(models.Model):
 	sourcename = models.CharField(max_length=150,blank=True,null=True)
+
+class BucketCredentials(models.Model):
+	bucket_name = models.CharField(max_length=30,null=True,blank=True)
+	credentials_path = models.CharField(max_length=500,null=True,blank=True)
+	storage_type = models.CharField(max_length=30,null=True,blank=True,default='GCP')

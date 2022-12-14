@@ -601,7 +601,7 @@ class DiallerEventLogSerializer(serializers.ModelSerializer):
 	hangup_time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
 	is_feedback = serializers.SerializerMethodField()
 	ip_address = serializers.SerializerMethodField()
-	recording_url = serializers.SerializerMethodField()
+	# recording_url = serializers.SerializerMethodField()
 	class Meta:
 		model = DiallerEventLog
 		fields= '__all__'   
@@ -623,15 +623,15 @@ class DiallerEventLogSerializer(serializers.ModelSerializer):
 		if obj.campaign_name:
 			ip_address = list(Campaign.objects.filter(name=obj.campaign_name).values_list('switch__ip_address', flat=True))[0]
 		return ip_address
-	def get_recording_url(self,obj):
-		try:
-			if obj.recording_url:
-				return obj.recording_url
-			else:
-				return ''
-		except Exception as e:
-			print(e)
-			return ''
+	# def get_recording_url(self,obj):
+	# 	try:
+	# 		if obj.recording_url:
+	# 			return obj.recording_url
+	# 		else:
+	# 			return ''
+	# 	except Exception as e:
+	# 		print(e)
+	# 		return ''
 class DiallerEventLogTimeSerializer(serializers.ModelSerializer):
 	""" sericlizzer for diallerevent log time format data serilizer"""
 	init_time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
