@@ -13,7 +13,7 @@ from django.conf  import settings
 from flexydial.constants import (Gateway_Mode, Status, REPORTS_LIST,auto_dialed_status, PROTOCOL_CHOICES, TRUNK_TYPE, CALL_TYPE,
 	CALLBACK_MODE, DIAL_RATIO_CHOICES, CAMPAIGN_STRATEGY_CHOICES, DNC_MODE, ACCESS_LEVEL, DISPO_FIELD_TYPE,
 	SCHEDULE_TYPE, SCHEDULE_DAYS, CONTACT_STATUS, UPLOAD_STATUS, VB_MODE, TEMPLATE_TYPE, TRIGGER_ACTIONS, SMS_STATUS, ACTION,
-	TYPE_OF_DID, STRATEGY_CHOICES, REPORT_NAME, COUNTRY_CODES,BROADCAST_MESSAGE_TYPE,PasswordChangeType,SHOW_DISPOS_TYPE)
+	TYPE_OF_DID, STRATEGY_CHOICES, REPORT_NAME, COUNTRY_CODES,BROADCAST_MESSAGE_TYPE,PasswordChangeType,SHOW_DISPOS_TYPE,STORAGE_BUCKET_TYPE,STORAGE_BUCKET_CREDENTIALS_HELP)
 from callcenter.signals import (
 	fs_del_campaign,
 	fs_group_campaign,
@@ -50,7 +50,7 @@ class GCPCustomBucketSelection(GoogleCloudStorage):
 	def filename_path(self,name):
 		bucket_name =( name.split('/')[0]).strip(' ')
 		try:
-			BUCKETS_JSON_KEY = BucketCredentials.objects.get(bucket_name = bucket_name,storage_type = 'GCP').credentials_path
+			BUCKETS_JSON_KEY = BucketCredentials.objects.get(storage_bucket_name = bucket_name,storage_type = 'GCP').storage_credentials
 			storage_credentials = service_account.Credentials.from_service_account_info(BUCKETS_JSON_KEY)
 			storage_client = gcp_storage.Client(project=BUCKETS_JSON_KEY['project_id'], credentials=storage_credentials)
 			bucket = storage_client.get_bucket(bucket_name)
@@ -75,7 +75,7 @@ class AWSCustomBucketSelection(S3Boto3Storage):
 	def filename_path(self,name):
 		bucket_name =( name.split('/')[0]).strip(' ')
 		try:
-			BUCKETS_JSON_KEY = BucketCredentials.objects.get(bucket_name = bucket_name,storage_type = 'AWS').credentials_path
+			BUCKETS_JSON_KEY = BucketCredentials.objects.get(storage_bucket_name = bucket_name,storage_type = 'AWS').storage_credentials
 			AWS_ACCESS_KEY_ID = BUCKETS_JSON_KEY['AWS_ACCESS_KEY_ID']
 			AWS_SECRET_ACCESS_KEY = BUCKETS_JSON_KEY['AWS_SECRET_ACCESS_KEY']
 			REGION_NAME = 'ap-northeast-1'
@@ -1580,6 +1580,14 @@ class SourceList(models.Model):
 	sourcename = models.CharField(max_length=150,blank=True,null=True)
 
 class BucketCredentials(models.Model):
-	bucket_name = models.CharField(max_length=30,null=True,blank=True)
-	credentials_path = models.CharField(max_length=500,null=True,blank=True)
-	storage_type = models.CharField(max_length=30,null=True,blank=True,default='GCP')
+	storage_bucket_name = models.CharField(max_length=30,null=False,blank=False)
+	storage_type = models.CharField(max_length=30,null=False,blank=False,choices=STORAGE_BUCKET_TYPE)
+	storage_credentials = JSONField(default=dict,help_text=STORAGE_BUCKET_CREDENTIALS_HELP)
+	# storage_credentials = models.CharField(max_length=3000,help_text=STORAGE_BUCKET_CREDENTIALS_HELP)
+	created_by = models.ForeignKey(User, related_name='bucketcredentials_created_by',on_delete=models.SET_NULL,blank=True, null=True)
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		unique_together = (
+				('storage_type', 'storage_bucket_name'),
+				)

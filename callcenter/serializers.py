@@ -1031,3 +1031,16 @@ class ThirdPartyApiDispositionSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = ThirdPartyApiDisposition
 		fields ="__all__"
+
+class BucketCredentialsSerializer(serializers.ModelSerializer):	
+	class Meta:
+		model = BucketCredentials
+		fields =("storage_bucket_name","storage_type","storage_credentials",)
+
+		validators = [
+            serializers.UniqueTogetherValidator(
+                queryset=model.objects.all(),
+                fields=('storage_type', 'storage_bucket_name'),
+                message="Bucket Name and Storage type  already exists"
+            )
+        ]
