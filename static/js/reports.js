@@ -738,8 +738,8 @@ $(document).on('click', '.play-recording', function(){
 		parent_path = `${parent_path}/${file_date}`
 	}
 	console.log(row_data)
-	setAudioTag(row_data['recording_url'],row_data)
-	return 
+	setAudioTag(row_data['recording_file'],row_data)
+	return
 	$.ajax({
         type: 'post',
         headers: {
@@ -805,8 +805,8 @@ $(document).on('click','.file-download', function(e){
 	if (date.setHours(0,0,0,0) != new Date().setHours(0,0,0,0)){
 		parent_path = `${parent_path}/${file_date}`
 	}
-	$('#'+row_data['session_uuid']).attr('href',row_data['recording_url'])
-	$('#'+row_data['session_uuid']).attr('download',row_data['recording_url'])
+	$('#'+row_data['session_uuid']).attr('href',row_data['recording_file'])
+	$('#'+row_data['session_uuid']).attr('download',row_data['recording_file'])
 	$('#'+row_data['session_uuid']).attr('target',"_blank")
 	$('#'+row_data['session_uuid'])[0].click()
 	return
