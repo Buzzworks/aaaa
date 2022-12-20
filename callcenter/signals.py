@@ -140,7 +140,6 @@ def recording_file_move(sender,**kwargs):
 			if os.path.isfile(file_path):
 				f = open(file_path, 'rb')
 				filter_instance.update(recording_file = File(f,os.path.basename(f.name)))
-				# dialereventlog.save()
 				f.close()
 			else:
 				print('File not exists ::',file_path)
