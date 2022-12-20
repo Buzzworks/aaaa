@@ -8952,21 +8952,21 @@ class PendingContactEditAPIView(LoginRequiredMixin, APIView):
 		return JsonResponse({"msg":"Contact Detail Saved Successfully"}, status=200)
 """ pending contacts code end here """
 
-class StorageBucketCredentialsApi(LoginRequiredMixin,APIView):
+class StorageBucketCredentialsApi(APIView):
 	"""
 	Saving Storage credentials 
 	"""
+	permission_classes = (IsAuthenticated,)
 	serializer_class = BucketCredentialsSerializer
 	def post(self,request):
-		storage_bucket_name= request.POST.get('storage_bucket_name','')
-		storage_credentials = request.POST.get('storage_credentials','')
-		storage_type = request.POST.get('storage_type','')
-		serializer_instance = self.serializer_class(data=request.POST)
+		serializer_instance = self.serializer_class(data=request.data)
 		if serializer_instance.is_valid(raise_exception=True):
-			serializer = serializer_instance.save(created_by=request.user,storage_credentials=storage_credentials)
+			serializer = serializer_instance.save(created_by=request.user)
 			serializer.save()
 			return Response({"msg":" Detail Saved Successfully"}, status=200)
 		else:
 			return Response({'error':self.serializer_class.errors})
 		return Response({})
+		
 
+		

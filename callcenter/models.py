@@ -48,8 +48,10 @@ class GCPCustomBucketSelection(GoogleCloudStorage):
 			kwargs['bucket_name'] = settings.GS_BUCKET_NAME
 		super(GCPCustomBucketSelection,self).__init__(*args,**kwargs)
 	def filename_path(self,name):
-		bucket_name =( name.split('/')[0]).strip(' ')
+		# bucket_name =( name.split('/')[0]).strip(' ')
 		try:
+			bucket_details = DiallerEventLog.objects.filter(recording_file = name).first()
+			bucket_name = bucket_details.storage_bucket_name
 			BUCKETS_JSON_KEY = BucketCredentials.objects.get(storage_bucket_name = bucket_name,storage_type = 'GCP').storage_credentials
 			storage_credentials = service_account.Credentials.from_service_account_info(BUCKETS_JSON_KEY)
 			storage_client = gcp_storage.Client(project=BUCKETS_JSON_KEY['project_id'], credentials=storage_credentials)
@@ -58,6 +60,7 @@ class GCPCustomBucketSelection(GoogleCloudStorage):
 			signed_url = blob.generate_signed_url(method='GET', expiration=settings.GS_EXPIRATION,  credentials=storage_credentials)
 			return signed_url
 		except Exception as e:
+			print(e,'eeeeeeeeeeeeeeeeeeee')
 			return 'ERROR'
 	
 	def url(self, name):
@@ -73,8 +76,10 @@ class AWSCustomBucketSelection(S3Boto3Storage):
 			kwargs['bucket_name'] = settings.AWS_STORAGE_BUCKET_NAME
 		super(AWSCustomBucketSelection,self).__init__(*args,**kwargs)
 	def filename_path(self,name):
-		bucket_name =( name.split('/')[0]).strip(' ')
+		# bucket_name =( name.split('/')[0]).strip(' ')
 		try:
+			bucket_details = DiallerEventLog.objects.filter(recording_file = name).first()
+			bucket_name = bucket_details.storage_bucket_name
 			BUCKETS_JSON_KEY = BucketCredentials.objects.get(storage_bucket_name = bucket_name,storage_type = 'AWS').storage_credentials
 			AWS_ACCESS_KEY_ID = BUCKETS_JSON_KEY['AWS_ACCESS_KEY_ID']
 			AWS_SECRET_ACCESS_KEY = BUCKETS_JSON_KEY['AWS_SECRET_ACCESS_KEY']
@@ -1006,13 +1011,23 @@ def get_upload_path(instance, filename):
 	year = date_time.strftime("%Y")
 	month = date_time.strftime("%m")
 	day = date_time.strftime("%d")
-	if settings.GS_BUCKET_NAME:
-		main_path = '{6}/recordings/{0}/{1}/{2}/{3}/{4}/{5}'.format(str(instance.callserver),year,month,day,str(instance.callflow), filename,settings.GS_BUCKET_NAME)
-	elif settings.AWS_STORAGE_BUCKET_NAME:
-		main_path = '{6}/recordings/{0}/{1}/{2}/{3}/{4}/{5}'.format(str(instance.callserver),year,month,day,str(instance.callflow), filename,settings.AWS_STORAGE_BUCKET_NAME)
-	else:
-		main_path = 'recordings/{0}/{1}/{2}/{3}/{4}/{5}'.format(str(instance.callserver),year,month,day,str(instance.callflow), filename)
+	# if settings.GS_BUCKET_NAME:
+	# 	main_path = '{6}/recordings/{0}/{1}/{2}/{3}/{4}/{5}'.format(str(instance.callserver),year,month,day,str(instance.callflow), filename)
+	# elif settings.AWS_STORAGE_BUCKET_NAME:
+	# 	main_path = '{6}/recordings/{0}/{1}/{2}/{3}/{4}/{5}'.format(str(instance.callserver),year,month,day,str(instance.callflow), filename)
+	# else:
+	main_path = 'recordings/{0}/{1}/{2}/{3}/{4}/{5}'.format(str(instance.callserver),year,month,day,str(instance.callflow), filename)
 	return main_path
+
+def get_bucket_name():
+	if settings.GS_BUCKET_NAME:
+		return settings.GS_BUCKET_NAME
+	elif settings.AWS_STORAGE_BUCKET_NAME:
+		return settings.AWS_STORAGE_BUCKET_NAME
+	else:
+		return None
+
+
 
 class DiallerEventLog(models.Model):
 	"""
@@ -1056,6 +1071,7 @@ class DiallerEventLog(models.Model):
 	objects = models.Manager()
 	recording_file = models.FileField(upload_to=get_upload_path, blank=True, help_text='',storage=CustomBucketSelection)
 	callserver = models.CharField(max_length=100, null=True, blank=True, verbose_name='Call Server IP')
+	storage_bucket_name = models.CharField(max_length=100, null=True, blank=True,default=get_bucket_name)
 
 	class Meta:
 		get_latest_by = 'init_time'
@@ -1583,7 +1599,6 @@ class BucketCredentials(models.Model):
 	storage_bucket_name = models.CharField(max_length=30,null=False,blank=False)
 	storage_type = models.CharField(max_length=30,null=False,blank=False,choices=STORAGE_BUCKET_TYPE)
 	storage_credentials = JSONField(default=dict,help_text=STORAGE_BUCKET_CREDENTIALS_HELP)
-	# storage_credentials = models.CharField(max_length=3000,help_text=STORAGE_BUCKET_CREDENTIALS_HELP)
 	created_by = models.ForeignKey(User, related_name='bucketcredentials_created_by',on_delete=models.SET_NULL,blank=True, null=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 
