@@ -148,6 +148,10 @@ def get_crm_fields_dict(campaign_name):
 					column_dict[section_key+':'+section_field["db_field"]] = section_field["field"]
 	return column_dict
 
+
+
+
+
 def total_list_users(server_ip):
 	"""
 	this is the function defined fto get the list of users  with the server_ip
@@ -246,23 +250,31 @@ def freeswicth_server(server_ip):
 	SERVER = xmlrpc.client.ServerProxy("http://%s:%s@%s:%s" % (settings.RPC_USERNAME,
 			 settings.RPC_PASSWORD,server_ip,rpc_port))
 	return SERVER 
+
+def gateway_status_redis():
+	gateway_status=pickle.loads(settings.R_SERVER.get("gateway_status") or pickle.dumps({}))
+	return gateway_status
+
 def get_gateways_status():
 	try:
-		return []
+		# return []
 		server_ip_list = Switch.objects.filter(status="Active")
 		gw_final_list =[]
 		for server_ip in server_ip_list:
 			SERVER = freeswicth_server(server_ip.ip_address)
 			switch_name = server_ip.name
 			gatlist=SERVER.freeswitch.api("sofia", "profile external gwlist").split()
-			for gw in gatlist:
-				gw_dict = dict()
-				gat_status = SERVER.freeswitch.api("sofia","status gateway '%s' "% gw)
-				gw_dict['switch'] =  switch_name
-				gw_dict['name'] = "".join(re.findall('Name\s*(.*)\s+Profile',gat_status)).split()
-				gw_dict['status'] = "".join(re.findall('Status\s*(UP|DOWN)',gat_status)).split()
-				gw_final_list.append(gw_dict)
-		return gw_final_list
+			gatlist_down=SERVER.freeswitch.api("sofia", "profile external gwlist down").split()
+			gatlist.extend(gatlist_down)
+			if gatlist:
+				for gw in gatlist:
+					gateway_status={}
+					gat_status = SERVER.freeswitch.api("sofia","status gateway '%s' "% gw)
+					gateway_status['switch'] = switch_name
+					gateway_status['name'] = "".join(re.findall('Name\s*(.*)\s+Profile',gat_status)).split()
+					gateway_status['status'] = "".join(re.findall('Status\s*(UP|DOWN)',gat_status)).split()
+					gw_final_list.append(gateway_status)
+			settings.R_SERVER.set("gateway_status", pickle.dumps(gw_final_list))
 	except Exception as e:
 		print('Exception from gateway status', e)
 
@@ -294,8 +306,8 @@ def get_current_users():
 
 def delete_session(session):
 	"""this method is used to get all user sessions form
-    django session
-    """
+	django session
+	"""
 	try:		
 		if settings.SESSION_ENGINE:
 			SessionStore = import_module(settings.SESSION_ENGINE).SessionStore
@@ -307,21 +319,21 @@ def delete_session(session):
 		print("ERROR:: delete_session function ",e)
 
 def all_unexpired_sessions_for_user(user):
-       """this method is used to get all user sessions form
-       django session
-       """
-       user_sessions = []
-       all_sessions  = Session.objects.filter(expire_date__gte=timezone.now())
-       for session in all_sessions:
-               session_data = session.get_decoded()
-               if user.pk == int(session_data.get('_auth_user_id',0)):
-                       user_sessions.append(session.pk)
-       return Session.objects.filter(pk__in=user_sessions)
+	   """this method is used to get all user sessions form
+	   django session
+	   """
+	   user_sessions = []
+	   all_sessions  = Session.objects.filter(expire_date__gte=timezone.now())
+	   for session in all_sessions:
+			   session_data = session.get_decoded()
+			   if user.pk == int(session_data.get('_auth_user_id',0)):
+					   user_sessions.append(session.pk)
+	   return Session.objects.filter(pk__in=user_sessions)
 
 def delete_all_unexpired_sessions_for_user(user, session_to_omit=None):
 	"""this method is used to delete user sessions from
-    django session
-    """
+	django session
+	"""
 	session_list = all_unexpired_sessions_for_user(user)
 	if session_to_omit is not None:
 		session_list.exclude(session_key=session_to_omit.session_key)
@@ -2134,16 +2146,19 @@ def download_agent_perforance_report(filters, user, col_list, download_report_id
 		selected_campaign = filters.get("selected_campaign", [])
 		selected_user = filters.get("selected_user", [])
 		start_date = filters.get("start_date", "")
-		end_date = filters.get("end_date", "")
+		start_date = start_date[:10] 
+		# end_date = filters.get("end_date", "")
 		download_type = filters.get('download_type',"")
-		start_date = datetime.strptime(start_date,"%Y-%m-%d %H:%M").isoformat()
-		end_date = datetime.strptime(end_date,"%Y-%m-%d %H:%M").isoformat()
+		# start_date = datetime.strptime(start_date,"%Y-%m-%d %H:%M").isoformat()
+		# end_date = datetime.strptime(end_date,"%Y-%m-%d %H:%M").isoformat()
+		# agentactivity_users = list(AgentActivity.objects.values_list("user__id",flat=True))
+		agentactivity_users = list(AgentActivity.objects.filter(created__date=start_date).values_list("user__id",flat=True))
 		if selected_user:
 			queryset = User.objects.filter(id__in=selected_user)
 		else:
-			queryset = User.objects.filter(id__in=all_users)
+			queryset = User.objects.filter(id__in=agentactivity_users)
 		queryset = queryset.order_by("username")
-		# start_end_date_filter = Q(created__gte=start_date)&Q(created__lte=end_date)
+		start_end_date_filter = Q(created__date=start_date)
 		app_idle_time_filter = Q(campaign_name='')|Q(event='DIALER LOGIN')
 		dialler_idle_time_filter = ~Q(campaign_name="")&~Q(event__in=["DIALER LOGIN","LOGOUT"])
 		default_time = timedelta(seconds=0)
@@ -2151,10 +2166,10 @@ def download_agent_perforance_report(filters, user, col_list, download_report_id
 			col_list.remove("")
 		col_list.append('date')
 		csv_file.append(col_list)
-		date_range = pd.date_range(start_date,end_date)
-		for date, user in itertools.product(date_range, queryset):
-			user = User.objects.filter(id=user.id).prefetch_related(Prefetch('calldetail_set',queryset=CallDetail.objects.filter(created__date=date.date()).filter(user=user)),Prefetch('agentactivity_set',queryset=AgentActivity.objects.filter(created__date=date.date()).filter(user=user))).first()
-			
+		# date_range = pd.date_range(start_date,end_date)
+		for user in queryset:
+			user = User.objects.filter(id=user.id).prefetch_related(Prefetch('calldetail_set',queryset=CallDetail.objects.filter(created__date=start_date).filter(user=user)),Prefetch('agentactivity_set',queryset=AgentActivity.objects.filter(created__date=start_date).filter(user=user))).first()
+ 			
 			if selected_campaign:
 				calldetail = user.calldetail_set.filter(campaign_name__in=selected_campaign)
 				agentactivity = user.agentactivity_set.filter(Q(campaign_name__in=selected_campaign)|Q(
@@ -2162,7 +2177,7 @@ def download_agent_perforance_report(filters, user, col_list, download_report_id
 			else:
 				calldetail = user.calldetail_set
 				agentactivity = user.agentactivity_set
-			
+
 			calldetail_cal = calldetail.aggregate(media_time=Cast(Coalesce(Sum('media_time'),default_time),TimeField()),
 				ring_duration=Cast(Coalesce(Sum('ring_duration'),default_time),TimeField()),
 				hold_time=Cast(Coalesce(Sum('hold_time'),default_time),TimeField()),
@@ -2250,7 +2265,7 @@ def download_agent_perforance_report(filters, user, col_list, download_report_id
 			calldetail_cal['supervisor_name'] = '' 
 			if user.reporting_to:
 				calldetail_cal['supervisor_name'] = user.reporting_to.username
-			calldetail_cal['date'] = date.date()
+			calldetail_cal['date'] = start_date
 			if selected_campaign:
 				calldetail_cal['campaign'] = ','.join(selected_campaign)
 			else:
@@ -2260,7 +2275,7 @@ def download_agent_perforance_report(filters, user, col_list, download_report_id
 				row.append(calldetail_cal.get(field,""))
 			csv_file.append(row)
 			count += 1
-			percentage = ((count)/(len(date_range)*queryset.count()))*100
+			percentage = ((count)/queryset.count()*100)
 			if download_report_id!=None:
 				set_download_progress_redis(download_report_id, round(percentage,2))
 		####### To save file ###########

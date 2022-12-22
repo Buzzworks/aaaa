@@ -75,7 +75,7 @@ from .utility import (delete_all_unexpired_sessions_for_user, delete_session, ge
 		get_model_data, validate_uploaded_dnc,upload_dnc_nums,submit_feedback, customer_detials, convert_into_timedelta,
 		total_list_users,camp_list_users,user_hierarchy, user_hierarchy_object, update_contact_on_css, get_transform_key, update_contact_on_portifolio,
 		validate_third_party_token,get_temp_contact,get_contact_data, upload_template_sms,get_crm_fields_dict, channel_trunk_single_call, DownloadCssQuery,get_campaign_did, get_group_did,DownloadCssQuery,diff_time_in_seconds,
-		save_report_column_visibility, get_report_visible_column,save_email_log, get_used_did, get_used_did_by_pk,convert_into_timeformat, email_connection, check_non_admin_user, getDaemonsStatus,upload_holiday_dates,read_status,convert_timedelta_hrs,get_agent_status,set_agent_status,get_all_keys_data_df,get_all_keys_data,get_gateways_status)
+		save_report_column_visibility, get_report_visible_column,save_email_log, get_used_did, get_used_did_by_pk,convert_into_timeformat, email_connection, check_non_admin_user, getDaemonsStatus,upload_holiday_dates,read_status,convert_timedelta_hrs,get_agent_status,set_agent_status,get_all_keys_data_df,get_all_keys_data,get_gateways_status,gateway_status_redis)
 
 from .decorators import (user_validation, group_validation,campaign_validation,
 		campaign_edit_validation, phone_validation, dispo_validation, relationtag_validation,
@@ -545,7 +545,7 @@ class DashBoardApiView(LoginRequiredMixin, APIView):
 						"inbound_count":ic_count, "preview_count":pv_count, "progressive_count":pg_count,
 						"predictive_count":pd_count,"manual_count":mu_count, "a_camp_count": ac_camp_count,
 						"ll_data_count":ll_data_count,"noti_count":noti_count, 'web_socket_host':settings.WEB_SOCKET_HOST,
-						"break_count":brk_count,"down_count":down_count,"server_ip":settings.WEB_SOCKET_HOST, "trunks_data":trunks_data, "gateway_status":get_gateways_status()}
+						"break_count":brk_count,"down_count":down_count,"server_ip":settings.WEB_SOCKET_HOST, "trunks_data":trunks_data, "gateway_status":gateway_status_redis()}
 		context['can_switch'] = kwargs['permissions']['can_switch']
 		context['can_boot'] = kwargs['permissions']['can_boot']
 		services_data = read_status('all')
@@ -3195,11 +3195,12 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		user_list = campaign_list =[]
 		admin = False
 		report_visible_cols = get_report_visible_column("3",request.user)
+		users_agentactivity = list(AgentActivity.objects.filter(created__date=date.today()).values_list("user__id",flat=True))
 		if request.user.user_role and request.user.user_role.access_level == 'Admin':
 			admin = True
 		if request.user.is_superuser:
 			campaign_list = Campaign.objects.all().distinct().values("id", "name")
-			user_list = User.objects.all().exclude(
+			user_list = User.objects.filter(id__in=users_agentactivity).exclude(
 					user_role__access_level="Admin").exclude(is_superuser=True).values("id", "username")
 		else:
 			camp = Campaign.objects.filter(Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
@@ -3210,11 +3211,11 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 				c_user.extend(list(campaign.users.all().values_list("id", flat=True)))
 				c_group.extend(list(campaign.group.all().values_list("id", flat=True)))
 			temp_id = c_user + c_group
-			c_group_user = User.objects.filter(group__id__in=c_group)
-			c_users = User.objects.filter(id__in=c_user)
+			c_group_user = User.objects.filter(group__id__in=c_group).filter(id__in=users_agentactivity)
+			c_users = User.objects.filter(id__in=c_user).filter(id__in=users_agentactivity)
 			total_camp_users = c_group_user | c_users
 			#reporting users
-			users = User.objects.filter(reporting_to = request.user)
+			users = User.objects.filter(id__in=users_agentactivity).filter(reporting_to = request.user)
 			if request.user.user_role.access_level == 'Manager':
 				supervisors = users.exclude(user_role__access_level="Agent")
 				team = User.objects.filter(reporting_to__in = supervisors)
@@ -3224,7 +3225,7 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 			user_list = final_camp_users.values("id", "username")
 		pause_breaks = tuple(PauseBreak.objects.values_list('name',flat=True))
 		context["report_visible_cols"] = report_visible_cols
-		context["campaign_list"] =campaign_list
+		context["campaign_list"] = campaign_list
 		context['all_fields'] =  ('username','full_name','supervisor_name','campaign','app_idle_time','dialer_idle_time','pause_progressive_time','progressive_time','preview_time',
 				'predictive_wait_time','inbound_wait_time','blended_wait_time','ring_duration','ring_duration_avg','hold_time','media_time','predictive_wait_time_avg','talk','talk_avg','bill_sec','bill_sec_avg','call_duration','feedback_time','feedback_time_avg','break_time','break_time_avg','app_login_time'
 				) + pause_breaks + ('dialer_login_time','total_login_time','first_login_time','last_logout_time','total_calls','total_unique_connected_calls')
@@ -3240,6 +3241,10 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		writer = {}
 		admin = False
 		download_report = request.POST.get("agent_reports_download", "")
+		# users_agentactivity = list(AgentActivity.objects.values_list("user__id",flat=True))
+		start_date = request.POST.get("start_date", "")
+		start_date = start_date[:10]
+		users_agentactivity = list(AgentActivity.objects.filter(created__date=start_date).values_list("user__id",flat=True))
 		if download_report:
 			context = {}
 			col_name = request.POST.get("column_name", "")
@@ -3259,21 +3264,15 @@ class AgentPerformanceReportView(LoginRequiredMixin,APIView):
 		all_users = request.POST.get("all_users",[])
 		all_users = all_users.split(',')
 		if selected_user:
-			# queryset = User.objects.filter(id__in=selected_user)
-			queryset = User.objects.filter(id__in=user_hierarchy_func(request.user.id,selected_user))
+			queryset = User.objects.filter(id__in=selected_user)		
 		else:
-			queryset = User.objects.filter(id__in=all_users)
+			queryset = User.objects.filter(id__in=users_agentactivity)
 		queryset = queryset.order_by("username")
-		start_date = request.POST.get("start_date", "")
-		end_date = request.POST.get("end_date", "")
 		page = int(request.POST.get('page' ,1))
 		paginate_by = int(request.POST.get('paginate_by', 10))
 
 		users = get_paginated_object(queryset, page, paginate_by)
-		start_date = datetime.strptime(start_date,"%Y-%m-%d %H:%M").isoformat()
-		end_date = datetime.strptime(end_date,"%Y-%m-%d %H:%M").isoformat()
-
-		start_end_date_filter = Q(created__gte=start_date)&Q(created__lte=end_date)
+		start_end_date_filter = Q(created__date=start_date)
 		app_idle_time_filter = Q(campaign_name='')|Q(event='DIALER LOGIN')
 		dialler_idle_time_filter = ~Q(campaign_name="")&~Q(event__in=["DIALER LOGIN","LOGOUT"])
 		default_time = timedelta(seconds=0)
@@ -8951,3 +8950,22 @@ class PendingContactEditAPIView(LoginRequiredMixin, APIView):
 			print(contact_serializer.errors)
 		return JsonResponse({"msg":"Contact Detail Saved Successfully"}, status=200)
 """ pending contacts code end here """
+
+class StorageBucketCredentialsApi(APIView):
+	"""
+	Saving Storage credentials 
+	"""
+	permission_classes = (IsAuthenticated,)
+	serializer_class = BucketCredentialsSerializer
+	def post(self,request):
+		serializer_instance = self.serializer_class(data=request.data)
+		if serializer_instance.is_valid(raise_exception=True):
+			serializer = serializer_instance.save(created_by=request.user)
+			serializer.save()
+			return Response({"msg":" Detail Saved Successfully"}, status=200)
+		else:
+			return Response({'error':self.serializer_class.errors})
+		return Response({})
+		
+
+		
