@@ -47,7 +47,9 @@ $('.backtoSignIn_link').click(function(e) {
 
 $("#login_btn").click(function() {
     var now = new Date();
-    var dateString = moment(now).format('YYYY-MM-DD HH:mm:ss');
+    // moment is comment because remove moment library
+    // var dateString = moment(now).format('YYYY-MM-DD HH:mm:ss');
+    var dateString = formatedDate(now);
     var encodedPassword = Base64.encode($("#password").val());
     $("#client_time").val(dateString);
     $("#password").val(encodedPassword);
@@ -228,3 +230,13 @@ $('#download_certificate').unbind('click').click(function() {
         })
     }
 })
+
+function formatedDate(date){
+    // var newdate = date.toLocaleString(undefined, {timeZone: 'Asia/Kolkata'}).slice(0, 20).replace(/\//g, "-").replace("T", " ").replace(',','');
+    let time = date.toLocaleTimeString('it-IT')
+    let day = date.getDate();
+    let month = date.getMonth();
+    let year = date.getFullYear();
+    let datenew =  year+ "-" + (month + 1) + "-" + day + ' '+ time;
+    return datenew;
+}
