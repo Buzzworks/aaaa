@@ -2453,7 +2453,7 @@ class CallDetailReportView(LoginRequiredMixin,APIView):
 		else:
 			# camp = Campaign.objects.filter(Q(created_by__id=request.user.id))
 			camp = Campaign.objects.filter(Q(created_by__id=request.user.id)
-				|Q(users__id__in=user_hierarchy_func(request.user.id)+list(str(request.user.id)), users__isnull=False)|
+				|Q(users__id__in=user_hierarchy_func(request.user.id)+[str(request.user.id)], users__isnull=False)|
 					Q( group__in=request.user.group.all(), group__isnull=False)).prefetch_related(
 					'users', 'group', 'disposition').distinct()
 			campaign_list = camp.values("id", "name")
