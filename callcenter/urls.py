@@ -281,5 +281,7 @@ urlpatterns = [
 	path('CallReports/pending-contacts/',views.PendingContactAPIView.as_view(),name='pending_contacts'),
 	path('CallReports/pending-contacts/<int:pk>/',views.PendingContactEditAPIView.as_view(),name='edit-pending_contacts'),
 	path('api/webpstn_agent_dial/',views.WebPSTNAgentCallAPIView.as_view(),name='webpstn-agent-dial'),
+	path('api/bucket_credentials_upload/',views.StorageBucketCredentialsApi.as_view(),name='bucket_credentials_upload'),
+
 ] + static(settings.RECORDING_URL, document_root=settings.RECORDING_ROOT)
 

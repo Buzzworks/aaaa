@@ -683,3 +683,40 @@ BROADCAST_MESSAGE_TYPE = (
 	('1','warning'),
 	('2','danger'),
 	)
+
+STORAGE_BUCKET_TYPE = (
+	('GCP','GCP'),
+	('AWS','AWS'),
+	)
+
+STORAGE_BUCKET_CREDENTIALS_HELP = '''
+If storage type is GCP Simply copy the content in credentials.json file and paste in this field <br>
+that JSON content looks like as below <br>
+<div class='' style='background: #d0dfd6;margin-left: 40px;margin-right: 150px;'>
+	<p style='padding: 20px 0px 20px 00px;color:blueviolet'>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  { <br>	
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;      "type" &nbsp;:&nbsp; "<-------type-------------->", <br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;      "project_id" &nbsp;:&nbsp; "<-----------project_id---------------------->", <br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;      "private_key_id" &nbsp;:&nbsp; "<---------private_key_id--------------------->"<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;      "private_key" &nbsp;:&nbsp; "<-------private_key-------------->", <br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;      "client_email" &nbsp;:&nbsp; "<-----------client_email---------------------->", <br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;      "client_id" &nbsp;:&nbsp; "<---------client_id--------------------->"<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;      "auth_uri" &nbsp;:&nbsp; "<-------auth_uri-------------->", <br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;      "token_uri" &nbsp;:&nbsp; "<-----------token_uri---------------------->", <br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;      "auth_provider_x509_cert_url" &nbsp;:&nbsp; "<---------auth_provider_x509_cert_url--------------------->"<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;      "client_x509_cert_url" &nbsp;:&nbsp; "<---------client_x509_cert_url--------------------->"<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } <br>
+	</p>
+</div>
+or <br>
+If the storage type is AWS then enter your credentials in the below mentioned format <br>
+<div class='' style='background: #d0dfd6;margin-left: 40px;margin-right: 150px;'>
+	<p style='padding: 20px 0px 20px 00px;color:blueviolet'>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  { <br>	
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;      "AWS_ACCESS_KEY_ID" &nbsp;:&nbsp; "<-------access key id-------------->", <br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;      "AWS_SECRET_ACCESS_KEY" &nbsp;:&nbsp; "<-----------secret key---------------------->", <br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;      "AWS_STORAGE_BUCKET_NAME" &nbsp;:&nbsp; "<---------bucket name--------------------->"<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } <br>
+	</p>
+</div>
+'''

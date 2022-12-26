@@ -601,7 +601,7 @@ class DiallerEventLogSerializer(serializers.ModelSerializer):
 	hangup_time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
 	is_feedback = serializers.SerializerMethodField()
 	ip_address = serializers.SerializerMethodField()
-	recording_url = serializers.SerializerMethodField()
+	# recording_url = serializers.SerializerMethodField()
 	class Meta:
 		model = DiallerEventLog
 		fields= '__all__'   
@@ -623,15 +623,15 @@ class DiallerEventLogSerializer(serializers.ModelSerializer):
 		if obj.campaign_name:
 			ip_address = list(Campaign.objects.filter(name=obj.campaign_name).values_list('switch__ip_address', flat=True))[0]
 		return ip_address
-	def get_recording_url(self,obj):
-		try:
-			if obj.recording_url:
-				return obj.recording_url
-			else:
-				return ''
-		except Exception as e:
-			print(e)
-			return ''
+	# def get_recording_url(self,obj):
+	# 	try:
+	# 		if obj.recording_url:
+	# 			return obj.recording_url
+	# 		else:
+	# 			return ''
+	# 	except Exception as e:
+	# 		print(e)
+	# 		return ''
 class DiallerEventLogTimeSerializer(serializers.ModelSerializer):
 	""" sericlizzer for diallerevent log time format data serilizer"""
 	init_time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
@@ -1031,3 +1031,16 @@ class ThirdPartyApiDispositionSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = ThirdPartyApiDisposition
 		fields ="__all__"
+
+class BucketCredentialsSerializer(serializers.ModelSerializer):	
+	class Meta:
+		model = BucketCredentials
+		fields =("storage_bucket_name","storage_type","storage_credentials",)
+
+		validators = [
+            serializers.UniqueTogetherValidator(
+                queryset=model.objects.all(),
+                fields=('storage_type', 'storage_bucket_name'),
+                message="Bucket Name and Storage type  already exists"
+            )
+        ]
